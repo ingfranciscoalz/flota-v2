@@ -337,77 +337,182 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
 
   const doFranco = async (choferId, accion) => {
     setSaving(choferId + 'franco')
-    const { error } = accion === 'marcar' ? await marcarFranco(choferId, ds) : await quitarFranco(choferId, ds)
+    const { error } = accion === 'marcar'
+      ? await marcarFranco(choferId, ds)
+      : await quitarFranco(choferId, ds)
+
     setSaving(null)
+
     if (error) return showToast('⚠ ' + error.message, 'error')
-    showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
+
+    showToast(
+      accion === 'marcar'
+        ? '✓ Franco marcado'
+        : '✓ Franco quitado',
+      'success'
+    )
+
     onRefresh()
   }
 
   const doBorrar = async (choferId) => {
     setSaving(choferId + 'borrar')
+
     const { error } = await deleteTurno(choferId, ds)
+
     setSaving(null)
+
     if (error) return showToast('⚠ ' + error.message, 'error')
+
     showToast('✓ Pago eliminado', 'success')
     onRefresh()
   }
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div
+      className="modal-overlay"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
       <div className="modal-sheet">
         <div className="modal-date">{DIAS_FULL[dow]}</div>
-        <div className="modal-title">{d} de {MESES[m - 1]}</div>
+
+        <div className="modal-title">
+          {d} de {MESES[m - 1]}
+        </div>
+
         {autoEntries.map(([aid, adata]) =>
           Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
             const info = adata.dias?.[ds]?.[cid]
+
             if (!info) return null
+
             const { estado, monto } = info
-            const badgeClass = { completo: 'eb-completo', parcial: 'eb-parcial', debe: 'eb-debe', franco: 'eb-franco', futuro: 'eb-futuro' }[estado] || 'eb-futuro'
+
+            const badgeClass = {
+              completo: 'eb-completo',
+              parcial: 'eb-parcial',
+              debe: 'eb-debe',
+              franco: 'eb-franco',
+              futuro: 'eb-futuro',
+            }[estado] || 'eb-futuro'
+
             const isSaving = !!saving
+
             return (
               <div key={cid} className="chofer-section">
                 <div className="chofer-sec-header">
                   <div>
-                    <div className="chofer-sec-name">{cnombre}</div>
-                    <div className="chofer-sec-sub">{adata.nombre}</div>
+                    <div className="chofer-sec-name">
+                      {cnombre}
+                    </div>
+
+                    <div className="chofer-sec-sub">
+                      {adata.nombre}
+                    </div>
                   </div>
-                  <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
+
+                  <span className={`eb ${badgeClass}`}>
+                    {estado.charAt(0).toUpperCase() + estado.slice(1)}
+                  </span>
                 </div>
-                {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
+
+                {monto ? (
+                  <div
+                    style={{
+                      fontFamily: "'DM Mono',monospace",
+                      fontSize: 11,
+                      color: '#555',
+                      marginBottom: 10,
+                    }}
+                  >
+                    Pagó: {fmt(monto)}
+                  </div>
+                ) : null}
 
                 {estado === 'franco' ? (
-                  <button className="action-btn ab-quitar" disabled={isSaving}
-                    onClick={() => doFranco(cid, 'quitar')}>
-                    {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
+                  <button
+                    className="action-btn ab-quitar"
+                    disabled={isSaving}
+                    onClick={() => doFranco(cid, 'quitar')}
+                  >
+                    {saving === cid + 'franco'
+                      ? '...'
+                      : '✕ Quitar franco'}
                   </button>
                 ) : (
                   <>
                     <div className="action-grid">
-                      <button className="action-btn ab-primary" disabled={isSaving}
-                        onClick={() => doTurno(cid, turnoBase)}>
-                        {saving === cid + 'turno' ? '...' : '✓ Turno completo'}
+                      <button
+                        className="action-btn ab-primary"
+                        disabled={isSaving}
+                        onClick={() => doTurno(cid, turnoBase)}
+                      >
+                        {saving === cid + 'turno'
+                          ? '...'
+                          : '✓ Turno completo'}
                       </button>
-                      <button className="action-btn ab-franco" disabled={isSaving}
-                        onClick={() => doFranco(cid, 'marcar')}>
-                        {saving === cid + 'franco' ? '...' : 'F Franco'}
+
+                      <button
+                        className="action-btn ab-franco"
+                        disabled={isSaving}
+                        onClick={() => doFranco(cid, 'marcar')}
+                      >
+                        {saving === cid + 'franco'
+                          ? '...'
+                          : 'F Franco'}
                       </button>
                     </div>
-                    <div className="monto-row" style={{ marginBottom: 8 }}>
-                      <input className="monto-input" type="number" inputMode="numeric" placeholder="Otro monto..."
+
+                    <div
+                      className="monto-row"
+                      style={{ marginBottom: 8 }}
+                    >
+                      <input
+                        className="monto-input"
+                        type="number"
+                        inputMode="numeric"
+                        placeholder="Otro monto..."
                         value={montos[cid] || ''}
-                        onChange={e => setMontos(prev => ({ ...prev, [cid]: e.target.value }))}
+                        onChange={e =>
+                          setMontos(prev => ({
+                            ...prev,
+                            [cid]: e.target.value,
+                          }))
+                        }
                       />
-                      <button className="monto-btn" disabled={isSaving} onClick={() => {
-                        const v = parseFloat(montos[cid])
-                        if (!v || v <= 0) return showToast('Ingresá un monto válido', 'error')
-                        doTurno(cid, v)
-                      }}>{saving === cid + 'turno' ? '...' : 'OK'}</button>
+
+                      <button
+                        className="monto-btn"
+                        disabled={isSaving}
+                        onClick={() => {
+                          const v = parseFloat(montos[cid])
+
+                          if (!v || v <= 0) {
+                            return showToast(
+                              'Ingresá un monto válido',
+                              'error'
+                            )
+                          }
+
+                          doTurno(cid, v)
+                        }}
+                      >
+                        {saving === cid + 'turno'
+                          ? '...'
+                          : 'OK'}
+                      </button>
                     </div>
-                    {(estado === 'completo' || estado === 'parcial') && (
-                      <button className="action-btn ab-quitar" disabled={isSaving}
-                        onClick={() => doBorrar(cid)}>
-                        {saving === cid + 'borrar' ? '...' : '✕ Marcar como no pagado'}
+
+                    {(estado === 'completo' ||
+                      estado === 'parcial') && (
+                      <button
+                        className="action-btn ab-quitar"
+                        disabled={isSaving}
+                        onClick={() => doBorrar(cid)}
+                      >
+                        {saving === cid + 'borrar'
+                          ? '...'
+                          : '✕ Marcar como no pagado'}
                       </button>
                     )}
                   </>
@@ -416,95 +521,17 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
             )
           })
         )}
-        <button className="modal-close" onClick={onClose}>Cerrar</button>
-      </div>
-    </div>
-  )
-}) {
-  const [montos, setMontos] = useState({})
-  const [saving, setSaving] = useState(null)
-  const [y, m, d] = ds.split('-').map(Number)
-  const dow = (new Date(y, m - 1, d).getDay() + 6) % 7
 
-  const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
-
-  const handleTurno = async (autoId, choferId, monto) => {
-    setSaving(choferId + 'turno')
-    const { error } = await upsertTurno(choferId, ds, monto)
-    setSaving(null)
-    if (error) return showToast('⚠ ' + error.message, 'error')
-    showToast('✓ Turno anotado', 'success')
-    onRefresh()
-  }
-
-  const handleFranco = async (choferId, accion) => {
-    setSaving(choferId + 'franco')
-    const { error } = accion === 'marcar' ? await marcarFranco(choferId, ds) : await quitarFranco(choferId, ds)
-    setSaving(null)
-    if (error) return showToast('⚠ ' + error.message, 'error')
-    showToast('✓ Franco ' + (accion === 'marcar' ? 'marcado' : 'quitado'), 'success')
-    onRefresh()
-  }
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet">
-        <div className="modal-date">{DIAS_FULL[dow]}</div>
-        <div className="modal-title">{d} de {MESES[m - 1]}</div>
-        {autoEntries.map(([aid, adata]) =>
-          Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
-            const info = adata.dias?.[ds]?.[cid]
-            if (!info) return null
-            const { estado, monto } = info
-            const badgeClass = { completo: 'eb-completo', parcial: 'eb-parcial', debe: 'eb-debe', franco: 'eb-franco', futuro: 'eb-futuro' }[estado] || 'eb-futuro'
-            const isSaving = saving === cid + 'turno' || saving === cid + 'franco'
-            return (
-              <div key={cid} className="chofer-section">
-                <div className="chofer-sec-header">
-                  <div>
-                    <div className="chofer-sec-name">{cnombre}</div>
-                    <div className="chofer-sec-sub">{adata.nombre}</div>
-                  </div>
-                  <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
-                </div>
-                {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
-                {estado === 'franco' ? (
-                  <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => handleFranco(cid, 'quitar')}>
-                    {isSaving ? '...' : '✕ Quitar franco'}
-                  </button>
-                ) : (
-                  <>
-                    <div className="action-grid">
-                      <button className="action-btn ab-primary" disabled={isSaving} onClick={() => handleTurno(aid, cid, turnoBase)}>
-                        {isSaving ? '...' : '✓ Turno completo'}
-                      </button>
-                      <button className="action-btn ab-franco" disabled={isSaving} onClick={() => handleFranco(cid, 'marcar')}>
-                        {isSaving ? '...' : 'F Franco'}
-                      </button>
-                    </div>
-                    <div className="monto-row">
-                      <input className="monto-input" type="number" inputMode="numeric" placeholder="Otro monto..."
-                        value={montos[cid] || ''}
-                        onChange={e => setMontos(prev => ({ ...prev, [cid]: e.target.value }))}
-                      />
-                      <button className="monto-btn" disabled={isSaving} onClick={() => {
-                        const v = parseFloat(montos[cid])
-                        if (!v || v <= 0) return showToast('Ingresá un monto válido', 'error')
-                        handleTurno(aid, cid, v)
-                      }}>{isSaving ? '...' : 'OK'}</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )
-          })
-        )}
-        <button className="modal-close" onClick={onClose}>Cerrar</button>
+        <button
+          className="modal-close"
+          onClick={onClose}
+        >
+          Cerrar
+        </button>
       </div>
     </div>
   )
 }
-
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
 function GastosPage({ resumen, showToast }) {
   const [tab, setTab] = useState('lista')
