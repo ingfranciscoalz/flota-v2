@@ -322,24 +322,32 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
 function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
+
   const [y, m, d] = ds.split('-').map(Number)
   const dow = (new Date(y, m - 1, d).getDay() + 6) % 7
+
   const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
 
   const doTurno = async (choferId, monto) => {
     setSaving(choferId + 'turno')
+
     const { error } = await upsertTurno(choferId, ds, monto)
+
     setSaving(null)
+
     if (error) return showToast('⚠ ' + error.message, 'error')
+
     showToast('✓ Turno anotado', 'success')
     onRefresh()
   }
 
   const doFranco = async (choferId, accion) => {
     setSaving(choferId + 'franco')
-    const { error } = accion === 'marcar'
-      ? await marcarFranco(choferId, ds)
-      : await quitarFranco(choferId, ds)
+
+    const { error } =
+      accion === 'marcar'
+        ? await marcarFranco(choferId, ds)
+        : await quitarFranco(choferId, ds)
 
     setSaving(null)
 
@@ -419,7 +427,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
                 {monto ? (
                   <div
                     style={{
-                      fontFamily: "'DM Mono',monospace",
+                      fontFamily: "'DM Mono', monospace",
                       fontSize: 11,
                       color: '#555',
                       marginBottom: 10,
