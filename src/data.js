@@ -160,11 +160,11 @@ export async function getCalendario(year, month) {
     turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
   }
 
-  // Mapa francos {chofer_id: Set<fecha>}
+  // Mapa francos {chofer_id: Map<fecha, motivo>}
   const francosMap = {}
   for (const f of francos) {
-    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Set()
-    francosMap[f.chofer_id].add(f.fecha)
+    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
+    francosMap[f.chofer_id].set(f.fecha, f.motivo || 'franco_especial')
   }
 
   const resultado = {}
@@ -218,7 +218,15 @@ export async function marcarFranco(chofer_id, fecha, motivo = 'franco_especial')
 }
 
 export async function quitarFranco(chofer_id, fecha) {
-  return supabase.from('francos').delete().eq('chofer_id', chofer_id).eq('fecha', fecha)
+  // Si es un franco por defecto (día de semana), insertar excepción "no_franco"
+  // Si es un franco manual, eliminarlo
+  const { data } = await supabase.from('francos').select('id,motivo').eq('chofer_id', chofer_id).eq('fecha', fecha).single()
+  if (data && data.motivo !== 'no_franco') {
+    // Era un franco manual, lo borramos y ponemos no_franco para override del default
+    await supabase.from('francos').delete().eq('id', data.id)
+  }
+  // Insertar excepción de no-franco para override del día de semana default
+  return supabase.from('francos').upsert({ chofer_id, fecha, motivo: 'no_franco' }, { onConflict: 'chofer_id,fecha' })
 }
 
 // ── GASTOS ────────────────────────────────────────────────────────────────────
@@ -244,6 +252,11 @@ export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, 
   return supabase.from('mantenimiento').insert({ auto_id, tipo, kms_en_service, costo, fecha })
 }
 
+// ── DELETE TURNO ─────────────────────────────────────────────────────────────
+export async function deleteTurno(chofer_id, fecha) {
+  return supabase.from('turnos').delete().eq('chofer_id', chofer_id).eq('fecha', fecha)
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function getLunes(d) {
   const lunes = new Date(d)
@@ -253,6 +266,13 @@ function getLunes(d) {
 
 function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const ds = d.toISOString().split('T')[0]
+  // Si tiene excepción "no_franco", NO es franco aunque sea el día de semana
+  if (francosMap[chofer_id]?.get(ds) === 'no_franco') return false
+  // Si tiene franco manual (cualquier otro motivo), es franco
   if (francosMap[chofer_id]?.has(ds)) return true
-  return d.getDay() === (franco_weekday === 0 ? 0 : (parseInt(franco_weekday) + 1) % 7 === 0 ? 7 : parseInt(franco_weekday) + 1) % 7
+  // Franco por defecto según día de semana
+  // franco_weekday: 0=lun,1=mar,...,6=dom
+  // JS getDay(): 0=dom,1=lun,...,6=sab → convertir: (getDay()+6)%7
+  const dowLunes = (d.getDay() + 6) % 7
+  return dowLunes === parseInt(franco_weekday)
 }
