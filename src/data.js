@@ -266,7 +266,6 @@ function getLunes(d) {
 
 function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const ds = d.toISOString().split('T')[0]
-
   const francoData = francosMap[chofer_id]
 
   if (francoData instanceof Map) {
@@ -279,6 +278,5 @@ function isFranco(d, chofer_id, franco_weekday, francosMap) {
   }
 
   const dowLunes = (d.getDay() + 6) % 7
-
   return dowLunes === parseInt(franco_weekday)
 }
