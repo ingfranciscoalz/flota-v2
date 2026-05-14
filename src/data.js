@@ -266,13 +266,19 @@ function getLunes(d) {
 
 function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const ds = d.toISOString().split('T')[0]
-  // Si tiene excepción "no_franco", NO es franco aunque sea el día de semana
-  if (francosMap[chofer_id]?.get(ds) === 'no_franco') return false
-  // Si tiene franco manual (cualquier otro motivo), es franco
-  if (francosMap[chofer_id]?.has(ds)) return true
-  // Franco por defecto según día de semana
-  // franco_weekday: 0=lun,1=mar,...,6=dom
-  // JS getDay(): 0=dom,1=lun,...,6=sab → convertir: (getDay()+6)%7
+
+  const francoData = francosMap[chofer_id]
+
+  if (francoData instanceof Map) {
+    if (francoData.get(ds) === 'no_franco') return false
+    if (francoData.has(ds)) return true
+  }
+
+  if (francoData instanceof Set) {
+    if (francoData.has(ds)) return true
+  }
+
   const dowLunes = (d.getDay() + 6) % 7
+
   return dowLunes === parseInt(franco_weekday)
 }
