@@ -441,7 +441,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
                           {saving === cid + 'turno' ? '...' : '✓ Turno completo'}
                         </button>
                         <button className="action-btn ab-franco" disabled={isSaving} onClick={() => doFranco(cid, 'marcar')}>
-                          {saving === cid + 'franco' ? '...' : 'F Franco'}
+                          {saving === cid + 'franco' ? '...' : 'Franco'}
                         </button>
                       </div>
                       <div className="monto-row" style={{ marginBottom: 8 }}>

@@ -121,8 +121,12 @@ export async function getResumen() {
   }
 }
 
+const MANT_PERMITIDOS = ['distribuc', 'aceite']
+
 function calcMantStatus(items, realizados, kmsAct) {
-  return items.map(item => {
+  return items.filter(item =>
+    MANT_PERMITIDOS.some(k => item.nombre?.toLowerCase().includes(k))
+  ).map(item => {
     const servicios = realizados.filter(r => r.tipo === item.id)
     const ultimoKms = servicios.length > 0 ? Math.max(...servicios.map(s => s.kms_en_service || 0)) : 0
     const proximo = ultimoKms + item.frecuencia_kms
