@@ -439,21 +439,12 @@ function AdminScreen({ showToast }) {
 // ── RESUMEN PAGE ──────────────────────────────────────────────────────────────
 function ResumenPage({ resumen, showToast, onRefresh }) {
   const [kmsInputs, setKmsInputs] = useState({})
-  const [mantModal, setMantModal] = useState(null)
   if (!resumen) return <div className="loading"><div className="spinner" /></div>
 
   const { autos, totales } = resumen
 
   return (
     <div className="page">
-      {Object.entries(autos).flatMap(([aid, adata]) =>
-        (adata.mantenimiento || []).filter(m => m.estado === 'CAMBIAR').map(m => (
-          <div key={aid+m.id} className="alert-banner">
-            ⚠️ <span><b style={{ color: '#ff4545' }}>{adata.nombre}</b> — {m.nombre} necesita cambio</span>
-          </div>
-        ))
-      )}
-
       <div className="stitle">Total flota</div>
       <div className="total-banner">
         <div><div className="total-label">Esta semana</div><div className="total-value">{fmt(totales.semana)}</div></div>
@@ -496,43 +487,10 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
                 onRefresh()
               }}>OK</button>
             </div>
-            {adata.mantenimiento?.length > 0 && <>
-              <div className="divider" />
-              <div className="stitle" style={{ marginTop: 0 }}>Mantenimiento</div>
-              <div className="mant-list">
-                {adata.mantenimiento.map(m => (
-                  <div key={m.id} className="mant-item" onClick={() => setMantModal({ autoId: aid, item: m, autoNombre: adata.nombre, kmsAct: adata.kms_actuales })}>
-                    <div>
-                      <div className="mant-nombre">{m.nombre}</div>
-                      <div className="mant-sub">
-                        {m.estado === 'CAMBIAR' ? 'Vencido' : `Próximo: ${m.proximo_kms.toLocaleString('es-AR')} km`}
-                        {' · '}Faltan: {m.faltan_kms > 0 ? m.faltan_kms.toLocaleString('es-AR') + ' km' : 'VENCIDO'}
-                      </div>
-                    </div>
-                    <span className={`mbadge ${m.estado === 'CAMBIAR' ? 'mbadge-cambiar' : 'mbadge-ok'}`}>
-                      {m.estado === 'CAMBIAR' ? '⚠ CAMBIAR' : '✓ OK'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>}
           </div>
         )
       })}
 
-      {mantModal && (
-        <MantModal
-          {...mantModal}
-          onClose={() => setMantModal(null)}
-          onConfirm={async (kms, costo) => {
-            const { error } = await insertMantenimiento(mantModal.autoId, mantModal.item.id, kms, costo, today())
-            if (error) return showToast('⚠ ' + error.message, 'error')
-            showToast('✓ Service registrado', 'success')
-            setMantModal(null)
-            onRefresh()
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -912,7 +870,7 @@ function FlotaPage({ resumen, showToast, onRefresh }) {
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
       </div>
       {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
-      {tab === 'mant'  && <MantItemsTab autos={resumen?.config?.autos || []} showToast={showToast} />}
+      {tab === 'mant'  && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
     </div>
   )
 }
@@ -1054,9 +1012,15 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   )
 }
 
-function MantItemsTab({ showToast, autos }) {
+function MantItemsTab({ resumen, showToast, onRefresh }) {
+  const autos = resumen?.config?.autos || []
+  const autosData = resumen?.autos || {}
+
   const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loadingItems, setLoadingItems] = useState(true)
+  const [mantModal, setMantModal] = useState(null)
+
+  // edit/create state
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({ nombre: '', frecuencia: '', autoId: null })
   const [savingEdit, setSavingEdit] = useState(false)
@@ -1065,13 +1029,13 @@ function MantItemsTab({ showToast, autos }) {
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
 
-  const reload = async () => {
-    setLoading(true)
+  const reloadItems = async () => {
+    setLoadingItems(true)
     const { data } = await getUserMantItems()
     setItems(data || [])
-    setLoading(false)
+    setLoadingItems(false)
   }
-  useEffect(() => { reload() }, [])
+  useEffect(() => { reloadItems() }, [])
 
   const autoNombre = (autoId) => autos.find(a => a.id === autoId)?.nombre || null
 
@@ -1084,7 +1048,7 @@ function MantItemsTab({ showToast, autos }) {
     if (error) return showToast('⚠ ' + error.message, 'error')
     showToast('✓ Item agregado', 'success')
     setNewItem({ nombre: '', frecuencia: '', autoId: null }); setShowForm(false)
-    reload()
+    reloadItems(); onRefresh()
   }
 
   const handleEdit = async () => {
@@ -1096,104 +1060,188 @@ function MantItemsTab({ showToast, autos }) {
     if (error) return showToast('⚠ ' + error.message, 'error')
     showToast('✓ Item actualizado', 'success')
     setEditingId(null)
-    reload()
+    reloadItems(); onRefresh()
   }
 
-  if (loading) return <div className="loading"><div className="spinner" /></div>
-
-  return (
+  // ── SECCIÓN DE ESTADO POR AUTO ───────────────────────────────────────────────
+  const statusSection = (
     <>
-      {items.length === 0 && !showForm && (
-        <div className="loading" style={{ padding: '40px 0' }}>Sin items de mantenimiento</div>
+      <div className="stitle">Estado por auto</div>
+      {autos.length === 0 && (
+        <div className="loading" style={{ padding: '20px 0' }}>Sin autos en la flota</div>
       )}
-
-      {items.map(item => {
-        const isEditing = editingId === item.id
+      {autos.map(auto => {
+        const adata = autosData[auto.id]
+        const mant = adata?.mantenimiento || []
+        const kmsAct = adata?.kms_actuales || 0
+        const hayCambiar = mant.some(m => m.estado === 'CAMBIAR')
         return (
-          <div key={item.id} className="card" style={{ marginBottom: 8 }}>
-            {isEditing ? (
-              <>
-                <div className="stitle" style={{ marginTop: 0 }}>Editar item</div>
-                <div className="form-group">
-                  <input className="form-input" placeholder="Nombre" value={editForm.nombre}
-                    onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} autoFocus />
-                </div>
-                <div className="form-group">
-                  <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
-                    value={editForm.frecuencia} onChange={e => setEditForm(f => ({ ...f, frecuencia: e.target.value }))}
-                    style={{ fontFamily: "'DM Mono',monospace" }} />
-                </div>
-                <div className="stitle">Aplica a</div>
-                <MantAutoSelector autos={autos} selected={editForm.autoId} onChange={v => setEditForm(f => ({ ...f, autoId: v }))} />
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={savingEdit} onClick={handleEdit}>
-                    {savingEdit ? '...' : '✓ Guardar'}
-                  </button>
-                  <button className="action-btn" style={{ flex: 1 }} onClick={() => setEditingId(null)}>Cancelar</button>
-                </div>
-              </>
+          <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span className="auto-tag tag-auto">{auto.nombre}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {hayCambiar && <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444' }}>⚠ ATENCIÓN</span>}
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555' }}>
+                  {kmsAct.toLocaleString('es-AR')} km
+                </span>
+              </div>
+            </div>
+            {mant.length === 0 ? (
+              <div style={{ fontSize: 12, color: '#444', textAlign: 'center', padding: '6px 0' }}>
+                Sin items de mantenimiento asignados
+              </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
-                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
-                    Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
-                    {' · '}
-                    <span style={{ color: item.auto_id ? '#06C167' : '#888' }}>
-                      {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
+              <div className="mant-list">
+                {mant.map(m => (
+                  <div key={m.id} className="mant-item"
+                    onClick={() => setMantModal({ autoId: auto.id, item: m, autoNombre: auto.nombre, kmsAct })}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="mant-nombre">{m.nombre}</div>
+                      <div className="mant-sub">
+                        {m.estado === 'CAMBIAR'
+                          ? `Último: ${m.ultimo_kms.toLocaleString('es-AR')} km · VENCIDO`
+                          : `Próximo: ${m.proximo_kms.toLocaleString('es-AR')} km · faltan ${m.faltan_kms.toLocaleString('es-AR')} km`
+                        }
+                      </div>
+                    </div>
+                    <span className={`mbadge ${m.estado === 'CAMBIAR' ? 'mbadge-cambiar' : 'mbadge-ok'}`}>
+                      {m.estado === 'CAMBIAR' ? '⚠ CAMBIAR' : '✓ OK'}
                     </span>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A2A' }}
-                    onClick={() => { setEditingId(item.id); setEditForm({ nombre: item.nombre, frecuencia: String(item.frecuencia_kms), autoId: item.auto_id || null }) }}>
-                    ✎
-                  </button>
-                  <button className="gasto-del-btn" disabled={deletingId === item.id}
-                    onClick={async () => {
-                      setDeletingId(item.id)
-                      const { error } = await deleteMantItem(item.id)
-                      setDeletingId(null)
-                      if (error) return showToast('⚠ ' + error.message, 'error')
-                      showToast('✓ Item eliminado', 'success')
-                      setItems(prev => prev.filter(x => x.id !== item.id))
-                    }}>
-                    {deletingId === item.id ? '...' : '✕'}
-                  </button>
-                </div>
+                ))}
               </div>
             )}
           </div>
         )
       })}
+    </>
+  )
 
-      {showForm ? (
-        <div className="card" style={{ marginBottom: 10 }}>
-          <div className="stitle" style={{ marginTop: 0 }}>Nuevo item</div>
-          <div className="form-group">
-            <input className="form-input" placeholder="Nombre (ej: Frenos)" value={newItem.nombre}
-              onChange={e => setNewItem(f => ({ ...f, nombre: e.target.value }))} autoFocus />
-          </div>
-          <div className="form-group">
-            <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
-              value={newItem.frecuencia} onChange={e => setNewItem(f => ({ ...f, frecuencia: e.target.value }))}
-              style={{ fontFamily: "'DM Mono',monospace" }} />
-          </div>
-          <div className="stitle">Aplica a</div>
-          <MantAutoSelector autos={autos} selected={newItem.autoId} onChange={v => setNewItem(f => ({ ...f, autoId: v }))} />
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={saving} onClick={handleCreate}>
-              {saving ? 'Guardando...' : '✓ Agregar'}
-            </button>
-            <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowForm(false); setNewItem({ nombre: '', frecuencia: '', autoId: null }) }}>
-              Cancelar
-            </button>
-          </div>
-        </div>
+  // ── SECCIÓN DE GESTIÓN DE ITEMS ───────────────────────────────────────────────
+  const crudSection = (
+    <>
+      <div className="stitle" style={{ marginTop: 24 }}>Mis items</div>
+
+      {loadingItems ? (
+        <div className="loading" style={{ padding: '20px 0' }}><div className="spinner" /></div>
       ) : (
-        <button className="action-btn" style={{ width: '100%', marginTop: 4 }} onClick={() => setShowForm(true)}>
-          + Agregar item
-        </button>
+        <>
+          {items.length === 0 && !showForm && (
+            <div className="loading" style={{ padding: '20px 0', fontSize: 12 }}>Sin items — agregá uno abajo</div>
+          )}
+
+          {items.map(item => {
+            const isEditing = editingId === item.id
+            return (
+              <div key={item.id} className="card" style={{ marginBottom: 8 }}>
+                {isEditing ? (
+                  <>
+                    <div className="stitle" style={{ marginTop: 0 }}>Editar</div>
+                    <div className="form-group">
+                      <input className="form-input" placeholder="Nombre" value={editForm.nombre}
+                        onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} autoFocus />
+                    </div>
+                    <div className="form-group">
+                      <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
+                        value={editForm.frecuencia} onChange={e => setEditForm(f => ({ ...f, frecuencia: e.target.value }))}
+                        style={{ fontFamily: "'DM Mono',monospace" }} />
+                    </div>
+                    <div className="stitle">Aplica a</div>
+                    <MantAutoSelector autos={autos} selected={editForm.autoId} onChange={v => setEditForm(f => ({ ...f, autoId: v }))} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={savingEdit} onClick={handleEdit}>
+                        {savingEdit ? '...' : '✓ Guardar'}
+                      </button>
+                      <button className="action-btn" style={{ flex: 1 }} onClick={() => setEditingId(null)}>Cancelar</button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
+                        Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
+                        {' · '}
+                        <span style={{ color: item.auto_id ? '#06C167' : '#666' }}>
+                          {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A2A' }}
+                        onClick={() => { setEditingId(item.id); setEditForm({ nombre: item.nombre, frecuencia: String(item.frecuencia_kms), autoId: item.auto_id || null }) }}>
+                        ✎
+                      </button>
+                      <button className="gasto-del-btn" disabled={deletingId === item.id}
+                        onClick={async () => {
+                          setDeletingId(item.id)
+                          const { error } = await deleteMantItem(item.id)
+                          setDeletingId(null)
+                          if (error) return showToast('⚠ ' + error.message, 'error')
+                          showToast('✓ Item eliminado', 'success')
+                          setItems(prev => prev.filter(x => x.id !== item.id))
+                          onRefresh()
+                        }}>
+                        {deletingId === item.id ? '...' : '✕'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          {showForm ? (
+            <div className="card" style={{ marginBottom: 10 }}>
+              <div className="stitle" style={{ marginTop: 0 }}>Nuevo item</div>
+              <div className="form-group">
+                <input className="form-input" placeholder="Nombre (ej: Frenos)" value={newItem.nombre}
+                  onChange={e => setNewItem(f => ({ ...f, nombre: e.target.value }))} autoFocus />
+              </div>
+              <div className="form-group">
+                <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
+                  value={newItem.frecuencia} onChange={e => setNewItem(f => ({ ...f, frecuencia: e.target.value }))}
+                  style={{ fontFamily: "'DM Mono',monospace" }} />
+              </div>
+              <div className="stitle">Aplica a</div>
+              <MantAutoSelector autos={autos} selected={newItem.autoId} onChange={v => setNewItem(f => ({ ...f, autoId: v }))} />
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={saving} onClick={handleCreate}>
+                  {saving ? 'Guardando...' : '✓ Agregar'}
+                </button>
+                <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowForm(false); setNewItem({ nombre: '', frecuencia: '', autoId: null }) }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button className="action-btn" style={{ width: '100%', marginTop: 4 }} onClick={() => setShowForm(true)}>
+              + Agregar item
+            </button>
+          )}
+        </>
+      )}
+    </>
+  )
+
+  return (
+    <>
+      {statusSection}
+      <div className="divider" style={{ margin: '4px 0' }} />
+      {crudSection}
+
+      {mantModal && (
+        <MantModal
+          {...mantModal}
+          onClose={() => setMantModal(null)}
+          onConfirm={async (kms, costo) => {
+            const { error } = await insertMantenimiento(mantModal.autoId, mantModal.item.id, kms, costo, today())
+            if (error) return showToast('⚠ ' + error.message, 'error')
+            showToast('✓ Service registrado', 'success')
+            setMantModal(null)
+            onRefresh()
+          }}
+        />
       )}
     </>
   )
