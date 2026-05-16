@@ -14,6 +14,7 @@ DROP TABLE IF EXISTS config CASCADE;
 DROP TABLE IF EXISTS choferes CASCADE;
 DROP TABLE IF EXISTS autos CASCADE;
 DROP TABLE IF EXISTS mantenimiento_items CASCADE;
+DROP TABLE IF EXISTS user_mant_items CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 
 -- 2. Tabla de perfiles (uno por usuario de auth)
@@ -30,6 +31,7 @@ CREATE TABLE autos (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   nombre     TEXT NOT NULL,
+  turno_base INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -102,16 +104,13 @@ CREATE TABLE mantenimiento (
   fecha          DATE NOT NULL
 );
 
--- 11. Items de mantenimiento (compartidos, sin user_id)
-CREATE TABLE mantenimiento_items (
-  id              TEXT PRIMARY KEY,
-  nombre          TEXT NOT NULL,
-  frecuencia_kms  INTEGER NOT NULL
+-- 11. Items de mantenimiento por usuario
+CREATE TABLE user_mant_items (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  nombre         TEXT NOT NULL,
+  frecuencia_kms INTEGER NOT NULL
 );
-
-INSERT INTO mantenimiento_items (id, nombre, frecuencia_kms) VALUES
-  ('aceite',       'Aceite y filtros', 7500),
-  ('distribucion', 'Distribución',     60000);
 
 -- ── RLS ───────────────────────────────────────────────────────────────────────
 ALTER TABLE profiles          ENABLE ROW LEVEL SECURITY;
@@ -123,7 +122,7 @@ ALTER TABLE francos           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gastos            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kms               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mantenimiento     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mantenimiento_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_mant_items   ENABLE ROW LEVEL SECURITY;
 
 -- Función para chequear si el usuario actual es admin (SECURITY DEFINER evita recursión RLS)
 CREATE OR REPLACE FUNCTION is_admin()
@@ -144,10 +143,8 @@ CREATE POLICY "own" ON turnos        FOR ALL TO authenticated USING (auth.uid() 
 CREATE POLICY "own" ON francos       FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "own" ON gastos        FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "own" ON kms           FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-CREATE POLICY "own" ON mantenimiento FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- mantenimiento_items: lectura para todos los autenticados
-CREATE POLICY "read_all" ON mantenimiento_items FOR SELECT TO authenticated USING (true);
+CREATE POLICY "own" ON mantenimiento     FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "own" ON user_mant_items  FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- ── TRIGGER: crear perfil automáticamente al registrarse ──────────────────────
 CREATE OR REPLACE FUNCTION handle_new_user()

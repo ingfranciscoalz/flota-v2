@@ -9,20 +9,16 @@ async function uid() {
 export async function signUp(email, password) {
   return supabase.auth.signUp({ email, password })
 }
-
 export async function signIn(email, password) {
   return supabase.auth.signInWithPassword({ email, password })
 }
-
 export async function signOut() {
   return supabase.auth.signOut()
 }
-
 export async function getProfile() {
   const { data } = await supabase.from('profiles').select('*').maybeSingle()
   return data
 }
-
 export async function checkFleet() {
   const { data } = await supabase.from('autos').select('id').limit(1)
   return (data?.length || 0) > 0
@@ -32,11 +28,9 @@ export async function checkFleet() {
 export async function getAdminUsers() {
   return supabase.rpc('get_all_profiles')
 }
-
 export async function setUserActivo(id, activo) {
   return supabase.rpc('admin_set_activo', { target_id: id, new_activo: activo })
 }
-
 export async function addPayment(id) {
   return supabase.rpc('admin_add_payment', { target_id: id })
 }
@@ -56,7 +50,7 @@ export async function createFleet({ turnoBase, francoWeekday, autos }) {
     const nombre = auto.nombre.trim()
     if (!nombre) continue
     const { data: autoData, error: autoErr } = await supabase
-      .from('autos').insert({ user_id, nombre }).select('id').single()
+      .from('autos').insert({ user_id, nombre, turno_base: turnoBase }).select('id').single()
     if (autoErr) return { error: autoErr }
     for (const choferNombre of auto.choferes) {
       const cn = choferNombre.trim()
@@ -67,7 +61,41 @@ export async function createFleet({ turnoBase, francoWeekday, autos }) {
     await supabase.from('kms').insert({ user_id, auto_id: autoData.id, kms_actuales: 0, actualizado_en: new Date().toISOString().split('T')[0] })
   }
 
+  // Crear items de mantenimiento por defecto
+  await supabase.from('user_mant_items').insert([
+    { user_id, nombre: 'Aceite y filtros', frecuencia_kms: 7500 },
+    { user_id, nombre: 'Distribución', frecuencia_kms: 60000 },
+  ])
+
   return { error: null }
+}
+
+// ── FLOTA (autos, choferes, mantenimiento items) ───────────────────────────────
+export async function createAuto(nombre, turnoBase) {
+  const user_id = await uid()
+  return supabase.from('autos').insert({ user_id, nombre, turno_base: turnoBase }).select('id').single()
+}
+
+export async function createChofer(autoId, nombre) {
+  const user_id = await uid()
+  return supabase.from('choferes').insert({ user_id, auto_id: autoId, nombre })
+}
+
+export async function updateAutoTurnoBase(autoId, turnoBase) {
+  return supabase.from('autos').update({ turno_base: turnoBase }).eq('id', autoId)
+}
+
+export async function getUserMantItems() {
+  return supabase.from('user_mant_items').select('*').order('nombre')
+}
+
+export async function createMantItem(nombre, frecuenciaKms) {
+  const user_id = await uid()
+  return supabase.from('user_mant_items').insert({ user_id, nombre, frecuencia_kms: frecuenciaKms })
+}
+
+export async function deleteMantItem(id) {
+  return supabase.from('user_mant_items').delete().eq('id', id)
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -76,7 +104,7 @@ export async function getConfig() {
     supabase.from('config').select('*'),
     supabase.from('autos').select('*'),
     supabase.from('choferes').select('*'),
-    supabase.from('mantenimiento_items').select('*'),
+    supabase.from('user_mant_items').select('*'),
   ])
   const cfg = {}
   for (const row of configRes.data || []) cfg[row.clave] = row.valor
@@ -130,6 +158,7 @@ export async function getResumen() {
   let totalSemana = 0, totalMes = 0
 
   for (const auto of cfg.autos) {
+    const autoTurnoBase = auto.turno_base || cfg.turno_base
     const choferesAuto = cfg.choferes.filter(c => c.auto_id === auto.id)
     const gastosAuto = gastos.filter(g => g.auto_id === auto.id)
     const gastosMes = gastosAuto.reduce((s, g) => s + parseFloat(g.monto), 0)
@@ -150,7 +179,6 @@ export async function getResumen() {
         const ds = d.toISOString().split('T')[0]
         const monto = turnosMap[ds] || 0
         const esFranco = isFranco(d, chofer.id, cfg.franco_weekday, francosMap)
-
         if (monto > 0) {
           gMes += monto
           if (ds >= lunesStr) gSem += monto
@@ -173,8 +201,8 @@ export async function getResumen() {
 
     resultado[auto.id] = {
       nombre: auto.nombre,
+      turno_base: autoTurnoBase,
       kms_actuales: kmsAct,
-      turno_base: cfg.turno_base,
       ganancias: { semana: ganSemana, mes: ganMes, gastos_mes: gastosMes, neto_mes: ganMes - gastosMes },
       deudas: deudasPorChofer,
       mantenimiento: mantStatus,
@@ -188,12 +216,8 @@ export async function getResumen() {
   }
 }
 
-const MANT_PERMITIDOS = ['distribuc', 'aceite']
-
 function calcMantStatus(items, realizados, kmsAct) {
-  return items.filter(item =>
-    MANT_PERMITIDOS.some(k => item.nombre?.toLowerCase().includes(k))
-  ).map(item => {
+  return items.map(item => {
     const servicios = realizados.filter(r => r.tipo === item.id)
     const ultimoKms = servicios.length > 0 ? Math.max(...servicios.map(s => s.kms_en_service || 0)) : 0
     const proximo = ultimoKms + item.frecuencia_kms
@@ -238,6 +262,7 @@ export async function getCalendario(year, month) {
 
   const resultado = {}
   for (const auto of cfg.autos) {
+    const autoTurnoBase = auto.turno_base || cfg.turno_base
     const choferesAuto = cfg.choferes.filter(c => c.auto_id === auto.id)
     const dias = {}
 
@@ -251,11 +276,10 @@ export async function getCalendario(year, month) {
         const monto = turnosMap[chofer.id]?.[ds] ?? null
         let estado
         if (franco) estado = 'franco'
-        else if (monto !== null && monto >= cfg.turno_base) estado = 'completo'
+        else if (monto !== null && monto >= autoTurnoBase) estado = 'completo'
         else if (monto !== null && monto > 0) estado = 'parcial'
         else if (ds < hoy) estado = 'debe'
         else estado = 'futuro'
-
         diaInfo[chofer.id] = { nombre: chofer.nombre, estado, monto, franco_manual: francosMap[chofer.id]?.has(ds) }
       }
       dias[ds] = diaInfo
@@ -263,6 +287,7 @@ export async function getCalendario(year, month) {
 
     resultado[auto.id] = {
       nombre: auto.nombre,
+      turno_base: autoTurnoBase,
       choferes: Object.fromEntries(choferesAuto.map(c => [c.id, c.nombre])),
       dias,
     }
@@ -276,7 +301,6 @@ export async function upsertTurno(chofer_id, fecha, monto) {
   const user_id = await uid()
   return supabase.from('turnos').upsert({ user_id, chofer_id, fecha, monto }, { onConflict: 'chofer_id,fecha' })
 }
-
 export async function deleteTurno(chofer_id, fecha) {
   return supabase.from('turnos').delete().eq('chofer_id', chofer_id).eq('fecha', fecha)
 }
@@ -286,7 +310,6 @@ export async function marcarFranco(chofer_id, fecha, motivo = 'franco_especial')
   const user_id = await uid()
   return supabase.from('francos').upsert({ user_id, chofer_id, fecha, motivo }, { onConflict: 'chofer_id,fecha' })
 }
-
 export async function quitarFranco(chofer_id, fecha) {
   const user_id = await uid()
   const { data } = await supabase.from('francos').select('id,motivo').eq('chofer_id', chofer_id).eq('fecha', fecha).single()
@@ -301,11 +324,9 @@ export async function insertGasto(auto_id, descripcion, monto, categoria, fecha)
   const user_id = await uid()
   return supabase.from('gastos').insert({ user_id, auto_id, descripcion, monto, categoria, fecha })
 }
-
 export async function deleteGasto(id) {
   return supabase.from('gastos').delete().eq('id', id)
 }
-
 export async function getGastos(auto_id = null) {
   let q = supabase.from('gastos').select('*, autos(nombre)').order('fecha', { ascending: false })
   if (auto_id) q = q.eq('auto_id', auto_id)
@@ -338,16 +359,13 @@ function getLunes(d) {
 function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const ds = d.toISOString().split('T')[0]
   const francoData = francosMap[chofer_id]
-
   if (francoData instanceof Map) {
     if (francoData.get(ds) === 'no_franco') return false
     if (francoData.has(ds)) return true
   }
-
   if (francoData instanceof Set) {
     if (francoData.has(ds)) return true
   }
-
   const dowLunes = (d.getDay() + 6) % 7
   return dowLunes === parseInt(franco_weekday)
 }

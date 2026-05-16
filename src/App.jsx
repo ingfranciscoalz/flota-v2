@@ -5,6 +5,8 @@ import {
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
+  createAuto, createChofer, updateAutoTurnoBase,
+  getUserMantItems, createMantItem, deleteMantItem,
 } from './data'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -135,6 +137,7 @@ export default function App() {
     { id: 'resumen',    label: 'Resumen',    icon: <GridIcon /> },
     { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
     { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
+    { id: 'flota',      label: 'Flota',      icon: <FleetIcon /> },
     ...(profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
@@ -159,6 +162,7 @@ export default function App() {
           {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || 50000} />}
           {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} />}
+          {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'admin'      && <AdminScreen showToast={showToast} />}
         </>
       )}
@@ -742,7 +746,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
                   ) : (
                     <>
                       <div className="action-grid">
-                        <button className="action-btn ab-primary" disabled={isSaving} onClick={() => doTurno(cid, turnoBase)}>
+                        <button className="action-btn ab-primary" disabled={isSaving} onClick={() => doTurno(cid, adata.turno_base || turnoBase)}>
                           {saving === cid + 'turno' ? '...' : '✓ Turno completo'}
                         </button>
                         <button className="action-btn ab-franco" disabled={isSaving} onClick={() => doFranco(cid, 'marcar')}>
@@ -881,10 +885,251 @@ function GastosPage({ resumen, showToast }) {
   )
 }
 
+// ── FLOTA PAGE ────────────────────────────────────────────────────────────────
+function FlotaPage({ resumen, showToast, onRefresh }) {
+  const [tab, setTab] = useState('autos')
+  return (
+    <div className="page">
+      <div className="tabs">
+        <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
+        <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
+      </div>
+      {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
+      {tab === 'mant'  && <MantItemsTab showToast={showToast} />}
+    </div>
+  )
+}
+
+function AutosTab({ resumen, showToast, onRefresh }) {
+  const [showNewAuto, setShowNewAuto] = useState(false)
+  const [newAutoNombre, setNewAutoNombre] = useState('')
+  const [newAutoTurno, setNewAutoTurno] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [editingTurno, setEditingTurno] = useState({})
+  const [savingTurno, setSavingTurno] = useState(null)
+  const [showNewChofer, setShowNewChofer] = useState(null)
+  const [newChoferNombre, setNewChoferNombre] = useState('')
+  const [savingChofer, setSavingChofer] = useState(false)
+
+  const autos = resumen?.config?.autos || []
+  const choferes = resumen?.config?.choferes || []
+  const globalTurnoBase = resumen?.config?.turno_base || 50000
+
+  const handleCreateAuto = async () => {
+    if (!newAutoNombre.trim()) return showToast('Ingresá el nombre del auto', 'error')
+    if (!newAutoTurno || parseInt(newAutoTurno) <= 0) return showToast('Ingresá el turno base', 'error')
+    setSaving(true)
+    const { error } = await createAuto(newAutoNombre.trim(), parseInt(newAutoTurno))
+    setSaving(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Auto agregado', 'success')
+    setNewAutoNombre(''); setNewAutoTurno(''); setShowNewAuto(false)
+    onRefresh()
+  }
+
+  const handleUpdateTurno = async (autoId) => {
+    const v = editingTurno[autoId]
+    if (!v || parseInt(v) <= 0) return showToast('Ingresá un turno válido', 'error')
+    setSavingTurno(autoId)
+    const { error } = await updateAutoTurnoBase(autoId, parseInt(v))
+    setSavingTurno(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Turno actualizado', 'success')
+    setEditingTurno(prev => { const n = { ...prev }; delete n[autoId]; return n })
+    onRefresh()
+  }
+
+  const handleCreateChofer = async (autoId) => {
+    if (!newChoferNombre.trim()) return showToast('Ingresá el nombre del chofer', 'error')
+    setSavingChofer(true)
+    const { error } = await createChofer(autoId, newChoferNombre.trim())
+    setSavingChofer(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Chofer agregado', 'success')
+    setNewChoferNombre(''); setShowNewChofer(null)
+    onRefresh()
+  }
+
+  return (
+    <>
+      {autos.map(auto => {
+        const autoChoferes = choferes.filter(c => c.auto_id === auto.id)
+        const turnoActual = auto.turno_base || globalTurnoBase
+        const turnoVal = editingTurno[auto.id] ?? ''
+        return (
+          <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span className="auto-tag tag-auto">{auto.nombre}</span>
+            </div>
+
+            <div className="stitle" style={{ marginTop: 0 }}>Turno base</div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              <input className="form-input" type="number" inputMode="numeric"
+                placeholder={`$${turnoActual.toLocaleString('es-AR')}`}
+                value={turnoVal}
+                onChange={e => setEditingTurno(prev => ({ ...prev, [auto.id]: e.target.value }))}
+                style={{ flex: 1, fontFamily: "'DM Mono',monospace" }}
+              />
+              <button className="kms-btn"
+                disabled={savingTurno === auto.id || !turnoVal}
+                onClick={() => handleUpdateTurno(auto.id)}>
+                {savingTurno === auto.id ? '...' : 'OK'}
+              </button>
+            </div>
+
+            <div className="stitle">Choferes</div>
+            {autoChoferes.map(c => (
+              <div key={c.id} style={{ padding: '10px 12px', background: '#161616', borderRadius: 10, marginBottom: 6, fontSize: 14, color: '#ccc' }}>
+                {c.nombre}
+              </div>
+            ))}
+            {showNewChofer === auto.id ? (
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <input className="form-input" placeholder="Nombre del chofer"
+                  value={newChoferNombre} onChange={e => setNewChoferNombre(e.target.value)}
+                  style={{ flex: 1 }} autoFocus
+                />
+                <button className="kms-btn" disabled={savingChofer} onClick={() => handleCreateChofer(auto.id)}>
+                  {savingChofer ? '...' : 'OK'}
+                </button>
+                <button onClick={() => { setShowNewChofer(null); setNewChoferNombre('') }}
+                  style={{ padding: '0 14px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 12, color: '#ff4545', cursor: 'pointer', fontSize: 13 }}>
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setShowNewChofer(auto.id)}
+                style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
+                + Agregar chofer
+              </button>
+            )}
+          </div>
+        )
+      })}
+
+      {showNewAuto ? (
+        <div className="card" style={{ marginBottom: 10 }}>
+          <div className="stitle" style={{ marginTop: 0 }}>Nuevo auto</div>
+          <div className="form-group">
+            <input className="form-input" placeholder="Nombre (ej: Corsa Blanco)"
+              value={newAutoNombre} onChange={e => setNewAutoNombre(e.target.value)} autoFocus />
+          </div>
+          <div className="form-group">
+            <input className="form-input" type="number" inputMode="numeric" placeholder="Turno base ($)"
+              value={newAutoTurno} onChange={e => setNewAutoTurno(e.target.value)}
+              style={{ fontFamily: "'DM Mono',monospace" }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={saving} onClick={handleCreateAuto}>
+              {saving ? 'Guardando...' : '✓ Agregar'}
+            </button>
+            <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowNewAuto(false); setNewAutoNombre(''); setNewAutoTurno('') }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="action-btn" style={{ width: '100%', marginTop: 4 }} onClick={() => setShowNewAuto(true)}>
+          + Agregar auto a la flota
+        </button>
+      )}
+    </>
+  )
+}
+
+function MantItemsTab({ showToast }) {
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [nombre, setNombre] = useState('')
+  const [frecuencia, setFrecuencia] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
+
+  const reload = async () => {
+    setLoading(true)
+    const { data } = await getUserMantItems()
+    setItems(data || [])
+    setLoading(false)
+  }
+  useEffect(() => { reload() }, [])
+
+  const handleCreate = async () => {
+    if (!nombre.trim()) return showToast('Ingresá el nombre', 'error')
+    if (!frecuencia || parseInt(frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
+    setSaving(true)
+    const { error } = await createMantItem(nombre.trim(), parseInt(frecuencia))
+    setSaving(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Item agregado', 'success')
+    setNombre(''); setFrecuencia(''); setShowForm(false)
+    reload()
+  }
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>
+
+  return (
+    <>
+      {items.length === 0 && !showForm && (
+        <div className="loading" style={{ padding: '40px 0' }}>Sin items de mantenimiento</div>
+      )}
+      {items.map(item => (
+        <div key={item.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
+              Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
+            </div>
+          </div>
+          <button className="gasto-del-btn" disabled={deletingId === item.id}
+            onClick={async () => {
+              setDeletingId(item.id)
+              const { error } = await deleteMantItem(item.id)
+              setDeletingId(null)
+              if (error) return showToast('⚠ ' + error.message, 'error')
+              showToast('✓ Item eliminado', 'success')
+              setItems(prev => prev.filter(x => x.id !== item.id))
+            }}>
+            {deletingId === item.id ? '...' : '✕'}
+          </button>
+        </div>
+      ))}
+
+      {showForm ? (
+        <div className="card" style={{ marginBottom: 10 }}>
+          <div className="stitle" style={{ marginTop: 0 }}>Nuevo item</div>
+          <div className="form-group">
+            <input className="form-input" placeholder="Nombre (ej: Frenos)" value={nombre}
+              onChange={e => setNombre(e.target.value)} autoFocus />
+          </div>
+          <div className="form-group">
+            <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
+              value={frecuencia} onChange={e => setFrecuencia(e.target.value)}
+              style={{ fontFamily: "'DM Mono',monospace" }} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={saving} onClick={handleCreate}>
+              {saving ? 'Guardando...' : '✓ Agregar'}
+            </button>
+            <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowForm(false); setNombre(''); setFrecuencia('') }}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="action-btn" style={{ width: '100%', marginTop: 4 }} onClick={() => setShowForm(true)}>
+          + Agregar item
+        </button>
+      )}
+    </>
+  )
+}
+
 // ── ICONS ─────────────────────────────────────────────────────────────────────
 const GridIcon  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
 const CalIcon   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
 const MoneyIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+const FleetIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 17H5"/><path d="M19 17a2 2 0 0 0 2-2v-4l-2.5-5h-11L5 11v4a2 2 0 0 0 2 2"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/></svg>
 const AdminIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
