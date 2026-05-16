@@ -5,13 +5,17 @@ import {
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
-  createAuto, createChofer, updateAutoTurnoBase, updateChofer,
+  createAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
+  getMonthlyStats, getDeudaHistorica,
 } from './data'
 
 // ── CONSTANTES ────────────────────────────────────────────────────────────────
 const TURNO_BASE_DEFAULT = 50000
 const TOAST_DURATION = 3000
+const DEMO_EMAIL = 'demo@flotaapp.com'
+const DEMO_PASSWORD = 'demo1234'
+const ALERTA_DIAS = 30  // días de anticipación para alertas VTV/seguro
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
@@ -54,6 +58,102 @@ function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, on
   )
 }
 
+// ── BAR CHART ─────────────────────────────────────────────────────────────────
+function BarChart({ data }) {
+  if (!data || data.length === 0) return null
+  const maxVal = Math.max(...data.flatMap(d => [d.turnos, d.gastos]), 1)
+  const H = 110, BW = 14, GAP = 3, SW = 52
+  return (
+    <div style={{ marginTop: 8 }}>
+      <svg viewBox={`0 0 ${data.length * SW} ${H + 30}`} style={{ width: '100%', overflow: 'visible' }}>
+        {data.map((d, i) => {
+          const x = i * SW + SW / 2
+          const hT = Math.max((d.turnos / maxVal) * H, 2)
+          const hG = Math.max((d.gastos / maxVal) * H, 2)
+          const label = MESES[d.mes - 1].slice(0, 3)
+          return (
+            <g key={d.key}>
+              <rect x={x - BW - GAP} y={H - hT} width={BW} height={hT} fill="#276EF1" rx="3" />
+              <rect x={x + GAP} y={H - hG} width={BW} height={hG} fill="#EF4444" rx="3" opacity="0.85" />
+              <text x={x} y={H + 14} textAnchor="middle" fill="#555" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+            </g>
+          )
+        })}
+        <line x1="0" y1={H} x2={data.length * SW} y2={H} stroke="#1C1C1C" strokeWidth="1" />
+      </svg>
+      <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#276EF1' }} />
+          <span style={{ fontSize: 10, color: '#555' }}>Ganancias</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#EF4444' }} />
+          <span style={{ fontSize: 10, color: '#555' }}>Gastos</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── TUTORIAL OVERLAY ──────────────────────────────────────────────────────────
+const TUTORIAL_STEPS = [
+  {
+    icon: '👋',
+    title: '¡Bienvenido a FLOTA!',
+    body: 'En Resumen ves el estado de toda tu flota en tiempo real: ganancias de la semana, del mes, neto después de gastos y alertas de mantenimiento.',
+  },
+  {
+    icon: '📅',
+    title: 'Calendario',
+    body: 'Registrá los turnos de cada chofer día a día. Podés marcar pagos completos, parciales o francos especiales con un tap.',
+  },
+  {
+    icon: '💸',
+    title: 'Gastos',
+    body: 'Cargá todos los gastos de cada auto (combustible, seguro, mantenimiento). El neto del mes se calcula automáticamente.',
+  },
+  {
+    icon: '📊',
+    title: 'Stats',
+    body: 'Analizá la rentabilidad de los últimos 6 meses y controlá la deuda acumulada de cada chofer en lo que va del año.',
+  },
+]
+
+function TutorialOverlay({ onDone }) {
+  const [step, setStep] = useState(0)
+  const isLast = step === TUTORIAL_STEPS.length - 1
+  const s = TUTORIAL_STEPS[step]
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 900, display: 'flex', alignItems: 'flex-end' }}>
+      <div style={{ width: '100%', background: '#0D0D0D', borderRadius: '24px 24px 0 0', padding: '28px 24px 52px', borderTop: '1px solid #1C1C1C' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 24 }}>
+          {TUTORIAL_STEPS.map((_, i) => (
+            <div key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? '#276EF1' : '#2A2A2A', transition: 'width 0.3s' }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 36, marginBottom: 12 }}>{s.icon}</div>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 10, letterSpacing: -0.3 }}>{s.title}</div>
+        <div style={{ fontSize: 14, color: '#888', lineHeight: 1.6, marginBottom: 28 }}>{s.body}</div>
+        <button className="btn-primary" onClick={() => {
+          if (isLast) { localStorage.setItem('flota_tutorial', 'done'); onDone() }
+          else setStep(s => s + 1)
+        }}>
+          {isLast ? 'EMPEZAR A USAR FLOTA' : 'SIGUIENTE'}
+        </button>
+        {step > 0 && (
+          <button onClick={() => setStep(s => s - 1)} className="modal-close" style={{ marginTop: 8 }}>Anterior</button>
+        )}
+        {!isLast && (
+          <button onClick={() => { localStorage.setItem('flota_tutorial', 'done'); onDone() }}
+            style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 12, background: 'none', border: 'none', color: '#444', fontSize: 13, cursor: 'pointer' }}>
+            Saltar tutorial
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app
@@ -65,7 +165,14 @@ export default function App() {
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth() + 1)
   const [loading, setLoading] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const { toast, show: showToast } = useToast()
+
+  useEffect(() => {
+    if (authState === 'app' && !localStorage.getItem('flota_tutorial')) {
+      setShowTutorial(true)
+    }
+  }, [authState])
 
   const handleSession = useCallback(async () => {
     const prof = await getProfile()
@@ -175,6 +282,7 @@ export default function App() {
     { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
     { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
     { id: 'flota',      label: 'Flota',      icon: <FleetIcon /> },
+    { id: 'stats',      label: 'Stats',      icon: <StatsIcon /> },
     ...(profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
@@ -200,6 +308,7 @@ export default function App() {
           {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || 50000} />}
           {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+          {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} />}
           {page === 'admin'      && <AdminScreen showToast={showToast} />}
         </>
       )}
@@ -213,6 +322,7 @@ export default function App() {
       </nav>
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+      {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
     </div>
   )
 }
@@ -264,6 +374,25 @@ function AuthScreen() {
       <button className="btn-primary" disabled={loading} onClick={submit}>
         {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
       </button>
+
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1A1A1A' }}>
+        <div style={{ fontSize: 11, color: '#444', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.5 }}>¿Querés ver cómo funciona?</div>
+        <button
+          style={{ width: '100%', padding: '14px', background: '#091428', color: '#276EF1', border: '1px solid #0D1E42', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
+          disabled={loading}
+          onClick={async () => {
+            setLoading(true); setError(''); setSuccess('')
+            const { error: err } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
+            setLoading(false)
+            if (err) setError('La cuenta demo no está disponible en este momento.')
+          }}
+        >
+          PROBAR DEMO
+        </button>
+        <div style={{ fontSize: 11, color: '#333', textAlign: 'center', marginTop: 8 }}>
+          Sin registro. Solo para explorar la app.
+        </div>
+      </div>
     </div>
   )
 }
@@ -485,6 +614,11 @@ function AdminScreen({ showToast }) {
 }
 
 // ── RESUMEN PAGE ──────────────────────────────────────────────────────────────
+function diasParaVencer(fecha) {
+  if (!fecha) return null
+  return Math.ceil((new Date(fecha) - new Date()) / 86400000)
+}
+
 function ResumenPage({ resumen, showToast, onRefresh }) {
   const [kmsInputs, setKmsInputs] = useState({})
   const [kmsLoading, setKmsLoading] = useState({})
@@ -493,8 +627,39 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
   const { autos, totales } = resumen
   const autoEntries = Object.entries(autos)
 
+  // Alertas VTV / seguro
+  const alertas = (resumen.config?.autos || []).flatMap(auto => {
+    const items = []
+    const dVtv = diasParaVencer(auto.vtv_vence)
+    const dSeg = diasParaVencer(auto.seguro_vence)
+    if (dVtv !== null && dVtv <= ALERTA_DIAS)
+      items.push({ auto: auto.nombre, tipo: 'VTV', dias: dVtv })
+    if (dSeg !== null && dSeg <= ALERTA_DIAS)
+      items.push({ auto: auto.nombre, tipo: 'Seguro', dias: dSeg })
+    return items
+  })
+
   return (
     <div className="page">
+      {/* Botón PDF */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
+        <button onClick={() => window.print()}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #1C1C1C', borderRadius: 10, color: '#555', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+          ↓ Exportar PDF
+        </button>
+      </div>
+
+      {/* Alertas VTV/Seguro */}
+      {alertas.map((a, i) => (
+        <div key={i} className={`alert-banner ${a.dias <= 0 ? 'alert-danger' : 'alert-warn'}`}>
+          <span>{a.dias <= 0 ? '🔴' : '🟡'}</span>
+          <span>
+            <strong>{a.auto}</strong> — {a.tipo}{' '}
+            {a.dias <= 0 ? 'VENCIDO' : `vence en ${a.dias} día${a.dias !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+      ))}
+
       <div className="stitle">Total flota</div>
       <div className="total-banner">
         <div><div className="total-label">Esta semana</div><div className="total-value">{fmt(totales.semana)}</div></div>
@@ -966,10 +1131,22 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   const [editingChoferId, setEditingChoferId] = useState(null)
   const [editChoferNombre, setEditChoferNombre] = useState('')
   const [savingChoferEdit, setSavingChoferEdit] = useState(false)
+  const [vencimientos, setVencimientos] = useState({}) // autoId -> {vtv, seguro}
+  const [savingVenc, setSavingVenc] = useState(null)
 
   const autos = resumen?.config?.autos || []
   const choferes = resumen?.config?.choferes || []
-  const globalTurnoBase = resumen?.config?.turno_base || 50000
+  const globalTurnoBase = resumen?.config?.turno_base || TURNO_BASE_DEFAULT
+
+  const handleSaveVencimientos = async (autoId) => {
+    const v = vencimientos[autoId] || {}
+    setSavingVenc(autoId)
+    const { error } = await updateAutoVencimientos(autoId, v.vtv || null, v.seguro || null)
+    setSavingVenc(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Vencimientos guardados', 'success')
+    onRefresh()
+  }
 
   const handleCreateAuto = async () => {
     if (!newAutoNombre.trim()) return showToast('Ingresá el nombre del auto', 'error')
@@ -1043,6 +1220,29 @@ function AutosTab({ resumen, showToast, onRefresh }) {
                 {savingTurno === auto.id ? '...' : 'OK'}
               </button>
             </div>
+
+            <div className="stitle">VTV y Seguro</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 10, color: '#555', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
+                <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
+                  value={vencimientos[auto.id]?.vtv ?? (auto.vtv_vence || '')}
+                  onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], vtv: e.target.value } }))}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#555', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
+                <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
+                  value={vencimientos[auto.id]?.seguro ?? (auto.seguro_vence || '')}
+                  onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], seguro: e.target.value } }))}
+                />
+              </div>
+            </div>
+            <button className="action-btn ab-primary" style={{ width: '100%', marginBottom: 14 }}
+              disabled={savingVenc === auto.id}
+              onClick={() => handleSaveVencimientos(auto.id)}>
+              {savingVenc === auto.id ? '...' : '✓ Guardar vencimientos'}
+            </button>
 
             <div className="stitle">Choferes</div>
             {autoChoferes.map(c => (
@@ -1374,6 +1574,102 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
   )
 }
 
+// ── STATS PAGE ────────────────────────────────────────────────────────────────
+function StatsPage({ resumen, showToast }) {
+  const [monthlyData, setMonthlyData] = useState(null)
+  const [deuda, setDeuda] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true)
+      try {
+        const cfg = resumen?.config || null
+        const [md, dd] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg)])
+        setMonthlyData(md)
+        setDeuda(dd)
+      } catch (e) {
+        showToast('Error al cargar stats', 'error')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>
+
+  const deudaEntries = deuda ? Object.entries(deuda) : []
+  const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
+
+  // Totales del chart
+  const totalGan = monthlyData?.reduce((s, d) => s + d.turnos, 0) || 0
+  const totalGas = monthlyData?.reduce((s, d) => s + d.gastos, 0) || 0
+
+  return (
+    <div className="page">
+      <div className="stitle">Rentabilidad mensual</div>
+      <div className="card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <div>
+            <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ganancias 6m</div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#276EF1' }}>{fmt(totalGan)}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 6m</div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 6 meses</span>
+          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#276EF1' : '#EF4444' }}>
+            {fmt(totalGan - totalGas)}
+          </span>
+        </div>
+        <BarChart data={monthlyData} />
+      </div>
+
+      <div className="stitle">Deuda acumulada — {new Date().getFullYear()}</div>
+      {deudaEntries.length === 0 ? (
+        <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
+      ) : !hayDeuda ? (
+        <div className="card" style={{ textAlign: 'center', color: '#276EF1', fontSize: 13 }}>✓ Todos los choferes al día</div>
+      ) : (
+        deudaEntries.map(([cid, d]) => (
+          <div key={cid} className="card" style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
+                <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{d.autoNombre}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                {d.diasDebe > 0 ? (
+                  <>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, color: '#EF4444', fontWeight: 700 }}>
+                      {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''}
+                    </div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444' }}>
+                      ~{fmt(d.montoDebe)}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 12, color: '#276EF1', fontWeight: 600 }}>✓ Al día</div>
+                )}
+              </div>
+            </div>
+            {d.ganTotal > 0 && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#276EF1' }}>{fmt(d.ganTotal)}</span>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  )
+}
+
 function MantAutoSelector({ autos, selected, onChange }) {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
@@ -1397,6 +1693,7 @@ const CalIcon   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 const MoneyIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
 const FleetIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 17H5"/><path d="M19 17a2 2 0 0 0 2-2v-4l-2.5-5h-11L5 11v4a2 2 0 0 0 2 2"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/></svg>
 const AdminIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+const StatsIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function chunk(arr, size) {
@@ -1543,4 +1840,18 @@ const globalStyles = `
   .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;background:none;border:none;cursor:pointer;color:#444;transition:color 0.2s}
   .bnav-btn svg{width:22px;height:22px}.bnav-label{font-size:9px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
   .bnav-btn.active{color:#fff}
+
+  .alert-warn{background:#1A1200;border-color:#3A2800;color:#F59E0B}
+  .alert-danger{background:#1A0000;border-color:#3A0000;color:#EF4444}
+
+  @media print {
+    .no-print,.header,.bottom-nav,.toast,.kms-row,.sync-btn,.stitle,.tabs,.action-btn,.gasto-del-btn,.modal-overlay{display:none!important}
+    body{background:#fff!important;color:#000!important}
+    .page{padding:16px!important}
+    .card{background:#f9f9f9!important;border-color:#ddd!important;break-inside:avoid;margin-bottom:12px}
+    .gan-cell,.neto-row,.metric,.total-banner{background:#f0f0f0!important;border-color:#ddd!important}
+    .gan-value,.neto-value,.metric-value,.total-value{color:#000!important}
+    .gan-label,.neto-label,.metric-label,.total-label{color:#666!important}
+    .auto-tag{background:#eee!important;color:#000!important;border-color:#ccc!important}
+  }
 `

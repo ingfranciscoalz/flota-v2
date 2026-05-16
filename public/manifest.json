@@ -1,0 +1,14 @@
+{
+  "name": "FLOTA — Gestión de flota",
+  "short_name": "FLOTA",
+  "description": "Gestión de flotas de remises. Turnos, gastos, mantenimiento y rentabilidad.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

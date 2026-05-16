@@ -105,6 +105,13 @@ export async function updateAutoTurnoBase(autoId, turnoBase) {
   return supabase.from('autos').update({ turno_base: turnoBase }).eq('id', autoId)
 }
 
+export async function updateAutoVencimientos(autoId, vtv_vence, seguro_vence) {
+  return supabase.from('autos').update({
+    vtv_vence: vtv_vence || null,
+    seguro_vence: seguro_vence || null,
+  }).eq('id', autoId)
+}
+
 export async function updateChofer(id, nombre) {
   return supabase.from('choferes').update({ nombre }).eq('id', id)
 }
@@ -382,6 +389,86 @@ export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, 
   const user_id = await uid()
   await updateKms(auto_id, kms_en_service)
   return supabase.from('mantenimiento').insert({ user_id, auto_id, tipo, kms_en_service, costo, fecha })
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+export async function getMonthlyStats() {
+  const now = new Date()
+  const since = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+
+  const [turnosRes, gastosRes] = await Promise.all([
+    supabase.from('turnos').select('fecha, monto').gte('fecha', since),
+    supabase.from('gastos').select('fecha, monto').gte('fecha', since),
+  ])
+
+  const meses = {}
+  for (let i = 0; i <= 5; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    meses[key] = { key, mes: d.getMonth() + 1, año: d.getFullYear(), turnos: 0, gastos: 0 }
+  }
+
+  for (const t of turnosRes.data || []) {
+    const k = t.fecha.slice(0, 7)
+    if (meses[k]) meses[k].turnos += parseFloat(t.monto)
+  }
+  for (const g of gastosRes.data || []) {
+    const k = g.fecha.slice(0, 7)
+    if (meses[k]) meses[k].gastos += parseFloat(g.monto)
+  }
+
+  return Object.values(meses)
+}
+
+export async function getDeudaHistorica(cfg = null) {
+  const hoy = new Date()
+  const inicioAño = `${hoy.getFullYear()}-01-01`
+  const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1)
+  const ayerStr = ayer.toISOString().split('T')[0]
+
+  const [resolvedCfg, turnosRes, francosRes] = await Promise.all([
+    cfg ? Promise.resolve(cfg) : getConfig(),
+    supabase.from('turnos').select('chofer_id, fecha, monto').gte('fecha', inicioAño),
+    supabase.from('francos').select('chofer_id, fecha, motivo').gte('fecha', inicioAño),
+  ])
+
+  const turnosMap = {}
+  for (const t of turnosRes.data || []) {
+    if (!turnosMap[t.chofer_id]) turnosMap[t.chofer_id] = {}
+    turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
+  }
+  const francosMap = {}
+  for (const f of francosRes.data || []) {
+    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
+    francosMap[f.chofer_id].set(f.fecha, f.motivo || 'franco_especial')
+  }
+
+  const resultado = {}
+  for (const auto of resolvedCfg.autos) {
+    const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
+    for (const chofer of resolvedCfg.choferes.filter(c => c.auto_id === auto.id)) {
+      let diasDebe = 0, ganTotal = 0
+      const d = new Date(inicioAño)
+      while (d.toISOString().split('T')[0] <= ayerStr) {
+        const ds = d.toISOString().split('T')[0]
+        const pagado = turnosMap[chofer.id]?.[ds]
+        if (pagado) {
+          ganTotal += pagado
+        } else if (!isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap)) {
+          diasDebe++
+        }
+        d.setDate(d.getDate() + 1)
+      }
+      resultado[chofer.id] = {
+        nombre: chofer.nombre,
+        autoNombre: auto.nombre,
+        diasDebe,
+        montoDebe: diasDebe * autoTurnoBase,
+        ganTotal,
+      }
+    }
+  }
+  return resultado
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
