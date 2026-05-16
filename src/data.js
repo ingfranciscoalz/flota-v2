@@ -105,6 +105,24 @@ export async function updateAutoTurnoBase(autoId, turnoBase) {
   return supabase.from('autos').update({ turno_base: turnoBase }).eq('id', autoId)
 }
 
+export async function deleteAuto(autoId) {
+  // Obtener choferes del auto para borrar turnos y francos
+  const { data: choferesData } = await supabase.from('choferes').select('id').eq('auto_id', autoId)
+  const choferIds = (choferesData || []).map(c => c.id)
+
+  if (choferIds.length > 0) {
+    await supabase.from('turnos').delete().in('chofer_id', choferIds)
+    await supabase.from('francos').delete().in('chofer_id', choferIds)
+    await supabase.from('choferes').delete().in('id', choferIds)
+  }
+
+  await supabase.from('gastos').delete().eq('auto_id', autoId)
+  await supabase.from('mantenimiento').delete().eq('auto_id', autoId)
+  await supabase.from('kms').delete().eq('auto_id', autoId)
+
+  return supabase.from('autos').delete().eq('id', autoId)
+}
+
 export async function updateAutoVencimientos(autoId, vtv_vence, seguro_vence) {
   return supabase.from('autos').update({
     vtv_vence: vtv_vence || null,

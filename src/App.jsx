@@ -5,7 +5,7 @@ import {
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
-  createAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
+  createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
   getMonthlyStats, getDeudaHistorica,
 } from './data'
@@ -43,16 +43,16 @@ function useToast() {
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
-function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, onCancel }) {
+function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, onCancel, loading = false }) {
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !loading && onCancel()}>
       <div className="modal-sheet">
         <div className="modal-title">{title}</div>
         {message && <div style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>{message}</div>}
-        <button className="btn-primary ab-danger" style={{ marginBottom: 10 }} onClick={onConfirm}>
-          {confirmLabel}
+        <button className="btn-primary ab-danger" style={{ marginBottom: 10 }} onClick={onConfirm} disabled={loading}>
+          {loading ? 'Eliminando...' : confirmLabel}
         </button>
-        <button className="modal-close" onClick={onCancel}>Cancelar</button>
+        <button className="modal-close" onClick={onCancel} disabled={loading}>Cancelar</button>
       </div>
     </div>
   )
@@ -1175,6 +1175,8 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   const [savingChoferEdit, setSavingChoferEdit] = useState(false)
   const [vencimientos, setVencimientos] = useState({}) // autoId -> {vtv, seguro}
   const [savingVenc, setSavingVenc] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, nombre }
+  const [deletingAuto, setDeletingAuto] = useState(false)
 
   const autos = resumen?.config?.autos || []
   const choferes = resumen?.config?.choferes || []
@@ -1214,6 +1216,17 @@ function AutosTab({ resumen, showToast, onRefresh }) {
     onRefresh()
   }
 
+  const handleDeleteAutoConfirmed = async () => {
+    if (!deleteConfirm) return
+    setDeletingAuto(true)
+    const { error } = await deleteAuto(deleteConfirm.id)
+    setDeletingAuto(false)
+    setDeleteConfirm(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Auto eliminado', 'success')
+    onRefresh()
+  }
+
   const handleCreateChofer = async (autoId) => {
     if (!newChoferNombre.trim()) return showToast('Ingresá el nombre del chofer', 'error')
     setSavingChofer(true)
@@ -1238,6 +1251,15 @@ function AutosTab({ resumen, showToast, onRefresh }) {
 
   return (
     <>
+      {deleteConfirm && (
+        <ConfirmModal
+          title={`Eliminar ${deleteConfirm.nombre}`}
+          message="Se borrarán todos sus choferes, turnos, gastos y mantenimiento. Esta acción no se puede deshacer."
+          onConfirm={handleDeleteAutoConfirmed}
+          onCancel={() => setDeleteConfirm(null)}
+          loading={deletingAuto}
+        />
+      )}
       {autos.map(auto => {
         const autoChoferes = choferes.filter(c => c.auto_id === auto.id)
         const turnoActual = auto.turno_base || globalTurnoBase
@@ -1246,6 +1268,11 @@ function AutosTab({ resumen, showToast, onRefresh }) {
           <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <span className="auto-tag tag-auto">{auto.nombre}</span>
+              <button
+                onClick={() => setDeleteConfirm({ id: auto.id, nombre: auto.nombre })}
+                style={{ background: 'none', border: 'none', color: '#555', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
+                title="Eliminar auto"
+              >🗑</button>
             </div>
 
             <div className="stitle" style={{ marginTop: 0 }}>Turno base</div>
