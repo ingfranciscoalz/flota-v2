@@ -422,14 +422,20 @@ export async function getMonthlyStats() {
 
 export async function getDeudaHistorica(cfg = null) {
   const hoy = new Date()
-  const inicioAño = `${hoy.getFullYear()}-01-01`
   const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1)
   const ayerStr = ayer.toISOString().split('T')[0]
 
-  const [resolvedCfg, turnosRes, francosRes] = await Promise.all([
-    cfg ? Promise.resolve(cfg) : getConfig(),
-    supabase.from('turnos').select('chofer_id, fecha, monto').gte('fecha', inicioAño),
-    supabase.from('francos').select('chofer_id, fecha, motivo').gte('fecha', inicioAño),
+  const resolvedCfg = cfg || await getConfig()
+
+  // Fecha mínima = el auto más antiguo de la flota
+  const fechaMinima = resolvedCfg.autos.reduce((min, auto) => {
+    const d = auto.created_at ? auto.created_at.split('T')[0] : ayerStr
+    return d < min ? d : min
+  }, ayerStr)
+
+  const [turnosRes, francosRes] = await Promise.all([
+    supabase.from('turnos').select('chofer_id, fecha, monto').gte('fecha', fechaMinima),
+    supabase.from('francos').select('chofer_id, fecha, motivo').gte('fecha', fechaMinima),
   ])
 
   const turnosMap = {}
@@ -446,9 +452,12 @@ export async function getDeudaHistorica(cfg = null) {
   const resultado = {}
   for (const auto of resolvedCfg.autos) {
     const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
+    // Arrancar desde la fecha de creación del auto, no desde enero
+    const inicioAuto = auto.created_at ? auto.created_at.split('T')[0] : fechaMinima
+
     for (const chofer of resolvedCfg.choferes.filter(c => c.auto_id === auto.id)) {
       let diasDebe = 0, ganTotal = 0
-      const d = new Date(inicioAño)
+      const d = new Date(inicioAuto)
       while (d.toISOString().split('T')[0] <= ayerStr) {
         const ds = d.toISOString().split('T')[0]
         const pagado = turnosMap[chofer.id]?.[ds]
