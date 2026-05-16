@@ -770,8 +770,16 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
 
       <div className="stitle">Total flota</div>
       <div className="total-banner">
-        <div><div className="total-label">Esta semana</div><div className="total-value">{fmt(totales.semana)}</div></div>
-        <div style={{ textAlign: 'right' }}><div className="total-label">Este mes</div><div className="total-value">{fmt(totales.mes)}</div></div>
+        <div>
+          <div className="total-label">Esta semana</div>
+          <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
+          <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="total-label">Este mes</div>
+          <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
+          <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
+        </div>
       </div>
 
       {autoEntries.length === 0 && (

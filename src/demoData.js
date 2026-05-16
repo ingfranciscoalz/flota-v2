@@ -31,7 +31,7 @@ export function getDemoResumen() {
         nombre: 'Corsa Blanco',
         turno_base: 50000,
         kms_actuales: 76500,
-        ganancias: { semana: 200000, mes: 550000, gastos_mes: 37000, neto_mes: 513000 },
+        ganancias: { semana: 200000, mes: 550000, gastos_semana: 8500, gastos_mes: 37000, neto_semana: 191500, neto_mes: 513000 },
         deudas: {
           dc1: { nombre: 'Carlos M.',  dias: [],                        gan_semana: 100000, gan_mes: 350000 },
           dc2: { nombre: 'Roberto P.', dias: DEBE_MAP.dc2,              gan_semana: 100000, gan_mes: 200000 },
@@ -45,7 +45,7 @@ export function getDemoResumen() {
         nombre: 'Gol Negro',
         turno_base: 48000,
         kms_actuales: 143200,
-        ganancias: { semana: 192000, mes: 480000, gastos_mes: 41500, neto_mes: 438500 },
+        ganancias: { semana: 192000, mes: 480000, gastos_semana: 9800, gastos_mes: 41500, neto_semana: 182200, neto_mes: 438500 },
         deudas: {
           dc3: { nombre: 'Miguel A.', dias: DEBE_MAP.dc3,              gan_semana: 96000, gan_mes: 336000 },
           dc4: { nombre: 'Diego F.',  dias: DEBE_MAP.dc4,              gan_semana: 96000, gan_mes: 144000 },
@@ -56,7 +56,7 @@ export function getDemoResumen() {
         ],
       },
     },
-    totales: { semana: 392000, mes: 1030000 },
+    totales: { semana: 392000, mes: 1030000, neto_semana: 373700, neto_mes: 951500 },
     config: {
       turno_base: 50000,
       franco_weekday: FRANCO_WEEKDAY,

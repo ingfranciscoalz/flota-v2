@@ -222,7 +222,8 @@ export async function getResumen(cfg = null) {
     const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
     const choferesAuto = resolvedCfg.choferes.filter(c => c.auto_id === auto.id)
     const gastosAuto = gastos.filter(g => g.auto_id === auto.id)
-    const gastosMes = gastosAuto.reduce((s, g) => s + parseFloat(g.monto), 0)
+    const gastosMes    = gastosAuto.reduce((s, g) => s + parseFloat(g.monto), 0)
+    const gastosSemana = gastosAuto.filter(g => g.fecha >= lunesStr).reduce((s, g) => s + parseFloat(g.monto), 0)
 
     let ganSemana = 0, ganMes = 0
     const deudasPorChofer = {}
@@ -265,15 +266,22 @@ export async function getResumen(cfg = null) {
       nombre: auto.nombre,
       turno_base: autoTurnoBase,
       kms_actuales: kmsAct,
-      ganancias: { semana: ganSemana, mes: ganMes, gastos_mes: gastosMes, neto_mes: ganMes - gastosMes },
+      ganancias: {
+        semana: ganSemana, mes: ganMes,
+        gastos_semana: gastosSemana, gastos_mes: gastosMes,
+        neto_semana: ganSemana - gastosSemana, neto_mes: ganMes - gastosMes,
+      },
       deudas: deudasPorChofer,
       mantenimiento: mantStatus,
     }
   }
 
+  const totalNetoSemana = Object.values(resultado).reduce((s, a) => s + (a.ganancias.neto_semana || 0), 0)
+  const totalNetoMes    = Object.values(resultado).reduce((s, a) => s + (a.ganancias.neto_mes    || 0), 0)
+
   return {
     autos: resultado,
-    totales: { semana: totalSemana, mes: totalMes },
+    totales: { semana: totalSemana, mes: totalMes, neto_semana: totalNetoSemana, neto_mes: totalNetoMes },
     config: resolvedCfg,
   }
 }
