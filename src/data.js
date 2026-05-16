@@ -63,7 +63,7 @@ export async function createFleet({ turnoBase, francoWeekday, autos }) {
 
   // Crear items de mantenimiento por defecto
   await supabase.from('user_mant_items').insert([
-    { user_id, nombre: 'Aceite y filtros', frecuencia_kms: 7500 },
+    { user_id, nombre: 'Aceite y filtros', frecuencia_kms: 10000 },
     { user_id, nombre: 'Distribución', frecuencia_kms: 60000 },
   ])
 

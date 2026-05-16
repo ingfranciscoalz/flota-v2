@@ -568,6 +568,7 @@ function MantModal({ autoNombre, item, kmsAct, onClose, onConfirm }) {
 // ── CALENDARIO PAGE ───────────────────────────────────────────────────────────
 function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase }) {
   const [dayModal, setDayModal] = useState(null)
+  const [filterAuto, setFilterAuto] = useState(null)
   if (!cal) return <div className="loading"><div className="spinner" /></div>
 
   const todayStr = today()
@@ -576,9 +577,11 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   firstDow = (firstDow + 6) % 7
 
   const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
-  const choferesList = autoEntries.flatMap(([aid, adata]) =>
-    Object.entries(adata.choferes || {}).map(([cid, cnombre]) => ({ autoId: aid, choferId: cid, nombre: cnombre, autoNombre: adata.nombre }))
-  )
+  const choferesList = autoEntries
+    .filter(([aid]) => !filterAuto || filterAuto === aid)
+    .flatMap(([aid, adata]) =>
+      Object.entries(adata.choferes || {}).map(([cid, cnombre]) => ({ autoId: aid, choferId: cid, nombre: cnombre, autoNombre: adata.nombre }))
+    )
 
   const cells = []
   for (let i = 0; i < firstDow; i++) cells.push(null)
@@ -596,6 +599,20 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           <div key={lbl} className="leg-item"><div className="leg-dot" style={{ background: bg }} />{lbl}</div>
         ))}
       </div>
+
+      {autoEntries.length > 1 && (
+        <div className="filter-chips">
+          <button className={`filter-chip ${!filterAuto ? 'fchip-active' : ''}`} onClick={() => setFilterAuto(null)}>
+            Todos
+          </button>
+          {autoEntries.map(([aid, adata]) => (
+            <button key={aid} className={`filter-chip ${filterAuto === aid ? 'fchip-active' : ''}`} onClick={() => setFilterAuto(filterAuto === aid ? null : aid)}>
+              {adata.nombre}
+            </button>
+          ))}
+        </div>
+      )}
+
       <table className="cal-table"><thead><tr>{DIAS_CORTOS.map(d => <th key={d} className="cal-th">{d}</th>)}</tr></thead>
         <tbody>
           {chunk(cells, 7).map((week, wi) => (
@@ -1198,6 +1215,11 @@ const globalStyles = `
   .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
   .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#555}
   .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+
+  .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .filter-chip{padding:6px 14px;border-radius:100px;border:1px solid #1C1C1C;background:#111;color:#555;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+  .filter-chip:active{opacity:0.7}
+  .fchip-active{background:#fff;color:#000;border-color:#fff}
 
   .cal-table{width:100%;border-collapse:separate;border-spacing:3px}
   .cal-th{font-family:'DM Mono',monospace;font-size:10px;color:#444;text-align:center;padding:4px 2px;font-weight:500}
