@@ -809,7 +809,7 @@ function MantModal({ autoNombre, item, kmsAct, onClose, onConfirm }) {
 }
 
 // ── CALENDARIO PAGE ───────────────────────────────────────────────────────────
-function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase }) {
+function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode }) {
   const [dayModal, setDayModal] = useState(null)
   const [filterAuto, setFilterAuto] = useState(null)
   if (!cal) return <div className="loading"><div className="spinner" /></div>
