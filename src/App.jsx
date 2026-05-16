@@ -1989,9 +1989,9 @@ const globalStyles = `
 
   .alert-banner{background:#1A0A00;border:1px solid #3A1800;border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:13px}
 
-  .total-banner{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:20px 22px;display:flex;justify-content:space-between;margin-bottom:16px}
+  .total-banner{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:18px 20px;display:flex;align-items:stretch;margin-bottom:16px;overflow:hidden}
   .total-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-  .total-value{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:#5AACFF}
+  .total-value{font-family:'DM Mono',monospace;font-size:min(22px,5.5vw);font-weight:500;color:#5AACFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   .gan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
   .gan-cell{background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;padding:12px 14px}
