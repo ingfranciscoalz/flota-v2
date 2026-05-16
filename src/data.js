@@ -37,6 +37,10 @@ export async function setUserActivo(id, activo) {
   return supabase.rpc('admin_set_activo', { target_id: id, new_activo: activo })
 }
 
+export async function addPayment(id) {
+  return supabase.rpc('admin_add_payment', { target_id: id })
+}
+
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
 export async function createFleet({ turnoBase, francoWeekday, autos }) {
   const user_id = await uid()

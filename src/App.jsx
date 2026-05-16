@@ -4,7 +4,7 @@ import {
   getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
-  getAdminUsers, setUserActivo,
+  getAdminUsers, setUserActivo, addPayment,
 } from './data'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -45,6 +45,9 @@ export default function App() {
     const prof = await getProfile()
     setProfile(prof)
     if (!prof?.activo) { setAuthState('inactive'); return }
+    if (prof?.activo_hasta && new Date(prof.activo_hasta) < new Date()) {
+      setAuthState('inactive'); return
+    }
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -336,13 +339,18 @@ function OnboardingScreen({ showToast, onComplete }) {
 }
 
 // ── ADMIN SCREEN ──────────────────────────────────────────────────────────────
+function diasRestantes(activo_hasta) {
+  if (!activo_hasta) return null
+  const diff = new Date(activo_hasta) - new Date()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
 function AdminScreen({ showToast }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    getAdminUsers().then(({ data }) => { setUsers(data || []); setLoading(false) })
-  }, [])
+  const reload = () => getAdminUsers().then(({ data }) => { setUsers(data || []); setLoading(false) })
+  useEffect(() => { reload() }, [])
 
   return (
     <div className="page">
@@ -352,33 +360,67 @@ function AdminScreen({ showToast }) {
       ) : users.length === 0 ? (
         <div className="loading">Sin usuarios registrados</div>
       ) : (
-        users.map(u => (
-          <div key={u.id} className="card" style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, wordBreak: 'break-all' }}>{u.nombre}</div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: '#555' }}>
-                    {new Date(u.created_at).toLocaleDateString('es-AR')}
-                  </span>
-                  {u.is_admin && <span style={{ fontSize: 10, background: '#1a1a00', color: '#e8ff47', border: '1px solid #3a3a00', borderRadius: 4, padding: '1px 6px' }}>Admin</span>}
+        users.map(u => {
+          const dias = diasRestantes(u.activo_hasta)
+          const expirado = dias !== null && dias <= 0
+          const pocoTiempo = dias !== null && dias > 0 && dias <= 5
+          const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#47ff8a'
+
+          return (
+            <div key={u.id} className="card" style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-all' }}>{u.nombre}</div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, color: '#555' }}>
+                      Registro: {new Date(u.created_at).toLocaleDateString('es-AR')}
+                    </span>
+                    {u.is_admin && <span style={{ fontSize: 10, background: '#1a1a00', color: '#e8ff47', border: '1px solid #3a3a00', borderRadius: 4, padding: '1px 6px' }}>Admin</span>}
+                  </div>
+                  {dias !== null && (
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: '#555' }}>Vence:</span>
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: diasColor }}>
+                        {expirado ? 'VENCIDO' : `${dias} día${dias !== 1 ? 's' : ''}`}
+                      </span>
+                      {u.activo_hasta && (
+                        <span style={{ fontSize: 10, color: '#555' }}>
+                          ({new Date(u.activo_hasta).toLocaleDateString('es-AR')})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                  <button
+                    className="action-btn ab-primary"
+                    style={{ width: 'auto', padding: '7px 12px', fontSize: 12 }}
+                    onClick={async () => {
+                      const { error } = await addPayment(u.id)
+                      if (error) return showToast('⚠ ' + error.message, 'error')
+                      showToast('✓ +31 días agregados', 'success')
+                      reload()
+                    }}
+                  >
+                    + 31 días
+                  </button>
+                  <button
+                    className={`action-btn ${u.activo && !expirado ? 'ab-quitar' : 'ab-franco'}`}
+                    style={{ width: 'auto', padding: '7px 12px', fontSize: 12 }}
+                    onClick={async () => {
+                      const { error } = await setUserActivo(u.id, !(u.activo && !expirado))
+                      if (error) return showToast('⚠ ' + error.message, 'error')
+                      showToast(u.activo && !expirado ? '✕ Desactivado' : '✓ Activado', 'success')
+                      reload()
+                    }}
+                  >
+                    {u.activo && !expirado ? 'Desactivar' : 'Activar'}
+                  </button>
                 </div>
               </div>
-              <button
-                className={`action-btn ${u.activo ? 'ab-quitar' : 'ab-primary'}`}
-                style={{ width: 'auto', padding: '8px 14px', flexShrink: 0 }}
-                onClick={async () => {
-                  const { error } = await setUserActivo(u.id, !u.activo)
-                  if (error) return showToast('⚠ ' + error.message, 'error')
-                  setUsers(prev => prev.map(x => x.id === u.id ? { ...x, activo: !x.activo } : x))
-                  showToast(u.activo ? '✕ Desactivado' : '✓ Activado', 'success')
-                }}
-              >
-                {u.activo ? 'Desactivar' : 'Activar'}
-              </button>
             </div>
-          </div>
-        ))
+          )
+        })
       )}
     </div>
   )
