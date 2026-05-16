@@ -30,11 +30,11 @@ export async function checkFleet() {
 
 // ── ADMIN ─────────────────────────────────────────────────────────────────────
 export async function getAdminUsers() {
-  return supabase.from('profiles').select('*').order('created_at')
+  return supabase.rpc('get_all_profiles')
 }
 
 export async function setUserActivo(id, activo) {
-  return supabase.from('profiles').update({ activo }).eq('id', id)
+  return supabase.rpc('admin_set_activo', { target_id: id, new_activo: activo })
 }
 
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
