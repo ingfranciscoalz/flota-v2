@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <radialGradient id="glow" cx="22%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#276EF1" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#0A0A0A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1200" height="630" fill="#0A0A0A"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <rect x="1" y="1" width="1198" height="628" fill="none" stroke="#1C1C1C" stroke-width="2"/>
+
+  <!-- FLOTA. -->
+  <text x="80" y="290" font-family="Arial Black, Helvetica, sans-serif" font-weight="900" font-size="148" fill="#FFFFFF" letter-spacing="-6">FLOTA<tspan fill="#276EF1">.</tspan></text>
+
+  <!-- Tagline -->
+  <text x="86" y="350" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="400" fill="#444" letter-spacing="4">GESTIÓN DE FLOTA DE REMISES</text>
+
+  <!-- Pills de features -->
+  <rect x="82" y="388" width="116" height="34" rx="17" fill="#091428"/>
+  <text x="140" y="410" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#276EF1" text-anchor="middle">Turnos</text>
+
+  <rect x="210" y="388" width="116" height="34" rx="17" fill="#091428"/>
+  <text x="268" y="410" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#276EF1" text-anchor="middle">Gastos</text>
+
+  <rect x="338" y="388" width="172" height="34" rx="17" fill="#091428"/>
+  <text x="424" y="410" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#276EF1" text-anchor="middle">Mantenimiento</text>
+
+  <rect x="522" y="388" width="152" height="34" rx="17" fill="#091428"/>
+  <text x="598" y="410" font-family="Arial, sans-serif" font-size="13" font-weight="600" fill="#276EF1" text-anchor="middle">Rentabilidad</text>
+
+  <!-- Mockup de tarjeta -->
+  <rect x="800" y="80" width="320" height="470" rx="24" fill="#0D0D0D" stroke="#1C1C1C" stroke-width="1"/>
+
+  <!-- Tag auto -->
+  <rect x="824" y="110" width="100" height="24" rx="12" fill="#1A1A1A" stroke="#2A2A2A" stroke-width="1"/>
+  <text x="874" y="126" font-family="Arial, sans-serif" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">AUTO 1</text>
+
+  <!-- Semana / Mes -->
+  <rect x="824" y="148" width="130" height="68" rx="12" fill="#161616"/>
+  <text x="840" y="168" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="1">SEMANA</text>
+  <text x="840" y="202" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#276EF1">$48.200</text>
+
+  <rect x="966" y="148" width="130" height="68" rx="12" fill="#161616"/>
+  <text x="982" y="168" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="1">MES</text>
+  <text x="982" y="202" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#276EF1">$193.400</text>
+
+  <!-- Neto -->
+  <rect x="824" y="228" width="272" height="54" rx="12" fill="#091428" stroke="#0D1E42" stroke-width="1"/>
+  <text x="840" y="248" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="1">NETO DEL MES</text>
+  <text x="1080" y="264" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#276EF1" text-anchor="end">$171.900</text>
+
+  <!-- Kms -->
+  <rect x="824" y="294" width="130" height="54" rx="12" fill="#161616"/>
+  <text x="840" y="314" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="1">GASTOS MES</text>
+  <text x="840" y="340" font-family="Arial, sans-serif" font-size="16" font-weight="600" fill="#EF4444">$21.500</text>
+
+  <rect x="966" y="294" width="130" height="54" rx="12" fill="#161616"/>
+  <text x="982" y="314" font-family="Arial, sans-serif" font-size="9" fill="#555" letter-spacing="1">KMS</text>
+  <text x="982" y="340" font-family="Arial, sans-serif" font-size="16" font-weight="600" fill="#FFFFFF">48.230</text>
+
+  <!-- Mini mantenimiento -->
+  <rect x="824" y="362" width="272" height="44" rx="10" fill="#161616"/>
+  <text x="840" y="384" font-family="Arial, sans-serif" font-size="12" fill="#CCCCCC">Aceite y filtros</text>
+  <rect x="1012" y="371" width="68" height="26" rx="13" fill="#091428"/>
+  <text x="1046" y="388" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#276EF1" text-anchor="middle">✓ OK</text>
+
+  <rect x="824" y="416" width="272" height="44" rx="10" fill="#1A0A0A"/>
+  <text x="840" y="438" font-family="Arial, sans-serif" font-size="12" fill="#CCCCCC">Distribución</text>
+  <rect x="1000" y="425" width="80" height="26" rx="13" fill="#1A0A0A" stroke="#3A1010" stroke-width="1"/>
+  <text x="1040" y="442" font-family="Arial, sans-serif" font-size="10" font-weight="700" fill="#EF4444" text-anchor="middle">⚠ CAMBIAR</text>
+
+  <!-- Punto azul decorativo -->
+  <circle cx="960" cy="540" r="6" fill="#276EF1" opacity="0.6"/>
+</svg>
