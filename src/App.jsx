@@ -322,6 +322,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
 function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
+  const [selectedAuto, setSelectedAuto] = useState(null)
 
   const [y, m, d] = ds.split('-').map(Number)
   const dow = (new Date(y, m - 1, d).getDay() + 6) % 7
@@ -376,166 +377,100 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
     onRefresh()
   }
 
+  const adata = selectedAuto ? cal[selectedAuto] : null
+
   return (
-    <div
-      className="modal-overlay"
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-sheet">
         <div className="modal-date">{DIAS_FULL[dow]}</div>
+        <div className="modal-title">{d} de {MESES[m - 1]}</div>
 
-        <div className="modal-title">
-          {d} de {MESES[m - 1]}
-        </div>
-
-        {autoEntries.map(([aid, adata]) =>
-          Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
-            const info = adata.dias?.[ds]?.[cid]
-
-            if (!info) return null
-
-            const { estado, monto } = info
-
-            const badgeClass = {
-              completo: 'eb-completo',
-              parcial: 'eb-parcial',
-              debe: 'eb-debe',
-              franco: 'eb-franco',
-              futuro: 'eb-futuro',
-            }[estado] || 'eb-futuro'
-
-            const isSaving = !!saving
-
-            return (
-              <div key={cid} className="chofer-section">
-                <div className="chofer-sec-header">
-                  <div>
-                    <div className="chofer-sec-name">
-                      {cnombre}
-                    </div>
-
-                    <div className="chofer-sec-sub">
-                      {adata.nombre}
-                    </div>
+        {!selectedAuto ? (
+          <>
+            <div className="stitle" style={{ marginTop: 0 }}>Elegí el auto</div>
+            {autoEntries.map(([aid, adata]) => {
+              const choferes = Object.entries(adata.choferes || {})
+              const pills = choferes.map(([cid]) => adata.dias?.[ds]?.[cid])
+              const hayDebe = pills.some(p => p?.estado === 'debe')
+              const hayCompleto = pills.some(p => p?.estado === 'completo')
+              const allFranco = pills.every(p => p?.estado === 'franco')
+              const dot = allFranco ? '#4a9eff' : hayDebe ? '#ff4545' : hayCompleto ? '#47ff8a' : '#555'
+              return (
+                <div key={aid} className="auto-pick-btn" onClick={() => setSelectedAuto(aid)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: dot, flexShrink: 0 }} />
+                    <span style={{ fontSize: 15, fontWeight: 600 }}>{adata.nombre}</span>
                   </div>
-
-                  <span className={`eb ${badgeClass}`}>
-                    {estado.charAt(0).toUpperCase() + estado.slice(1)}
-                  </span>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    {choferes.map(([cid, cnombre]) => {
+                      const info = adata.dias?.[ds]?.[cid]
+                      const estado = info?.estado || 'futuro'
+                      const pc = { completo: 'pill-completo', parcial: 'pill-parcial', debe: 'pill-debe', franco: 'pill-franco', futuro: 'pill-futuro' }[estado] || 'pill-futuro'
+                      return <div key={cid} className={`chofer-pill ${pc}`}>{cnombre.slice(0, 3)}</div>
+                    })}
+                  </div>
                 </div>
-
-                {monto ? (
-                  <div
-                    style={{
-                      fontFamily: "'DM Mono', monospace",
-                      fontSize: 11,
-                      color: '#555',
-                      marginBottom: 10,
-                    }}
-                  >
-                    Pagó: {fmt(monto)}
+              )
+            })}
+          </>
+        ) : (
+          <>
+            <button className="modal-back" onClick={() => setSelectedAuto(null)}>‹ Volver</button>
+            <div className="stitle" style={{ marginTop: 8 }}>{adata.nombre}</div>
+            {Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
+              const info = adata.dias?.[ds]?.[cid]
+              if (!info) return null
+              const { estado, monto } = info
+              const badgeClass = { completo: 'eb-completo', parcial: 'eb-parcial', debe: 'eb-debe', franco: 'eb-franco', futuro: 'eb-futuro' }[estado] || 'eb-futuro'
+              const isSaving = !!saving
+              return (
+                <div key={cid} className="chofer-section">
+                  <div className="chofer-sec-header">
+                    <div className="chofer-sec-name">{cnombre}</div>
+                    <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
-                ) : null}
-
-                {estado === 'franco' ? (
-                  <button
-                    className="action-btn ab-quitar"
-                    disabled={isSaving}
-                    onClick={() => doFranco(cid, 'quitar')}
-                  >
-                    {saving === cid + 'franco'
-                      ? '...'
-                      : '✕ Quitar franco'}
-                  </button>
-                ) : (
-                  <>
-                    <div className="action-grid">
-                      <button
-                        className="action-btn ab-primary"
-                        disabled={isSaving}
-                        onClick={() => doTurno(cid, turnoBase)}
-                      >
-                        {saving === cid + 'turno'
-                          ? '...'
-                          : '✓ Turno completo'}
-                      </button>
-
-                      <button
-                        className="action-btn ab-franco"
-                        disabled={isSaving}
-                        onClick={() => doFranco(cid, 'marcar')}
-                      >
-                        {saving === cid + 'franco'
-                          ? '...'
-                          : 'F Franco'}
-                      </button>
-                    </div>
-
-                    <div
-                      className="monto-row"
-                      style={{ marginBottom: 8 }}
-                    >
-                      <input
-                        className="monto-input"
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="Otro monto..."
-                        value={montos[cid] || ''}
-                        onChange={e =>
-                          setMontos(prev => ({
-                            ...prev,
-                            [cid]: e.target.value,
-                          }))
-                        }
-                      />
-
-                      <button
-                        className="monto-btn"
-                        disabled={isSaving}
-                        onClick={() => {
+                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
+                  {estado === 'franco' ? (
+                    <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
+                      {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
+                    </button>
+                  ) : (
+                    <>
+                      <div className="action-grid">
+                        <button className="action-btn ab-primary" disabled={isSaving} onClick={() => doTurno(cid, turnoBase)}>
+                          {saving === cid + 'turno' ? '...' : '✓ Turno completo'}
+                        </button>
+                        <button className="action-btn ab-franco" disabled={isSaving} onClick={() => doFranco(cid, 'marcar')}>
+                          {saving === cid + 'franco' ? '...' : 'F Franco'}
+                        </button>
+                      </div>
+                      <div className="monto-row" style={{ marginBottom: 8 }}>
+                        <input className="monto-input" type="number" inputMode="numeric" placeholder="Otro monto..."
+                          value={montos[cid] || ''}
+                          onChange={e => setMontos(prev => ({ ...prev, [cid]: e.target.value }))}
+                        />
+                        <button className="monto-btn" disabled={isSaving} onClick={() => {
                           const v = parseFloat(montos[cid])
-
-                          if (!v || v <= 0) {
-                            return showToast(
-                              'Ingresá un monto válido',
-                              'error'
-                            )
-                          }
-
+                          if (!v || v <= 0) return showToast('Ingresá un monto válido', 'error')
                           doTurno(cid, v)
-                        }}
-                      >
-                        {saving === cid + 'turno'
-                          ? '...'
-                          : 'OK'}
-                      </button>
-                    </div>
-
-                    {(estado === 'completo' ||
-                      estado === 'parcial') && (
-                      <button
-                        className="action-btn ab-quitar"
-                        disabled={isSaving}
-                        onClick={() => doBorrar(cid)}
-                      >
-                        {saving === cid + 'borrar'
-                          ? '...'
-                          : '✕ Marcar como no pagado'}
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )
-          })
+                        }}>
+                          {saving === cid + 'turno' ? '...' : 'OK'}
+                        </button>
+                      </div>
+                      {(estado === 'completo' || estado === 'parcial') && (
+                        <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doBorrar(cid)}>
+                          {saving === cid + 'borrar' ? '...' : '✕ Marcar como no pagado'}
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </>
         )}
 
-        <button
-          className="modal-close"
-          onClick={onClose}
-        >
-          Cerrar
-        </button>
+        <button className="modal-close" onClick={onClose}>Cerrar</button>
       </div>
     </div>
   )
@@ -710,6 +645,9 @@ const globalStyles = `
   .monto-btn{padding:11px 16px;background:#1e1e1e;color:#f0f0f0;border:1px solid #2a2a2a;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer}
   .monto-btn:active{background:#e8ff47;color:#000}.monto-btn:disabled{opacity:0.5}
   .modal-close{width:100%;padding:13px;background:transparent;color:#555;border:1px solid #2a2a2a;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px}
+  .modal-back{background:none;border:none;color:#555;font-size:14px;cursor:pointer;padding:0;margin-bottom:2px}
+  .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+  .auto-pick-btn:active{border-color:#e8ff47;opacity:0.8}
   .tabs{display:flex;gap:6px;margin-bottom:16px}
   .tab{flex:1;padding:10px;border-radius:10px;border:1px solid #2a2a2a;background:transparent;color:#555;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
   .tab.active{background:#e8ff47;color:#000;border-color:#e8ff47;font-weight:700}
