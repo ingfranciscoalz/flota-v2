@@ -32,6 +32,7 @@ function useToast() {
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app
+  const [inactiveReason, setInactiveReason] = useState('pending') // pending|expired
   const [profile, setProfile] = useState(null)
   const [page, setPage] = useState('resumen')
   const [resumen, setResumen] = useState(null)
@@ -44,10 +45,10 @@ export default function App() {
   const handleSession = useCallback(async () => {
     const prof = await getProfile()
     setProfile(prof)
-    if (!prof?.activo) { setAuthState('inactive'); return }
     if (prof?.activo_hasta && new Date(prof.activo_hasta) < new Date()) {
-      setAuthState('inactive'); return
+      setInactiveReason('expired'); setAuthState('inactive'); return
     }
+    if (!prof?.activo) { setInactiveReason('pending'); setAuthState('inactive'); return }
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -109,6 +110,7 @@ export default function App() {
       <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
         <InactiveScreen
+          reason={inactiveReason}
           onRefresh={handleSession}
           onSignOut={async () => { await signOut(); setAuthState('auth') }}
         />
@@ -226,16 +228,20 @@ function AuthScreen() {
 }
 
 // ── INACTIVE SCREEN ───────────────────────────────────────────────────────────
-function InactiveScreen({ onRefresh, onSignOut }) {
+function InactiveScreen({ reason, onRefresh, onSignOut }) {
   const [checking, setChecking] = useState(false)
+  const expired = reason === 'expired'
   return (
     <div style={{ padding: '100px 24px', textAlign: 'center' }}>
-      <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
+      <div style={{ fontSize: 48, marginBottom: 20 }}>{expired ? '💳' : '⏳'}</div>
       <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
-        Cuenta pendiente
+        {expired ? 'Pago pendiente' : 'Cuenta pendiente'}
       </div>
       <div style={{ color: '#555', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
-        Tu cuenta está esperando activación.<br />Contactá al administrador para habilitarla.
+        {expired
+          ? <>Tu suscripción venció.<br />Realizá el pago para continuar usando la app.</>
+          : <>Tu cuenta está esperando activación.<br />Contactá al administrador para habilitarla.</>
+        }
       </div>
       <button className="btn-primary" style={{ marginBottom: 10 }} disabled={checking} onClick={async () => {
         setChecking(true); await onRefresh(); setChecking(false)
