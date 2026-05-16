@@ -109,7 +109,9 @@ CREATE TABLE user_mant_items (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id        UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   nombre         TEXT NOT NULL,
-  frecuencia_kms INTEGER NOT NULL
+  frecuencia_kms INTEGER NOT NULL,
+  auto_id        UUID REFERENCES autos(id) ON DELETE SET NULL
+  -- NULL = aplica a todos los autos
 );
 
 -- ── RLS ───────────────────────────────────────────────────────────────────────

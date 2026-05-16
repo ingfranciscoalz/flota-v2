@@ -1,24 +1,25 @@
 -- ============================================================
 -- FLOTA — ADDENDUM (ejecutar en Supabase → SQL Editor)
--- Solo agregar lo nuevo: turno_base en autos + user_mant_items
 -- NO borra datos existentes
 -- ============================================================
 
--- 1. Agregar columna turno_base a autos (si no existe)
+-- 1. turno_base en autos
 ALTER TABLE autos ADD COLUMN IF NOT EXISTS turno_base INTEGER;
 
--- 2. Crear tabla de items de mantenimiento por usuario
+-- 2. Tabla user_mant_items
 CREATE TABLE IF NOT EXISTS user_mant_items (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id        UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   nombre         TEXT NOT NULL,
-  frecuencia_kms INTEGER NOT NULL
+  frecuencia_kms INTEGER NOT NULL,
+  auto_id        UUID REFERENCES autos(id) ON DELETE SET NULL
+  -- NULL = aplica a todos los autos del usuario
 );
 
--- 3. Habilitar RLS
+-- 3. RLS
 ALTER TABLE user_mant_items ENABLE ROW LEVEL SECURITY;
 
--- 4. Policy: cada usuario solo ve sus propios items
+-- 4. Policy
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -31,3 +32,6 @@ BEGIN
       WITH CHECK (auth.uid() = user_id);
   END IF;
 END $$;
+
+-- 5. Si ya creaste user_mant_items antes, agregar la columna auto_id
+ALTER TABLE user_mant_items ADD COLUMN IF NOT EXISTS auto_id UUID REFERENCES autos(id) ON DELETE SET NULL;

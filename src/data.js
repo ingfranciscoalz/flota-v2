@@ -89,9 +89,13 @@ export async function getUserMantItems() {
   return supabase.from('user_mant_items').select('*').order('nombre')
 }
 
-export async function createMantItem(nombre, frecuenciaKms) {
+export async function createMantItem(nombre, frecuenciaKms, autoId = null) {
   const user_id = await uid()
-  return supabase.from('user_mant_items').insert({ user_id, nombre, frecuencia_kms: frecuenciaKms })
+  return supabase.from('user_mant_items').insert({ user_id, nombre, frecuencia_kms: frecuenciaKms, auto_id: autoId || null })
+}
+
+export async function updateMantItem(id, nombre, frecuenciaKms, autoId = null) {
+  return supabase.from('user_mant_items').update({ nombre, frecuencia_kms: frecuenciaKms, auto_id: autoId || null }).eq('id', id)
 }
 
 export async function deleteMantItem(id) {
@@ -197,7 +201,8 @@ export async function getResumen() {
     totalMes += ganMes
 
     const kmsAct = kmsMap[auto.id] || 0
-    const mantStatus = calcMantStatus(cfg.mant_items, mantRealizados.filter(m => m.auto_id === auto.id), kmsAct)
+    const autoItems = cfg.mant_items.filter(item => !item.auto_id || item.auto_id === auto.id)
+    const mantStatus = calcMantStatus(autoItems, mantRealizados.filter(m => m.auto_id === auto.id), kmsAct)
 
     resultado[auto.id] = {
       nombre: auto.nombre,

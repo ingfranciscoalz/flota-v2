@@ -6,7 +6,7 @@ import {
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
   createAuto, createChofer, updateAutoTurnoBase,
-  getUserMantItems, createMantItem, deleteMantItem,
+  getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
 } from './data'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -912,7 +912,7 @@ function FlotaPage({ resumen, showToast, onRefresh }) {
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
       </div>
       {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
-      {tab === 'mant'  && <MantItemsTab showToast={showToast} />}
+      {tab === 'mant'  && <MantItemsTab autos={resumen?.config?.autos || []} showToast={showToast} />}
     </div>
   )
 }
@@ -1054,12 +1054,14 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   )
 }
 
-function MantItemsTab({ showToast }) {
+function MantItemsTab({ showToast, autos }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({ nombre: '', frecuencia: '', autoId: null })
+  const [savingEdit, setSavingEdit] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [nombre, setNombre] = useState('')
-  const [frecuencia, setFrecuencia] = useState('')
+  const [newItem, setNewItem] = useState({ nombre: '', frecuencia: '', autoId: null })
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
 
@@ -1071,15 +1073,29 @@ function MantItemsTab({ showToast }) {
   }
   useEffect(() => { reload() }, [])
 
+  const autoNombre = (autoId) => autos.find(a => a.id === autoId)?.nombre || null
+
   const handleCreate = async () => {
-    if (!nombre.trim()) return showToast('Ingresá el nombre', 'error')
-    if (!frecuencia || parseInt(frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
+    if (!newItem.nombre.trim()) return showToast('Ingresá el nombre', 'error')
+    if (!newItem.frecuencia || parseInt(newItem.frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
     setSaving(true)
-    const { error } = await createMantItem(nombre.trim(), parseInt(frecuencia))
+    const { error } = await createMantItem(newItem.nombre.trim(), parseInt(newItem.frecuencia), newItem.autoId)
     setSaving(false)
     if (error) return showToast('⚠ ' + error.message, 'error')
     showToast('✓ Item agregado', 'success')
-    setNombre(''); setFrecuencia(''); setShowForm(false)
+    setNewItem({ nombre: '', frecuencia: '', autoId: null }); setShowForm(false)
+    reload()
+  }
+
+  const handleEdit = async () => {
+    if (!editForm.nombre.trim()) return showToast('Ingresá el nombre', 'error')
+    if (!editForm.frecuencia || parseInt(editForm.frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
+    setSavingEdit(true)
+    const { error } = await updateMantItem(editingId, editForm.nombre.trim(), parseInt(editForm.frecuencia), editForm.autoId)
+    setSavingEdit(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Item actualizado', 'success')
+    setEditingId(null)
     reload()
   }
 
@@ -1090,45 +1106,86 @@ function MantItemsTab({ showToast }) {
       {items.length === 0 && !showForm && (
         <div className="loading" style={{ padding: '40px 0' }}>Sin items de mantenimiento</div>
       )}
-      {items.map(item => (
-        <div key={item.id} className="card" style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
-              Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
-            </div>
+
+      {items.map(item => {
+        const isEditing = editingId === item.id
+        return (
+          <div key={item.id} className="card" style={{ marginBottom: 8 }}>
+            {isEditing ? (
+              <>
+                <div className="stitle" style={{ marginTop: 0 }}>Editar item</div>
+                <div className="form-group">
+                  <input className="form-input" placeholder="Nombre" value={editForm.nombre}
+                    onChange={e => setEditForm(f => ({ ...f, nombre: e.target.value }))} autoFocus />
+                </div>
+                <div className="form-group">
+                  <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
+                    value={editForm.frecuencia} onChange={e => setEditForm(f => ({ ...f, frecuencia: e.target.value }))}
+                    style={{ fontFamily: "'DM Mono',monospace" }} />
+                </div>
+                <div className="stitle">Aplica a</div>
+                <MantAutoSelector autos={autos} selected={editForm.autoId} onChange={v => setEditForm(f => ({ ...f, autoId: v }))} />
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={savingEdit} onClick={handleEdit}>
+                    {savingEdit ? '...' : '✓ Guardar'}
+                  </button>
+                  <button className="action-btn" style={{ flex: 1 }} onClick={() => setEditingId(null)}>Cancelar</button>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
+                    Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
+                    {' · '}
+                    <span style={{ color: item.auto_id ? '#06C167' : '#888' }}>
+                      {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A2A' }}
+                    onClick={() => { setEditingId(item.id); setEditForm({ nombre: item.nombre, frecuencia: String(item.frecuencia_kms), autoId: item.auto_id || null }) }}>
+                    ✎
+                  </button>
+                  <button className="gasto-del-btn" disabled={deletingId === item.id}
+                    onClick={async () => {
+                      setDeletingId(item.id)
+                      const { error } = await deleteMantItem(item.id)
+                      setDeletingId(null)
+                      if (error) return showToast('⚠ ' + error.message, 'error')
+                      showToast('✓ Item eliminado', 'success')
+                      setItems(prev => prev.filter(x => x.id !== item.id))
+                    }}>
+                    {deletingId === item.id ? '...' : '✕'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <button className="gasto-del-btn" disabled={deletingId === item.id}
-            onClick={async () => {
-              setDeletingId(item.id)
-              const { error } = await deleteMantItem(item.id)
-              setDeletingId(null)
-              if (error) return showToast('⚠ ' + error.message, 'error')
-              showToast('✓ Item eliminado', 'success')
-              setItems(prev => prev.filter(x => x.id !== item.id))
-            }}>
-            {deletingId === item.id ? '...' : '✕'}
-          </button>
-        </div>
-      ))}
+        )
+      })}
 
       {showForm ? (
         <div className="card" style={{ marginBottom: 10 }}>
           <div className="stitle" style={{ marginTop: 0 }}>Nuevo item</div>
           <div className="form-group">
-            <input className="form-input" placeholder="Nombre (ej: Frenos)" value={nombre}
-              onChange={e => setNombre(e.target.value)} autoFocus />
+            <input className="form-input" placeholder="Nombre (ej: Frenos)" value={newItem.nombre}
+              onChange={e => setNewItem(f => ({ ...f, nombre: e.target.value }))} autoFocus />
           </div>
           <div className="form-group">
             <input className="form-input" type="number" inputMode="numeric" placeholder="Cada cuántos kms"
-              value={frecuencia} onChange={e => setFrecuencia(e.target.value)}
+              value={newItem.frecuencia} onChange={e => setNewItem(f => ({ ...f, frecuencia: e.target.value }))}
               style={{ fontFamily: "'DM Mono',monospace" }} />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="stitle">Aplica a</div>
+          <MantAutoSelector autos={autos} selected={newItem.autoId} onChange={v => setNewItem(f => ({ ...f, autoId: v }))} />
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="action-btn ab-primary" style={{ flex: 1 }} disabled={saving} onClick={handleCreate}>
               {saving ? 'Guardando...' : '✓ Agregar'}
             </button>
-            <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowForm(false); setNombre(''); setFrecuencia('') }}>
+            <button className="action-btn" style={{ flex: 1 }} onClick={() => { setShowForm(false); setNewItem({ nombre: '', frecuencia: '', autoId: null }) }}>
               Cancelar
             </button>
           </div>
@@ -1139,6 +1196,23 @@ function MantItemsTab({ showToast }) {
         </button>
       )}
     </>
+  )
+}
+
+function MantAutoSelector({ autos, selected, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+      <div className={`radio-opt ${!selected ? 'sel' : ''}`} style={{ flex: 'none', padding: '8px 14px' }}
+        onClick={() => onChange(null)}>
+        <div className="rl" style={{ fontSize: 12 }}>Todos</div>
+      </div>
+      {autos.map(a => (
+        <div key={a.id} className={`radio-opt ${selected === a.id ? 'sel' : ''}`} style={{ flex: 'none', padding: '8px 14px' }}
+          onClick={() => onChange(selected === a.id ? null : a.id)}>
+          <div className="rl" style={{ fontSize: 12 }}>{a.nombre}</div>
+        </div>
+      ))}
+    </div>
   )
 }
 
