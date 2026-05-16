@@ -137,7 +137,7 @@ function TutorialOverlay({ onDone }) {
           <div style={{ fontSize: 96, lineHeight: 1, filter: `drop-shadow(0 0 52px ${s.color}77)` }}>{s.emoji}</div>
           {s.isWelcome && (
             <div style={{ marginTop: 20, fontFamily: "'Syne',sans-serif", fontSize: 42, fontWeight: 800, letterSpacing: -2, color: '#fff' }}>
-              FLOTA<span style={{ color: '#276EF1' }}>.</span>
+              TuFlota<span style={{ color: '#276EF1' }}>.</span>
             </div>
           )}
         </div>
@@ -187,7 +187,25 @@ export default function App() {
   const [calMonth, setCalMonth] = useState(new Date().getMonth() + 1)
   const [loading, setLoading] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showInstall, setShowInstall] = useState(false)
+  const installPrompt = useRef(null)
   const { toast, show: showToast } = useToast()
+
+  useEffect(() => {
+    const onPrompt = (e) => { e.preventDefault(); installPrompt.current = e; setShowInstall(true) }
+    const onInstalled = () => { setShowInstall(false); installPrompt.current = null }
+    window.addEventListener('beforeinstallprompt', onPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => { window.removeEventListener('beforeinstallprompt', onPrompt); window.removeEventListener('appinstalled', onInstalled) }
+  }, [])
+
+  const handleInstall = async () => {
+    if (!installPrompt.current) return
+    installPrompt.current.prompt()
+    const { outcome } = await installPrompt.current.userChoice
+    if (outcome === 'accepted') setShowInstall(false)
+    installPrompt.current = null
+  }
 
   useEffect(() => {
     if (authState === 'app' && !localStorage.getItem('flota_tutorial')) {
@@ -222,6 +240,22 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [handleSession])
+
+  const updateCalDay = useCallback((autoId, choferId, ds, patch) => {
+    setCal(prev => {
+      if (!prev?.[autoId]?.dias?.[ds]) return prev
+      return {
+        ...prev,
+        [autoId]: {
+          ...prev[autoId],
+          dias: {
+            ...prev[autoId].dias,
+            [ds]: { ...prev[autoId].dias[ds], [choferId]: { ...prev[autoId].dias[ds][choferId], ...patch } }
+          }
+        }
+      }
+    })
+  }, [])
 
   const enterDemoMode = useCallback(() => {
     setIsDemoMode(true)
@@ -280,7 +314,7 @@ export default function App() {
     return (
       <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
-        <AuthScreen onEnterDemo={enterDemoMode} />
+        <AuthScreen onEnterDemo={enterDemoMode} showInstall={showInstall} onInstall={handleInstall} />
         {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       </div>
     )
@@ -336,10 +370,16 @@ export default function App() {
       )}
 
       <div className="header">
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
-          FLOTA<span style={{ color: '#276EF1' }}>.</span>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: '#f0f0f0' }}>
+          TuFlota<span style={{ color: '#276EF1' }}>.</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
+          {showInstall && (
+            <button className="sync-btn" onClick={handleInstall} title="Instalar app"
+              style={{ background: '#091428', border: '1px solid #0D1E42', color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '0 10px', letterSpacing: 0.5 }}>
+              ⬇ Instalar
+            </button>
+          )}
           {!isDemoMode && <button className="sync-btn" onClick={loadAll}>↻</button>}
           {!isDemoMode && <button className="sync-btn" onClick={async () => { await signOut(); setAuthState('auth') }} title="Cerrar sesión">⏏</button>}
         </div>
@@ -347,7 +387,7 @@ export default function App() {
 
       <div key={page} className="page-anim">
         {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) loadCal(calYear, calMonth) }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} />}
+        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) loadCal(calYear, calMonth) }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
         {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
         {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
         {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
@@ -369,7 +409,7 @@ export default function App() {
 }
 
 // ── AUTH SCREEN ───────────────────────────────────────────────────────────────
-function AuthScreen({ onEnterDemo }) {
+function AuthScreen({ onEnterDemo, showInstall, onInstall }) {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -389,9 +429,15 @@ function AuthScreen({ onEnterDemo }) {
 
   return (
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6 }}>
-        FLOTA<span style={{ color: '#276EF1' }}>.</span>
+      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6, color: '#f0f0f0' }}>
+        TuFlota<span style={{ color: '#276EF1' }}>.</span>
       </h1>
+      {showInstall && (
+        <button onClick={onInstall}
+          style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
+          ⬇ Instalar TuFlota
+        </button>
+      )}
       <p style={{ color: '#555', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
@@ -809,7 +855,7 @@ function MantModal({ autoNombre, item, kmsAct, onClose, onConfirm }) {
 }
 
 // ── CALENDARIO PAGE ───────────────────────────────────────────────────────────
-function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode }) {
+function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode, onDemoUpdateDay }) {
   const [dayModal, setDayModal] = useState(null)
   const [filterAuto, setFilterAuto] = useState(null)
   if (!cal) return <div className="loading"><div className="spinner" /></div>
@@ -904,13 +950,14 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           showToast={showToast}
           onRefresh={async () => { await onRefresh(); setDayModal(null) }}
           isDemoMode={isDemoMode}
+          onDemoUpdateDay={onDemoUpdateDay}
         />
       )}
     </div>
   )
 }
 
-function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMode }) {
+function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
@@ -920,10 +967,15 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
 
   const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
 
-  const demoBlock = () => { showToast('👁 Modo demo — los cambios no se guardan', 'info'); return true }
-
   const doTurno = async (choferId, monto) => {
-    if (isDemoMode) return demoBlock()
+    if (isDemoMode) {
+      const autoTurnoBase = adata?.turno_base || turnoBase
+      const estado = monto >= autoTurnoBase ? 'completo' : 'parcial'
+      onDemoUpdateDay(selectedAuto, choferId, ds, { estado, monto })
+      showToast('✓ Turno anotado', 'success')
+      onRefresh()
+      return
+    }
     setSaving(choferId + 'turno')
     const { error } = await upsertTurno(choferId, ds, monto)
     setSaving(null)
@@ -933,7 +985,17 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
   }
 
   const doFranco = async (choferId, accion) => {
-    if (isDemoMode) return demoBlock()
+    if (isDemoMode) {
+      if (accion === 'marcar') {
+        onDemoUpdateDay(selectedAuto, choferId, ds, { estado: 'franco', monto: null })
+      } else {
+        const pasado = ds < new Date().toISOString().split('T')[0]
+        onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+      }
+      showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
+      onRefresh()
+      return
+    }
     setSaving(choferId + 'franco')
     const { error } = accion === 'marcar' ? await marcarFranco(choferId, ds) : await quitarFranco(choferId, ds)
     setSaving(null)
@@ -943,7 +1005,13 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
   }
 
   const doBorrar = async (choferId) => {
-    if (isDemoMode) return demoBlock()
+    if (isDemoMode) {
+      const pasado = ds < new Date().toISOString().split('T')[0]
+      onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+      showToast('✓ Pago eliminado', 'success')
+      onRefresh()
+      return
+    }
     setSaving(choferId + 'borrar')
     const { error } = await deleteTurno(choferId, ds)
     setSaving(null)
@@ -1080,7 +1148,13 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
   const categorias = ['mantenimiento', 'combustible', 'seguro', 'impuesto', 'multa', 'otro']
 
   const handleDeleteConfirmed = async () => {
-    if (isDemoMode) { setDeleteConfirm(null); showToast('👁 Modo demo — los cambios no se guardan', 'info'); return }
+    if (isDemoMode) {
+      const id = deleteConfirm
+      setDeleteConfirm(null)
+      setGastos(prev => prev.filter(x => x.id !== id))
+      showToast('✓ Gasto eliminado', 'success')
+      return
+    }
     const id = deleteConfirm
     setDeleteConfirm(null)
     setDeletingId(id)
@@ -1148,9 +1222,24 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
             <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} style={{ colorScheme: 'dark' }} />
           </div>
           <button className="btn-primary" onClick={async () => {
-            if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
             if (!form.auto_id) return showToast('Seleccioná un auto', 'error')
             if (!form.descripcion || !form.monto) return showToast('Completá descripción y monto', 'error')
+            if (isDemoMode) {
+              const demoGasto = {
+                id: 'demo-' + Date.now(),
+                auto_id: form.auto_id,
+                descripcion: form.descripcion,
+                monto: parseFloat(form.monto),
+                categoria: form.categoria,
+                fecha: form.fecha,
+                autos: { nombre: autos.find(a => a.id === form.auto_id)?.nombre || '' },
+              }
+              setGastos(prev => [demoGasto, ...prev])
+              showToast('✓ Gasto registrado', 'success')
+              setForm(f => ({ ...f, descripcion: '', monto: '' }))
+              setTab('lista')
+              return
+            }
             const { error } = await insertGasto(form.auto_id, form.descripcion, parseFloat(form.monto), form.categoria, form.fecha)
             if (error) return showToast('⚠ ' + error.message, 'error')
             showToast('✓ Gasto registrado', 'success')

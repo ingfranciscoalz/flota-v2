@@ -1,6 +1,6 @@
 {
-  "name": "FLOTA — Gestión de flota",
-  "short_name": "FLOTA",
+  "name": "TuFlota — Gestión de flota",
+  "short_name": "TuFlota",
   "description": "Gestión de flotas de remises. Turnos, gastos, mantenimiento y rentabilidad.",
   "start_url": "/",
   "display": "standalone",
