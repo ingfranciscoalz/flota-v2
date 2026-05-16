@@ -1935,46 +1935,46 @@ const globalStyles = `
   .spinner{width:28px;height:28px;border:2px solid #1F1F1F;border-top-color:#276EF1;border-radius:50%;animation:spin 0.75s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .stitle{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#555;margin:20px 0 10px}
-  .card{background:#0D0D0D;border:1px solid #1C1C1C;border-radius:16px;padding:18px;margin-bottom:10px}
-  .auto-tag{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:100px;display:inline-block}
-  .tag-auto{background:#1A1A1A;color:#fff;border:1px solid #2A2A2A}
-  .divider{height:1px;background:#1A1A1A;margin:14px 0}
+  .stitle{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#888;margin:24px 0 10px}
+  .card{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:20px;margin-bottom:16px}
+  .auto-tag{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border-radius:100px;display:inline-block}
+  .tag-auto{background:#0D1E42;color:#7EB8FF;border:1px solid #1A3468}
+  .divider{height:1px;background:#222228;margin:14px 0}
 
-  .alert-banner{background:#0D0000;border:1px solid #2A0000;border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:13px}
+  .alert-banner{background:#1A0A00;border:1px solid #3A1800;border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:13px}
 
-  .total-banner{background:#0D0D0D;border:1px solid #1C1C1C;border-radius:16px;padding:18px 20px;display:flex;justify-content:space-between;margin-bottom:12px}
-  .total-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-  .total-value{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:#276EF1}
+  .total-banner{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:20px 22px;display:flex;justify-content:space-between;margin-bottom:16px}
+  .total-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .total-value{font-family:'DM Mono',monospace;font-size:26px;font-weight:500;color:#5AACFF}
 
   .gan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
-  .gan-cell{background:#161616;border-radius:12px;padding:12px 14px}
-  .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:4px}
-  .gan-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:#276EF1}
+  .gan-cell{background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;padding:12px 14px}
+  .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:5px}
+  .gan-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:#5AACFF}
 
-  .neto-row{background:#091428;border:1px solid #0D1E42;border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
-  .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555}
-  .neto-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:#276EF1}
+  .neto-row{background:#091428;border:1px solid #1E3A6A;border-radius:12px;padding:14px 16px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#4A7AB5}
+  .neto-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:#5AACFF}
 
   .ab-danger{background:#1A0808;color:#EF4444;border:1px solid #3A1010}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-  .metric{background:#161616;border-radius:12px;padding:12px 14px}
-  .metric-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:4px}
+  .metric{background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;padding:12px 14px}
+  .metric-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:5px}
   .metric-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
 
-  .kms-row{display:flex;gap:8px;align-items:center;margin-top:10px}
-  .kms-input{flex:1;padding:10px 14px;background:#161616;border:1px solid #2A2A2A;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:14px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
+  .kms-row{display:flex;gap:8px;align-items:center;margin-top:12px}
+  .kms-input{flex:1;padding:11px 14px;background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:14px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
   .kms-input:focus{border-color:#276EF1}
-  .kms-btn{padding:10px 16px;background:#fff;color:#000;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+  .kms-btn{padding:11px 18px;background:#276EF1;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
 
-  .mant-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
-  .mant-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#161616;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:border-color 0.15s}
-  .mant-item:active{border-color:#2A2A2A}
-  .mant-nombre{font-size:13px;font-weight:600}
-  .mant-sub{font-family:'DM Mono',monospace;font-size:10px;color:#555;margin-top:3px}
-  .mbadge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;text-transform:uppercase}
-  .mbadge-ok{background:#091428;color:#276EF1}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
+  .mant-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+  .mant-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#1C1C24;border-radius:14px;cursor:pointer;border:1px solid #2A2A35;transition:border-color 0.15s}
+  .mant-item:active{border-color:#444}
+  .mant-nombre{font-size:13px;font-weight:600;color:#E8E8F0}
+  .mant-sub{font-family:'DM Mono',monospace;font-size:10px;color:#666;margin-top:3px}
+  .mbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
+  .mbadge-ok{background:#091428;color:#5AACFF}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:#1A1A1A;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
