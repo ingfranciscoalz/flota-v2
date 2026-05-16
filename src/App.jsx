@@ -5,7 +5,7 @@ import {
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
-  createAuto, createChofer, updateAutoTurnoBase,
+  createAuto, createChofer, updateAutoTurnoBase, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
 } from './data'
 
@@ -147,7 +147,7 @@ export default function App() {
 
       <div className="header">
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
-          FLOTA<span style={{ color: '#06C167' }}>.</span>
+          FLOTA<span style={{ color: '#276EF1' }}>.</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="sync-btn" onClick={loadAll}>↻</button>
@@ -202,7 +202,7 @@ function AuthScreen() {
   return (
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6 }}>
-        FLOTA<span style={{ color: '#06C167' }}>.</span>
+        FLOTA<span style={{ color: '#276EF1' }}>.</span>
       </h1>
       <p style={{ color: '#555', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
 
@@ -222,7 +222,7 @@ function AuthScreen() {
       </div>
 
       {error   && <div style={{ color: '#ff4545', fontSize: 13, marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: '#47ff8a', fontSize: 13, marginBottom: 12 }}>{success}</div>}
+      {success && <div style={{ color: '#276EF1', fontSize: 13, marginBottom: 12 }}>{success}</div>}
 
       <button className="btn-primary" disabled={loading} onClick={submit}>
         {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
@@ -374,7 +374,7 @@ function AdminScreen({ showToast }) {
           const dias = diasRestantes(u.activo_hasta)
           const expirado = dias !== null && dias <= 0
           const pocoTiempo = dias !== null && dias > 0 && dias <= 5
-          const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#47ff8a'
+          const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#276EF1'
 
           return (
             <div key={u.id} className="card" style={{ marginBottom: 8 }}>
@@ -553,7 +553,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
         <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
       </div>
       <div className="cal-legend">
-        {[['#0d2b18','Completo'],['#2b2000','Parcial'],['#2b0d0d','Debe'],['#0d1a2b','Franco']].map(([bg,lbl]) => (
+        {[['#0A1428','Completo'],['#2b2000','Parcial'],['#2b0d0d','Debe'],['#0d1a2b','Franco']].map(([bg,lbl]) => (
           <div key={lbl} className="leg-item"><div className="leg-dot" style={{ background: bg }} />{lbl}</div>
         ))}
       </div>
@@ -678,7 +678,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
               const hayDebe = pills.some(p => p?.estado === 'debe')
               const hayCompleto = pills.some(p => p?.estado === 'completo')
               const allFranco = pills.every(p => p?.estado === 'franco')
-              const dot = allFranco ? '#4a9eff' : hayDebe ? '#ff4545' : hayCompleto ? '#47ff8a' : '#555'
+              const dot = allFranco ? '#4a9eff' : hayDebe ? '#ff4545' : hayCompleto ? '#60AFFF' : '#555'
               return (
                 <div key={aid} className="auto-pick-btn" onClick={() => setSelectedAuto(aid)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -885,6 +885,9 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   const [showNewChofer, setShowNewChofer] = useState(null)
   const [newChoferNombre, setNewChoferNombre] = useState('')
   const [savingChofer, setSavingChofer] = useState(false)
+  const [editingChoferId, setEditingChoferId] = useState(null)
+  const [editChoferNombre, setEditChoferNombre] = useState('')
+  const [savingChoferEdit, setSavingChoferEdit] = useState(false)
 
   const autos = resumen?.config?.autos || []
   const choferes = resumen?.config?.choferes || []
@@ -925,6 +928,17 @@ function AutosTab({ resumen, showToast, onRefresh }) {
     onRefresh()
   }
 
+  const handleEditChofer = async (id) => {
+    if (!editChoferNombre.trim()) return showToast('Ingresá el nombre', 'error')
+    setSavingChoferEdit(true)
+    const { error } = await updateChofer(id, editChoferNombre.trim())
+    setSavingChoferEdit(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Nombre actualizado', 'success')
+    setEditingChoferId(null)
+    onRefresh()
+  }
+
   return (
     <>
       {autos.map(auto => {
@@ -954,9 +968,29 @@ function AutosTab({ resumen, showToast, onRefresh }) {
 
             <div className="stitle">Choferes</div>
             {autoChoferes.map(c => (
-              <div key={c.id} style={{ padding: '10px 12px', background: '#161616', borderRadius: 10, marginBottom: 6, fontSize: 14, color: '#ccc' }}>
-                {c.nombre}
-              </div>
+              editingChoferId === c.id ? (
+                <div key={c.id} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                  <input className="form-input" value={editChoferNombre}
+                    onChange={e => setEditChoferNombre(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleEditChofer(c.id)}
+                    style={{ flex: 1 }} autoFocus />
+                  <button className="kms-btn" disabled={savingChoferEdit} onClick={() => handleEditChofer(c.id)}>
+                    {savingChoferEdit ? '...' : 'OK'}
+                  </button>
+                  <button onClick={() => setEditingChoferId(null)}
+                    style={{ padding: '0 14px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 12, color: '#ff4545', cursor: 'pointer', fontSize: 13 }}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#161616', borderRadius: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, color: '#ccc' }}>{c.nombre}</span>
+                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#1A1A1A', borderColor: '#2A2A2A' }}
+                    onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
+                    ✎
+                  </button>
+                </div>
+              )
             ))}
             {showNewChofer === auto.id ? (
               <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
@@ -1162,7 +1196,7 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
                       <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
                         Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
                         {' · '}
-                        <span style={{ color: item.auto_id ? '#06C167' : '#666' }}>
+                        <span style={{ color: item.auto_id ? '#276EF1' : '#666' }}>
                           {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
                         </span>
                       </div>
@@ -1289,7 +1323,7 @@ const globalStyles = `
 
   .page{padding:0 20px 100px}
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:#555;font-size:13px}
-  .spinner{width:28px;height:28px;border:2px solid #1F1F1F;border-top-color:#06C167;border-radius:50%;animation:spin 0.75s linear infinite}
+  .spinner{width:28px;height:28px;border:2px solid #1F1F1F;border-top-color:#276EF1;border-radius:50%;animation:spin 0.75s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
   .stitle{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#555;margin:20px 0 10px}
@@ -1302,16 +1336,16 @@ const globalStyles = `
 
   .total-banner{background:#0D0D0D;border:1px solid #1C1C1C;border-radius:16px;padding:18px 20px;display:flex;justify-content:space-between;margin-bottom:12px}
   .total-label{font-size:10px;color:#555;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-  .total-value{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:#06C167}
+  .total-value{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:#276EF1}
 
   .gan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
   .gan-cell{background:#161616;border-radius:12px;padding:12px 14px}
   .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:4px}
-  .gan-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:#06C167}
+  .gan-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:#276EF1}
 
-  .neto-row{background:#0A1A12;border:1px solid #0F2D1F;border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .neto-row{background:#091428;border:1px solid #0D1E42;border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
   .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555}
-  .neto-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:#06C167}
+  .neto-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:#276EF1}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
   .metric{background:#161616;border-radius:12px;padding:12px 14px}
@@ -1320,7 +1354,7 @@ const globalStyles = `
 
   .kms-row{display:flex;gap:8px;align-items:center;margin-top:10px}
   .kms-input{flex:1;padding:10px 14px;background:#161616;border:1px solid #2A2A2A;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:14px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .kms-input:focus{border-color:#06C167}
+  .kms-input:focus{border-color:#276EF1}
   .kms-btn{padding:10px 16px;background:#fff;color:#000;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
 
   .mant-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
@@ -1329,7 +1363,7 @@ const globalStyles = `
   .mant-nombre{font-size:13px;font-weight:600}
   .mant-sub{font-family:'DM Mono',monospace;font-size:10px;color:#555;margin-top:3px}
   .mbadge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;text-transform:uppercase}
-  .mbadge-ok{background:#0A1A12;color:#06C167}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
+  .mbadge-ok{background:#091428;color:#276EF1}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:#1A1A1A;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
@@ -1353,7 +1387,7 @@ const globalStyles = `
   .day-cell.today .day-num{color:#fff;font-weight:700}
   .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%}
   .chofer-pill{border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;padding:2px 3px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pill-completo{background:#071A0F;color:#06C167}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A2A}
+  .pill-completo{background:#091428;color:#276EF1}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A2A}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;display:flex;align-items:flex-end}
   .modal-sheet{background:#0D0D0D;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid #1C1C1C}
@@ -1369,7 +1403,7 @@ const globalStyles = `
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .chofer-sec-name{font-size:16px;font-weight:600}
   .eb{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
-  .eb-completo{background:#071A0F;color:#06C167}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1A1A1A;color:#555}
+  .eb-completo{background:#091428;color:#276EF1}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1A1A1A;color:#555}
 
   .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
   .action-btn{padding:12px 8px;border-radius:12px;border:1px solid #1C1C1C;background:#111;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:opacity 0.15s}
@@ -1380,7 +1414,7 @@ const globalStyles = `
 
   .monto-row{display:flex;gap:8px}
   .monto-input{flex:1;padding:12px 14px;background:#111;border:1px solid #1C1C1C;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .monto-input:focus{border-color:#06C167}.monto-input::placeholder{color:#333}
+  .monto-input:focus{border-color:#276EF1}.monto-input::placeholder{color:#333}
   .monto-btn{padding:12px 18px;background:#1A1A1A;color:#fff;border:1px solid #2A2A2A;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;transition:background 0.15s}
   .monto-btn:active{background:#fff;color:#000}.monto-btn:disabled{opacity:0.4}
 
@@ -1396,19 +1430,19 @@ const globalStyles = `
 
   .form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#555;display:block;margin-bottom:8px}
   .form-input{width:100%;padding:14px 16px;background:#111;border:1px solid #1C1C1C;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .form-input:focus{border-color:#06C167}.form-input::placeholder{color:#333}
+  .form-input:focus{border-color:#276EF1}.form-input::placeholder{color:#333}
   .form-group{margin-bottom:14px}
   select.form-input{cursor:pointer}
   .radio-group{display:flex;gap:8px}
   .radio-opt{flex:1;padding:12px;border-radius:12px;border:1px solid #1C1C1C;background:#111;text-align:center;cursor:pointer;transition:all 0.15s}
-  .radio-opt.sel{border-color:#06C167;background:#071A0F}
+  .radio-opt.sel{border-color:#276EF1;background:#091428}
   .rl{font-size:13px;font-weight:600;color:#fff}
 
   .btn-primary{width:100%;padding:16px;background:#fff;color:#000;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity 0.15s}
   .btn-primary:active{opacity:0.85}.btn-primary:disabled{opacity:0.4;cursor:not-allowed}
 
   .toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(16px);background:#1A1A1A;border:1px solid #2A2A2A;color:#fff;padding:12px 20px;border-radius:100px;font-size:13px;font-weight:600;opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;max-width:92vw;text-align:center}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:#06C167;color:#06C167}.toast.error{border-color:#EF4444;color:#EF4444}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:#276EF1;color:#276EF1}.toast.error{border-color:#EF4444;color:#EF4444}
 
   .bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(0,0,0,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid #1A1A1A;padding:10px 0 26px;z-index:200}
   .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;background:none;border:none;cursor:pointer;color:#444;transition:color 0.2s}

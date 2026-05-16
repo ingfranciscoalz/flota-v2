@@ -85,6 +85,10 @@ export async function updateAutoTurnoBase(autoId, turnoBase) {
   return supabase.from('autos').update({ turno_base: turnoBase }).eq('id', autoId)
 }
 
+export async function updateChofer(id, nombre) {
+  return supabase.from('choferes').update({ nombre }).eq('id', id)
+}
+
 export async function getUserMantItems() {
   return supabase.from('user_mant_items').select('*').order('nombre')
 }
