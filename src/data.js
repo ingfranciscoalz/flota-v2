@@ -413,7 +413,6 @@ export async function updateKms(auto_id, kms_actuales) {
 // ── MANTENIMIENTO ─────────────────────────────────────────────────────────────
 export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, fecha) {
   const user_id = await uid()
-  await updateKms(auto_id, kms_en_service)
   return supabase.from('mantenimiento').insert({ user_id, auto_id, tipo, kms_en_service, costo, fecha })
 }
 

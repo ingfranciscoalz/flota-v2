@@ -191,6 +191,10 @@ export default function App() {
   const installPrompt = useRef(null)
   const { toast, show: showToast } = useToast()
 
+  // Detectar iOS (Safari no soporta beforeinstallprompt)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+  const isInStandaloneMode = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches
+
   useEffect(() => {
     const onPrompt = (e) => { e.preventDefault(); installPrompt.current = e; setShowInstall(true) }
     const onInstalled = () => { setShowInstall(false); installPrompt.current = null }
@@ -206,6 +210,9 @@ export default function App() {
     if (outcome === 'accepted') setShowInstall(false)
     installPrompt.current = null
   }
+
+  // En iOS mostramos instrucciones si no está en modo standalone
+  const showIosInstall = isIOS && !isInStandaloneMode
 
   useEffect(() => {
     if (authState === 'app' && !localStorage.getItem('flota_tutorial')) {
@@ -314,7 +321,7 @@ export default function App() {
     return (
       <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
-        <AuthScreen onEnterDemo={enterDemoMode} showInstall={showInstall} onInstall={handleInstall} />
+        <AuthScreen onEnterDemo={enterDemoMode} showInstall={showInstall} onInstall={handleInstall} showIosInstall={showIosInstall} />
         {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       </div>
     )
@@ -380,6 +387,9 @@ export default function App() {
               ⬇ Instalar
             </button>
           )}
+          {showIosInstall && !showInstall && (
+            <IosInstallHint />
+          )}
           {!isDemoMode && <button className="sync-btn" onClick={loadAll}>↻</button>}
           {!isDemoMode && <button className="sync-btn" onClick={async () => { await signOut(); setAuthState('auth') }} title="Cerrar sesión">⏏</button>}
         </div>
@@ -408,8 +418,33 @@ export default function App() {
   )
 }
 
+// ── IOS INSTALL HINT ──────────────────────────────────────────────────────────
+function IosInstallHint() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '6px 10px', cursor: 'pointer', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+        ⬇ Instalar
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '110%', right: 0, width: 230, background: '#131318', border: '1px solid #2A2A35', borderRadius: 14, padding: '14px 16px', zIndex: 999, boxShadow: '0 8px 32px #000a' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 8 }}>Instalar en iPhone / iPad</div>
+          <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.6 }}>
+            1. Tocá el ícono <span style={{ fontSize: 14 }}>⎙</span> <strong style={{ color: '#f0f0f0' }}>Compartir</strong> en Safari<br />
+            2. Elegí <strong style={{ color: '#f0f0f0' }}>Añadir a pantalla de inicio</strong><br />
+            3. Tocá <strong style={{ color: '#f0f0f0' }}>Añadir</strong>
+          </div>
+          <button onClick={() => setOpen(false)} style={{ marginTop: 12, background: 'none', border: 'none', color: '#276EF1', fontSize: 12, cursor: 'pointer', padding: 0 }}>Cerrar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── AUTH SCREEN ───────────────────────────────────────────────────────────────
-function AuthScreen({ onEnterDemo, showInstall, onInstall }) {
+function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -437,6 +472,16 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall }) {
           style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
           ⬇ Instalar TuFlota
         </button>
+      )}
+      {showIosInstall && !showInstall && (
+        <div style={{ alignSelf: 'stretch', marginBottom: 16, padding: '12px 16px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#5AACFF', marginBottom: 6 }}>⬇ Instalar en iPhone / iPad</div>
+          <div style={{ fontSize: 12, color: '#888', lineHeight: 1.7 }}>
+            1. Tocá el ícono <span style={{ fontSize: 13 }}>⎙</span> <strong style={{ color: '#ccc' }}>Compartir</strong> en Safari<br />
+            2. Elegí <strong style={{ color: '#ccc' }}>Añadir a pantalla de inicio</strong><br />
+            3. Tocá <strong style={{ color: '#ccc' }}>Añadir</strong>
+          </div>
+        </div>
       )}
       <p style={{ color: '#555', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
 
@@ -770,12 +815,13 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
 
       <div className="stitle">Total flota</div>
       <div className="total-banner">
-        <div>
+        <div style={{ flex: 1 }}>
           <div className="total-label">Esta semana</div>
           <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
           <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
         </div>
-        <div style={{ textAlign: 'right' }}>
+        <div style={{ width: 1, background: '#2A2A35', alignSelf: 'stretch', margin: '0 18px' }} />
+        <div style={{ flex: 1, textAlign: 'right' }}>
           <div className="total-label">Este mes</div>
           <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
           <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
