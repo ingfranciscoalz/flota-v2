@@ -15,7 +15,7 @@ const TURNO_BASE_DEFAULT = 50000
 const TOAST_DURATION = 3000
 const DEMO_EMAIL = 'demo@flotaapp.com'
 const DEMO_PASSWORD = 'demo1234'
-const ALERTA_DIAS = 30  // días de anticipación para alertas VTV/seguro
+const ALERTA_DIAS = 5   // días de anticipación para alertas VTV/seguro
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
