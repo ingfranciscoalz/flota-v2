@@ -35,3 +35,10 @@ END $$;
 
 -- 5. Si ya creaste user_mant_items antes, agregar la columna auto_id
 ALTER TABLE user_mant_items ADD COLUMN IF NOT EXISTS auto_id UUID REFERENCES autos(id) ON DELETE SET NULL;
+
+-- 6. Índices de rendimiento
+CREATE INDEX IF NOT EXISTS idx_turnos_fecha         ON turnos(fecha);
+CREATE INDEX IF NOT EXISTS idx_turnos_chofer_fecha  ON turnos(chofer_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_francos_chofer_fecha ON francos(chofer_id, fecha);
+CREATE INDEX IF NOT EXISTS idx_gastos_fecha         ON gastos(fecha);
+CREATE INDEX IF NOT EXISTS idx_gastos_auto          ON gastos(auto_id);

@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import {
-  getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
+  getResumen, getCalendario, getConfig, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
   createAuto, createChofer, updateAutoTurnoBase, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
 } from './data'
+
+// ── CONSTANTES ────────────────────────────────────────────────────────────────
+const TURNO_BASE_DEFAULT = 50000
+const TOAST_DURATION = 3000
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
@@ -24,11 +28,30 @@ function padZ(n) { return String(n).padStart(2, '0') }
 // ── TOAST ─────────────────────────────────────────────────────────────────────
 function useToast() {
   const [toast, setToast] = useState(null)
+  const timerRef = useRef(null)
   const show = useCallback((msg, type = '') => {
+    if (timerRef.current) clearTimeout(timerRef.current)
     setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
+    timerRef.current = setTimeout(() => setToast(null), TOAST_DURATION)
   }, [])
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
   return { toast, show }
+}
+
+// ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
+function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, onCancel }) {
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onCancel()}>
+      <div className="modal-sheet">
+        <div className="modal-title">{title}</div>
+        {message && <div style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>{message}</div>}
+        <button className="btn-primary ab-danger" style={{ marginBottom: 10 }} onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+        <button className="modal-close" onClick={onCancel}>Cancelar</button>
+      </div>
+    </div>
+  )
 }
 
 // ── APP ───────────────────────────────────────────────────────────────────────
@@ -46,11 +69,15 @@ export default function App() {
 
   const handleSession = useCallback(async () => {
     const prof = await getProfile()
+    if (!prof) {
+      // Perfil aún no creado (trigger puede demorar) — tratar como pendiente
+      setProfile(null); setInactiveReason('pending'); setAuthState('inactive'); return
+    }
     setProfile(prof)
-    if (prof?.activo_hasta && new Date(prof.activo_hasta) < new Date()) {
+    if (prof.activo_hasta && new Date(prof.activo_hasta) < new Date()) {
       setInactiveReason('expired'); setAuthState('inactive'); return
     }
-    if (!prof?.activo) { setInactiveReason('pending'); setAuthState('inactive'); return }
+    if (!prof.activo) { setInactiveReason('pending'); setAuthState('inactive'); return }
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -68,16 +95,26 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [handleSession])
 
-  const loadResumen = useCallback(async () => { const data = await getResumen(); setResumen(data) }, [])
-  const loadCal = useCallback(async (y, m) => { const data = await getCalendario(y, m); setCal(data) }, [])
+  const loadResumen = useCallback(async (cfg = null) => {
+    const data = await getResumen(cfg); setResumen(data)
+  }, [])
+  const loadCal = useCallback(async (y, m, cfg = null) => {
+    const data = await getCalendario(y, m, cfg); setCal(data)
+  }, [])
 
   const loadAll = useCallback(async () => {
     setLoading(true)
-    await Promise.all([loadResumen(), loadCal(calYear, calMonth)])
-    setLoading(false)
+    try {
+      const cfg = await getConfig()
+      await Promise.all([loadResumen(cfg), loadCal(calYear, calMonth, cfg)])
+    } catch (err) {
+      console.error('Error al cargar datos:', err)
+    } finally {
+      setLoading(false)
+    }
   }, [loadResumen, loadCal, calYear, calMonth])
 
-  useEffect(() => { if (authState === 'app') loadAll() }, [authState])
+  useEffect(() => { if (authState === 'app') loadAll() }, [authState, loadAll])
 
   const changeMonth = async (delta) => {
     let m = calMonth + delta, y = calYear
@@ -161,7 +198,7 @@ export default function App() {
         <>
           {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || 50000} />}
-          {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} />}
+          {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'admin'      && <AdminScreen showToast={showToast} />}
         </>
@@ -358,9 +395,16 @@ function diasRestantes(activo_hasta) {
 function AdminScreen({ showToast }) {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadingAction, setLoadingAction] = useState({}) // key: userId+action
 
   const reload = () => getAdminUsers().then(({ data }) => { setUsers(data || []); setLoading(false) })
   useEffect(() => { reload() }, [])
+
+  const withLoading = async (key, fn) => {
+    setLoadingAction(prev => ({ ...prev, [key]: true }))
+    await fn()
+    setLoadingAction(prev => ({ ...prev, [key]: false }))
+  }
 
   return (
     <div className="page">
@@ -375,6 +419,8 @@ function AdminScreen({ showToast }) {
           const expirado = dias !== null && dias <= 0
           const pocoTiempo = dias !== null && dias > 0 && dias <= 5
           const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#276EF1'
+          const loadingPago = !!loadingAction[u.id + 'pago']
+          const loadingActivo = !!loadingAction[u.id + 'activo']
 
           return (
             <div key={u.id} className="card" style={{ marginBottom: 8 }}>
@@ -405,26 +451,28 @@ function AdminScreen({ showToast }) {
                   <button
                     className="action-btn ab-primary"
                     style={{ width: 'auto', padding: '7px 12px', fontSize: 12 }}
-                    onClick={async () => {
+                    disabled={loadingPago || loadingActivo}
+                    onClick={() => withLoading(u.id + 'pago', async () => {
                       const { error } = await addPayment(u.id)
                       if (error) return showToast('⚠ ' + error.message, 'error')
                       showToast('✓ +31 días agregados', 'success')
                       reload()
-                    }}
+                    })}
                   >
-                    + 31 días
+                    {loadingPago ? '...' : '+ 31 días'}
                   </button>
                   <button
                     className={`action-btn ${u.activo && !expirado ? 'ab-quitar' : 'ab-franco'}`}
                     style={{ width: 'auto', padding: '7px 12px', fontSize: 12 }}
-                    onClick={async () => {
+                    disabled={loadingActivo || loadingPago}
+                    onClick={() => withLoading(u.id + 'activo', async () => {
                       const { error } = await setUserActivo(u.id, !(u.activo && !expirado))
                       if (error) return showToast('⚠ ' + error.message, 'error')
                       showToast(u.activo && !expirado ? '✕ Desactivado' : '✓ Activado', 'success')
                       reload()
-                    }}
+                    })}
                   >
-                    {u.activo && !expirado ? 'Desactivar' : 'Activar'}
+                    {loadingActivo ? '...' : u.activo && !expirado ? 'Desactivar' : 'Activar'}
                   </button>
                 </div>
               </div>
@@ -439,9 +487,11 @@ function AdminScreen({ showToast }) {
 // ── RESUMEN PAGE ──────────────────────────────────────────────────────────────
 function ResumenPage({ resumen, showToast, onRefresh }) {
   const [kmsInputs, setKmsInputs] = useState({})
+  const [kmsLoading, setKmsLoading] = useState({})
   if (!resumen) return <div className="loading"><div className="spinner" /></div>
 
   const { autos, totales } = resumen
+  const autoEntries = Object.entries(autos)
 
   return (
     <div className="page">
@@ -451,9 +501,14 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
         <div style={{ textAlign: 'right' }}><div className="total-label">Este mes</div><div className="total-value">{fmt(totales.mes)}</div></div>
       </div>
 
-      {Object.entries(autos).map(([aid, adata]) => {
+      {autoEntries.length === 0 && (
+        <div className="loading">Sin autos en la flota</div>
+      )}
+
+      {autoEntries.map(([aid, adata]) => {
         const gan = adata.ganancias || {}
         const choferes = Object.values(adata.deudas || {}).map(d => d.nombre)
+        const isLoadingKms = !!kmsLoading[aid]
         return (
           <div key={aid} className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -477,15 +532,18 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
                 value={kmsInputs[aid] || ''}
                 onChange={e => setKmsInputs(prev => ({ ...prev, [aid]: e.target.value }))}
               />
-              <button className="kms-btn" onClick={async () => {
-                const k = kmsInputs[aid]
-                if (!k) return showToast('Ingresá los kms', 'error')
-                const { error } = await updateKms(aid, parseInt(k))
+              <button className="kms-btn" disabled={isLoadingKms} onClick={async () => {
+                const k = parseInt(kmsInputs[aid])
+                if (!k || k <= 0) return showToast('Ingresá los kms', 'error')
+                if (k < (adata.kms_actuales || 0)) return showToast('Los kms no pueden ser menores a los actuales', 'error')
+                setKmsLoading(prev => ({ ...prev, [aid]: true }))
+                const { error } = await updateKms(aid, k)
+                setKmsLoading(prev => ({ ...prev, [aid]: false }))
                 if (error) return showToast('⚠ ' + error.message, 'error')
                 showToast('✓ Kms actualizados', 'success')
                 setKmsInputs(prev => ({ ...prev, [aid]: '' }))
                 onRefresh()
-              }}>OK</button>
+              }}>{isLoadingKms ? '...' : 'OK'}</button>
             </div>
           </div>
         )
@@ -761,11 +819,12 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
 }
 
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
-function GastosPage({ resumen, showToast }) {
+function GastosPage({ resumen, showToast, onRefresh }) {
   const [tab, setTab] = useState('lista')
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // id del gasto a confirmar
   const autos = resumen?.config?.autos || []
   const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
 
@@ -786,6 +845,18 @@ function GastosPage({ resumen, showToast }) {
 
   const categorias = ['mantenimiento', 'combustible', 'seguro', 'impuesto', 'multa', 'otro']
 
+  const handleDeleteConfirmed = async () => {
+    const id = deleteConfirm
+    setDeleteConfirm(null)
+    setDeletingId(id)
+    const { error } = await deleteGasto(id)
+    setDeletingId(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Gasto eliminado', 'success')
+    setGastos(prev => prev.filter(x => x.id !== id))
+    onRefresh()
+  }
+
   return (
     <div className="page">
       <div className="tabs">
@@ -804,14 +875,10 @@ function GastosPage({ resumen, showToast }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
-              <button className="gasto-del-btn" disabled={deletingId === g.id} onClick={async () => {
-                setDeletingId(g.id)
-                const { error } = await deleteGasto(g.id)
-                setDeletingId(null)
-                if (error) return showToast('⚠ ' + error.message, 'error')
-                showToast('✓ Gasto eliminado', 'success')
-                setGastos(prev => prev.filter(x => x.id !== g.id))
-              }}>{deletingId === g.id ? '...' : '✕'}</button>
+              <button className="gasto-del-btn" disabled={deletingId === g.id}
+                onClick={() => setDeleteConfirm(g.id)}>
+                {deletingId === g.id ? '...' : '✕'}
+              </button>
             </div>
           </div>
         ))
@@ -852,9 +919,20 @@ function GastosPage({ resumen, showToast }) {
             if (error) return showToast('⚠ ' + error.message, 'error')
             showToast('✓ Gasto registrado', 'success')
             setForm(f => ({ ...f, descripcion: '', monto: '' }))
+            onRefresh()
             setTab('lista')
           }}>REGISTRAR GASTO</button>
         </>
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Eliminar gasto"
+          message="¿Estás seguro? Esta acción no se puede deshacer."
+          confirmLabel="Eliminar"
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   )
@@ -1062,6 +1140,7 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
   const [newItem, setNewItem] = useState({ nombre: '', frecuencia: '', autoId: null })
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) // id del item a confirmar
 
   const reloadItems = async () => {
     setLoadingItems(true)
@@ -1207,15 +1286,7 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
                         ✎
                       </button>
                       <button className="gasto-del-btn" disabled={deletingId === item.id}
-                        onClick={async () => {
-                          setDeletingId(item.id)
-                          const { error } = await deleteMantItem(item.id)
-                          setDeletingId(null)
-                          if (error) return showToast('⚠ ' + error.message, 'error')
-                          showToast('✓ Item eliminado', 'success')
-                          setItems(prev => prev.filter(x => x.id !== item.id))
-                          onRefresh()
-                        }}>
+                        onClick={() => setDeleteConfirm(item.id)}>
                         {deletingId === item.id ? '...' : '✕'}
                       </button>
                     </div>
@@ -1258,6 +1329,18 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
     </>
   )
 
+  const handleDeleteItemConfirmed = async () => {
+    const id = deleteConfirm
+    setDeleteConfirm(null)
+    setDeletingId(id)
+    const { error } = await deleteMantItem(id)
+    setDeletingId(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Item eliminado', 'success')
+    setItems(prev => prev.filter(x => x.id !== id))
+    onRefresh()
+  }
+
   return (
     <>
       {statusSection}
@@ -1275,6 +1358,16 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
             setMantModal(null)
             onRefresh()
           }}
+        />
+      )}
+
+      {deleteConfirm && (
+        <ConfirmModal
+          title="Eliminar item"
+          message="¿Estás seguro? Se eliminará el item de mantenimiento."
+          confirmLabel="Eliminar"
+          onConfirm={handleDeleteItemConfirmed}
+          onCancel={() => setDeleteConfirm(null)}
         />
       )}
     </>
@@ -1346,6 +1439,8 @@ const globalStyles = `
   .neto-row{background:#091428;border:1px solid #0D1E42;border-radius:12px;padding:12px 14px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
   .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555}
   .neto-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:#276EF1}
+
+  .ab-danger{background:#1A0808;color:#EF4444;border:1px solid #3A1010}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
   .metric{background:#161616;border-radius:12px;padding:12px 14px}

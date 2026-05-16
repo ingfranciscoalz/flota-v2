@@ -2,7 +2,8 @@ import { supabase } from './supabase'
 
 async function uid() {
   const { data: { session } } = await supabase.auth.getSession()
-  return session?.user?.id
+  if (!session?.user?.id) throw new Error('Sesión expirada. Volvé a iniciar sesión.')
+  return session.user.id
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -37,8 +38,12 @@ export async function addPayment(id) {
 
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
 export async function createFleet({ turnoBase, francoWeekday, autos }) {
-  const user_id = await uid()
-  if (!user_id) return { error: { message: 'No autenticado' } }
+  let user_id
+  try {
+    user_id = await uid()
+  } catch {
+    return { error: { message: 'No autenticado' } }
+  }
 
   const { error: cfgErr } = await supabase.from('config').upsert([
     { user_id, clave: 'turno_base', valor: String(turnoBase) },
@@ -46,28 +51,43 @@ export async function createFleet({ turnoBase, francoWeekday, autos }) {
   ], { onConflict: 'user_id,clave' })
   if (cfgErr) return { error: cfgErr }
 
-  for (const auto of autos) {
-    const nombre = auto.nombre.trim()
-    if (!nombre) continue
-    const { data: autoData, error: autoErr } = await supabase
-      .from('autos').insert({ user_id, nombre, turno_base: turnoBase }).select('id').single()
-    if (autoErr) return { error: autoErr }
-    for (const choferNombre of auto.choferes) {
-      const cn = choferNombre.trim()
-      if (!cn) continue
-      const { error: chErr } = await supabase.from('choferes').insert({ user_id, auto_id: autoData.id, nombre: cn })
-      if (chErr) return { error: chErr }
+  const createdAutoIds = []
+  try {
+    for (const auto of autos) {
+      const nombre = auto.nombre.trim()
+      if (!nombre) continue
+      const { data: autoData, error: autoErr } = await supabase
+        .from('autos').insert({ user_id, nombre, turno_base: turnoBase }).select('id').single()
+      if (autoErr) throw autoErr
+      createdAutoIds.push(autoData.id)
+
+      for (const choferNombre of auto.choferes) {
+        const cn = choferNombre.trim()
+        if (!cn) continue
+        const { error: chErr } = await supabase.from('choferes').insert({ user_id, auto_id: autoData.id, nombre: cn })
+        if (chErr) throw chErr
+      }
+      await supabase.from('kms').insert({
+        user_id,
+        auto_id: autoData.id,
+        kms_actuales: 0,
+        actualizado_en: new Date().toISOString().split('T')[0],
+      })
     }
-    await supabase.from('kms').insert({ user_id, auto_id: autoData.id, kms_actuales: 0, actualizado_en: new Date().toISOString().split('T')[0] })
+
+    await supabase.from('user_mant_items').insert([
+      { user_id, nombre: 'Aceite y filtros', frecuencia_kms: 10000 },
+      { user_id, nombre: 'Distribución', frecuencia_kms: 60000 },
+    ])
+
+    return { error: null }
+  } catch (err) {
+    // Intentar limpiar autos creados parcialmente
+    if (createdAutoIds.length > 0) {
+      await supabase.from('autos').delete().in('id', createdAutoIds)
+    }
+    return { error: err }
   }
-
-  // Crear items de mantenimiento por defecto
-  await supabase.from('user_mant_items').insert([
-    { user_id, nombre: 'Aceite y filtros', frecuencia_kms: 10000 },
-    { user_id, nombre: 'Distribución', frecuencia_kms: 60000 },
-  ])
-
-  return { error: null }
 }
 
 // ── FLOTA (autos, choferes, mantenimiento items) ───────────────────────────────
@@ -114,6 +134,12 @@ export async function getConfig() {
     supabase.from('choferes').select('*'),
     supabase.from('user_mant_items').select('*'),
   ])
+
+  if (configRes.error) throw configRes.error
+  if (autosRes.error) throw autosRes.error
+  if (choferesRes.error) throw choferesRes.error
+  if (mantItemsRes.error) throw mantItemsRes.error
+
   const cfg = {}
   for (const row of configRes.data || []) cfg[row.clave] = row.valor
   return {
@@ -131,15 +157,15 @@ export async function updateConfig(clave, valor) {
 }
 
 // ── RESUMEN ───────────────────────────────────────────────────────────────────
-export async function getResumen() {
+export async function getResumen(cfg = null) {
   const hoy = new Date()
   const inicioMes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`
   const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1)
   const ayerStr = ayer.toISOString().split('T')[0]
   const lunesStr = getLunes(hoy)
 
-  const [cfg, turnosRes, gastosRes, mantRes, kmsRes, francosRes] = await Promise.all([
-    getConfig(),
+  const [cfgData, turnosRes, gastosRes, mantRes, kmsRes, francosRes] = await Promise.all([
+    cfg ? Promise.resolve(cfg) : getConfig(),
     supabase.from('turnos').select('*, choferes(auto_id)').gte('fecha', inicioMes),
     supabase.from('gastos').select('*').gte('fecha', inicioMes),
     supabase.from('mantenimiento').select('*'),
@@ -147,6 +173,7 @@ export async function getResumen() {
     supabase.from('francos').select('*').gte('fecha', inicioMes),
   ])
 
+  const resolvedCfg = cfg ? cfgData : cfgData
   const turnos = turnosRes.data || []
   const gastos = gastosRes.data || []
   const mantRealizados = mantRes.data || []
@@ -156,18 +183,19 @@ export async function getResumen() {
   const kmsMap = {}
   for (const k of kmsData) kmsMap[k.auto_id] = k.kms_actuales
 
+  // Usar Map para unificar con getCalendario
   const francosMap = {}
   for (const f of francosManuales) {
-    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Set()
-    francosMap[f.chofer_id].add(f.fecha)
+    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
+    francosMap[f.chofer_id].set(f.fecha, f.motivo || 'franco_especial')
   }
 
   const resultado = {}
   let totalSemana = 0, totalMes = 0
 
-  for (const auto of cfg.autos) {
-    const autoTurnoBase = auto.turno_base || cfg.turno_base
-    const choferesAuto = cfg.choferes.filter(c => c.auto_id === auto.id)
+  for (const auto of resolvedCfg.autos) {
+    const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
+    const choferesAuto = resolvedCfg.choferes.filter(c => c.auto_id === auto.id)
     const gastosAuto = gastos.filter(g => g.auto_id === auto.id)
     const gastosMes = gastosAuto.reduce((s, g) => s + parseFloat(g.monto), 0)
 
@@ -186,7 +214,7 @@ export async function getResumen() {
       while (d <= hoy) {
         const ds = d.toISOString().split('T')[0]
         const monto = turnosMap[ds] || 0
-        const esFranco = isFranco(d, chofer.id, cfg.franco_weekday, francosMap)
+        const esFranco = isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap)
         if (monto > 0) {
           gMes += monto
           if (ds >= lunesStr) gSem += monto
@@ -205,7 +233,7 @@ export async function getResumen() {
     totalMes += ganMes
 
     const kmsAct = kmsMap[auto.id] || 0
-    const autoItems = cfg.mant_items.filter(item => !item.auto_id || item.auto_id === auto.id)
+    const autoItems = resolvedCfg.mant_items.filter(item => !item.auto_id || item.auto_id === auto.id)
     const mantStatus = calcMantStatus(autoItems, mantRealizados.filter(m => m.auto_id === auto.id), kmsAct)
 
     resultado[auto.id] = {
@@ -221,14 +249,15 @@ export async function getResumen() {
   return {
     autos: resultado,
     totales: { semana: totalSemana, mes: totalMes },
-    config: cfg,
+    config: resolvedCfg,
   }
 }
 
 function calcMantStatus(items, realizados, kmsAct) {
   return items.map(item => {
     const servicios = realizados.filter(r => r.tipo === item.id)
-    const ultimoKms = servicios.length > 0 ? Math.max(...servicios.map(s => s.kms_en_service || 0)) : 0
+    // Usar reduce en lugar de Math.max(...spread) para evitar stack overflow con muchos registros
+    const ultimoKms = servicios.reduce((max, s) => Math.max(max, s.kms_en_service || 0), 0)
     const proximo = ultimoKms + item.frecuencia_kms
     const faltan = proximo - kmsAct
     return {
@@ -242,17 +271,18 @@ function calcMantStatus(items, realizados, kmsAct) {
 }
 
 // ── CALENDARIO ────────────────────────────────────────────────────────────────
-export async function getCalendario(year, month) {
+export async function getCalendario(year, month, cfg = null) {
   const inicioMes = `${year}-${String(month).padStart(2, '0')}-01`
   const daysInMonth = new Date(year, month, 0).getDate()
   const finMes = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
 
-  const [cfg, turnosRes, francosRes] = await Promise.all([
-    getConfig(),
+  const [cfgData, turnosRes, francosRes] = await Promise.all([
+    cfg ? Promise.resolve(cfg) : getConfig(),
     supabase.from('turnos').select('*, choferes(auto_id)').gte('fecha', inicioMes).lte('fecha', finMes),
     supabase.from('francos').select('*').gte('fecha', inicioMes).lte('fecha', finMes),
   ])
 
+  const resolvedCfg = cfg ? cfgData : cfgData
   const turnos = turnosRes.data || []
   const francos = francosRes.data || []
   const hoy = new Date().toISOString().split('T')[0]
@@ -270,9 +300,9 @@ export async function getCalendario(year, month) {
   }
 
   const resultado = {}
-  for (const auto of cfg.autos) {
-    const autoTurnoBase = auto.turno_base || cfg.turno_base
-    const choferesAuto = cfg.choferes.filter(c => c.auto_id === auto.id)
+  for (const auto of resolvedCfg.autos) {
+    const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
+    const choferesAuto = resolvedCfg.choferes.filter(c => c.auto_id === auto.id)
     const dias = {}
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -281,7 +311,7 @@ export async function getCalendario(year, month) {
       const diaInfo = {}
 
       for (const chofer of choferesAuto) {
-        const franco = isFranco(d, chofer.id, cfg.franco_weekday, francosMap)
+        const franco = isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap)
         const monto = turnosMap[chofer.id]?.[ds] ?? null
         let estado
         if (franco) estado = 'franco'
@@ -302,7 +332,7 @@ export async function getCalendario(year, month) {
     }
   }
 
-  return { ...resultado, franco_weekday: cfg.franco_weekday }
+  return { ...resultado, franco_weekday: resolvedCfg.franco_weekday }
 }
 
 // ── TURNOS ────────────────────────────────────────────────────────────────────
@@ -321,10 +351,6 @@ export async function marcarFranco(chofer_id, fecha, motivo = 'franco_especial')
 }
 export async function quitarFranco(chofer_id, fecha) {
   const user_id = await uid()
-  const { data } = await supabase.from('francos').select('id,motivo').eq('chofer_id', chofer_id).eq('fecha', fecha).single()
-  if (data && data.motivo !== 'no_franco') {
-    await supabase.from('francos').delete().eq('id', data.id)
-  }
   return supabase.from('francos').upsert({ user_id, chofer_id, fecha, motivo: 'no_franco' }, { onConflict: 'chofer_id,fecha' })
 }
 
@@ -370,9 +396,6 @@ function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const francoData = francosMap[chofer_id]
   if (francoData instanceof Map) {
     if (francoData.get(ds) === 'no_franco') return false
-    if (francoData.has(ds)) return true
-  }
-  if (francoData instanceof Set) {
     if (francoData.has(ds)) return true
   }
   const dowLunes = (d.getDay() + 6) % 7
