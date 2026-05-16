@@ -1,5 +1,71 @@
 import { supabase } from './supabase'
 
+async function uid() {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session?.user?.id
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+export async function signUp(email, password) {
+  return supabase.auth.signUp({ email, password })
+}
+
+export async function signIn(email, password) {
+  return supabase.auth.signInWithPassword({ email, password })
+}
+
+export async function signOut() {
+  return supabase.auth.signOut()
+}
+
+export async function getProfile() {
+  const { data } = await supabase.from('profiles').select('*').maybeSingle()
+  return data
+}
+
+export async function checkFleet() {
+  const { data } = await supabase.from('autos').select('id').limit(1)
+  return (data?.length || 0) > 0
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+export async function getAdminUsers() {
+  return supabase.from('profiles').select('*').order('created_at')
+}
+
+export async function setUserActivo(id, activo) {
+  return supabase.from('profiles').update({ activo }).eq('id', id)
+}
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+export async function createFleet({ turnoBase, francoWeekday, autos }) {
+  const user_id = await uid()
+  if (!user_id) return { error: { message: 'No autenticado' } }
+
+  const { error: cfgErr } = await supabase.from('config').upsert([
+    { user_id, clave: 'turno_base', valor: String(turnoBase) },
+    { user_id, clave: 'franco_weekday', valor: String(francoWeekday) },
+  ], { onConflict: 'user_id,clave' })
+  if (cfgErr) return { error: cfgErr }
+
+  for (const auto of autos) {
+    const nombre = auto.nombre.trim()
+    if (!nombre) continue
+    const { data: autoData, error: autoErr } = await supabase
+      .from('autos').insert({ user_id, nombre }).select('id').single()
+    if (autoErr) return { error: autoErr }
+    for (const choferNombre of auto.choferes) {
+      const cn = choferNombre.trim()
+      if (!cn) continue
+      const { error: chErr } = await supabase.from('choferes').insert({ user_id, auto_id: autoData.id, nombre: cn })
+      if (chErr) return { error: chErr }
+    }
+    await supabase.from('kms').insert({ user_id, auto_id: autoData.id, kms_actuales: 0, actualizado_en: new Date().toISOString().split('T')[0] })
+  }
+
+  return { error: null }
+}
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 export async function getConfig() {
   const [configRes, autosRes, choferesRes, mantItemsRes] = await Promise.all([
@@ -20,7 +86,8 @@ export async function getConfig() {
 }
 
 export async function updateConfig(clave, valor) {
-  return supabase.from('config').upsert({ clave, valor: String(valor) })
+  const user_id = await uid()
+  return supabase.from('config').upsert({ user_id, clave, valor: String(valor) }, { onConflict: 'user_id,clave' })
 }
 
 // ── RESUMEN ───────────────────────────────────────────────────────────────────
@@ -46,11 +113,9 @@ export async function getResumen() {
   const kmsData = kmsRes.data || []
   const francosManuales = francosRes.data || []
 
-  // Mapa kms por auto
   const kmsMap = {}
   for (const k of kmsData) kmsMap[k.auto_id] = k.kms_actuales
 
-  // Mapa francos manuales {chofer_id: Set<fecha>}
   const francosMap = {}
   for (const f of francosManuales) {
     if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Set()
@@ -76,7 +141,6 @@ export async function getResumen() {
       let gSem = 0, gMes = 0
       const diasDebe = []
 
-      // Iterar días del mes
       const d = new Date(inicioMes)
       while (d <= hoy) {
         const ds = d.toISOString().split('T')[0]
@@ -100,7 +164,6 @@ export async function getResumen() {
     totalSemana += ganSemana
     totalMes += ganMes
 
-    // Mantenimiento
     const kmsAct = kmsMap[auto.id] || 0
     const mantStatus = calcMantStatus(cfg.mant_items, mantRealizados.filter(m => m.auto_id === auto.id), kmsAct)
 
@@ -157,14 +220,12 @@ export async function getCalendario(year, month) {
   const francos = francosRes.data || []
   const hoy = new Date().toISOString().split('T')[0]
 
-  // Mapa turnos {chofer_id: {fecha: monto}}
   const turnosMap = {}
   for (const t of turnos) {
     if (!turnosMap[t.chofer_id]) turnosMap[t.chofer_id] = {}
     turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
   }
 
-  // Mapa francos {chofer_id: Map<fecha, motivo>}
   const francosMap = {}
   for (const f of francos) {
     if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
@@ -208,34 +269,33 @@ export async function getCalendario(year, month) {
 
 // ── TURNOS ────────────────────────────────────────────────────────────────────
 export async function upsertTurno(chofer_id, fecha, monto) {
-  // Verificar si ya existe
-  const { data } = await supabase.from('turnos').select('id').eq('chofer_id', chofer_id).eq('fecha', fecha).single()
-  if (data) {
-    return supabase.from('turnos').update({ monto }).eq('id', data.id)
-  }
-  return supabase.from('turnos').insert({ chofer_id, fecha, monto })
+  const user_id = await uid()
+  return supabase.from('turnos').upsert({ user_id, chofer_id, fecha, monto }, { onConflict: 'chofer_id,fecha' })
+}
+
+export async function deleteTurno(chofer_id, fecha) {
+  return supabase.from('turnos').delete().eq('chofer_id', chofer_id).eq('fecha', fecha)
 }
 
 // ── FRANCOS ───────────────────────────────────────────────────────────────────
 export async function marcarFranco(chofer_id, fecha, motivo = 'franco_especial') {
-  return supabase.from('francos').upsert({ chofer_id, fecha, motivo }, { onConflict: 'chofer_id,fecha' })
+  const user_id = await uid()
+  return supabase.from('francos').upsert({ user_id, chofer_id, fecha, motivo }, { onConflict: 'chofer_id,fecha' })
 }
 
 export async function quitarFranco(chofer_id, fecha) {
-  // Si es un franco por defecto (día de semana), insertar excepción "no_franco"
-  // Si es un franco manual, eliminarlo
+  const user_id = await uid()
   const { data } = await supabase.from('francos').select('id,motivo').eq('chofer_id', chofer_id).eq('fecha', fecha).single()
   if (data && data.motivo !== 'no_franco') {
-    // Era un franco manual, lo borramos y ponemos no_franco para override del default
     await supabase.from('francos').delete().eq('id', data.id)
   }
-  // Insertar excepción de no-franco para override del día de semana default
-  return supabase.from('francos').upsert({ chofer_id, fecha, motivo: 'no_franco' }, { onConflict: 'chofer_id,fecha' })
+  return supabase.from('francos').upsert({ user_id, chofer_id, fecha, motivo: 'no_franco' }, { onConflict: 'chofer_id,fecha' })
 }
 
 // ── GASTOS ────────────────────────────────────────────────────────────────────
 export async function insertGasto(auto_id, descripcion, monto, categoria, fecha) {
-  return supabase.from('gastos').insert({ auto_id, descripcion, monto, categoria, fecha })
+  const user_id = await uid()
+  return supabase.from('gastos').insert({ user_id, auto_id, descripcion, monto, categoria, fecha })
 }
 
 export async function deleteGasto(id) {
@@ -250,19 +310,18 @@ export async function getGastos(auto_id = null) {
 
 // ── KMS ───────────────────────────────────────────────────────────────────────
 export async function updateKms(auto_id, kms_actuales) {
-  return supabase.from('kms').upsert({ auto_id, kms_actuales, actualizado_en: new Date().toISOString().split('T')[0] })
+  const user_id = await uid()
+  return supabase.from('kms').upsert(
+    { user_id, auto_id, kms_actuales, actualizado_en: new Date().toISOString().split('T')[0] },
+    { onConflict: 'user_id,auto_id' }
+  )
 }
 
 // ── MANTENIMIENTO ─────────────────────────────────────────────────────────────
 export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, fecha) {
-  // También actualizar kms
+  const user_id = await uid()
   await updateKms(auto_id, kms_en_service)
-  return supabase.from('mantenimiento').insert({ auto_id, tipo, kms_en_service, costo, fecha })
-}
-
-// ── DELETE TURNO ─────────────────────────────────────────────────────────────
-export async function deleteTurno(chofer_id, fecha) {
-  return supabase.from('turnos').delete().eq('chofer_id', chofer_id).eq('fecha', fecha)
+  return supabase.from('mantenimiento').insert({ user_id, auto_id, tipo, kms_en_service, costo, fecha })
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

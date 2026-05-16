@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco, insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento } from './data'
+import { supabase } from './supabase'
+import {
+  getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
+  insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
+  signIn, signUp, signOut, getProfile, checkFleet, createFleet,
+  getAdminUsers, setUserActivo,
+} from './data'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
@@ -11,7 +17,6 @@ function fmt(n) {
 }
 
 function today() { return new Date().toISOString().split('T')[0] }
-
 function padZ(n) { return String(n).padStart(2, '0') }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────
@@ -26,23 +31,39 @@ function useToast() {
 
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
+  const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app
+  const [profile, setProfile] = useState(null)
   const [page, setPage] = useState('resumen')
   const [resumen, setResumen] = useState(null)
   const [cal, setCal] = useState(null)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
   const [calMonth, setCalMonth] = useState(new Date().getMonth() + 1)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const { toast, show: showToast } = useToast()
 
-  const loadResumen = useCallback(async () => {
-    const data = await getResumen()
-    setResumen(data)
+  const handleSession = useCallback(async () => {
+    const prof = await getProfile()
+    setProfile(prof)
+    if (!prof?.activo) { setAuthState('inactive'); return }
+    const hasFleet = await checkFleet()
+    if (!hasFleet) { setAuthState('onboarding'); return }
+    setAuthState('app')
   }, [])
 
-  const loadCal = useCallback(async (y, m) => {
-    const data = await getCalendario(y, m)
-    setCal(data)
-  }, [])
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setAuthState('auth'); return }
+      handleSession()
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setAuthState('auth'); setProfile(null); return }
+      handleSession()
+    })
+    return () => subscription.unsubscribe()
+  }, [handleSession])
+
+  const loadResumen = useCallback(async () => { const data = await getResumen(); setResumen(data) }, [])
+  const loadCal = useCallback(async (y, m) => { const data = await getCalendario(y, m); setCal(data) }, [])
 
   const loadAll = useCallback(async () => {
     setLoading(true)
@@ -50,7 +71,7 @@ export default function App() {
     setLoading(false)
   }, [loadResumen, loadCal, calYear, calMonth])
 
-  useEffect(() => { loadAll() }, [])
+  useEffect(() => { if (authState === 'app') loadAll() }, [authState])
 
   const changeMonth = async (delta) => {
     let m = calMonth + delta, y = calYear
@@ -61,44 +82,304 @@ export default function App() {
     setCal(data)
   }
 
+  if (authState === 'loading') {
+    return (
+      <div style={{ background: '#0a0a0a', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <style>{globalStyles}</style>
+        <div className="spinner" />
+      </div>
+    )
+  }
+
+  if (authState === 'auth') {
+    return (
+      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+        <style>{globalStyles}</style>
+        <AuthScreen />
+        {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+      </div>
+    )
+  }
+
+  if (authState === 'inactive') {
+    return (
+      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+        <style>{globalStyles}</style>
+        <InactiveScreen
+          onRefresh={handleSession}
+          onSignOut={async () => { await signOut(); setAuthState('auth') }}
+        />
+      </div>
+    )
+  }
+
+  if (authState === 'onboarding') {
+    return (
+      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+        <style>{globalStyles}</style>
+        <OnboardingScreen
+          showToast={showToast}
+          onComplete={() => { setAuthState('app') }}
+        />
+        {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+      </div>
+    )
+  }
+
+  const navItems = [
+    { id: 'resumen',    label: 'Resumen',    icon: <GridIcon /> },
+    { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
+    { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
+    ...(profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
+  ]
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#0a0a0a', color: '#f0f0f0', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
 
-      {/* HEADER */}
       <div className="header">
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
           FLOTA<span style={{ color: '#e8ff47' }}>.</span>
         </h1>
-        <button className="sync-btn" onClick={loadAll}>↻</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="sync-btn" onClick={loadAll}>↻</button>
+          <button className="sync-btn" onClick={async () => { await signOut(); setAuthState('auth') }} title="Cerrar sesión">⏏</button>
+        </div>
       </div>
 
-      {/* PAGES */}
       {loading && !resumen ? (
         <div className="loading"><div className="spinner" /><span>Cargando...</span></div>
       ) : (
         <>
-          {page === 'resumen'   && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+          {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
           {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || 50000} />}
-          {page === 'gastos'    && <GastosPage resumen={resumen} showToast={showToast} />}
+          {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} />}
+          {page === 'admin'      && <AdminScreen showToast={showToast} />}
         </>
       )}
 
-      {/* BOTTOM NAV */}
       <nav className="bottom-nav">
-        {[
-          { id: 'resumen',    label: 'Resumen',    icon: <GridIcon /> },
-          { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
-          { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
-        ].map(({ id, label, icon }) => (
+        {navItems.map(({ id, label, icon }) => (
           <button key={id} className={`bnav-btn ${page === id ? 'active' : ''}`} onClick={() => setPage(id)}>
             {icon}<span className="bnav-label">{label}</span>
           </button>
         ))}
       </nav>
 
-      {/* TOAST */}
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+    </div>
+  )
+}
+
+// ── AUTH SCREEN ───────────────────────────────────────────────────────────────
+function AuthScreen() {
+  const [tab, setTab] = useState('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const submit = async () => {
+    if (!email || !password) { setError('Completá email y contraseña'); return }
+    setLoading(true); setError(''); setSuccess('')
+    const fn = tab === 'login' ? signIn : signUp
+    const { error: err } = await fn(email, password)
+    setLoading(false)
+    if (err) { setError(err.message); return }
+    if (tab === 'register') setSuccess('Cuenta creada. Esperá la activación del administrador.')
+  }
+
+  return (
+    <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
+      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6 }}>
+        FLOTA<span style={{ color: '#e8ff47' }}>.</span>
+      </h1>
+      <p style={{ color: '#555', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
+
+      <div className="tabs" style={{ marginBottom: 20 }}>
+        <button className={`tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setSuccess('') }}>Ingresar</button>
+        <button className={`tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setSuccess('') }}>Registrarse</button>
+      </div>
+
+      <div className="form-group">
+        <input className="form-input" type="email" placeholder="Email" value={email}
+          onChange={e => setEmail(e.target.value)} autoComplete="email" />
+      </div>
+      <div className="form-group">
+        <input className="form-input" type="password" placeholder="Contraseña (mínimo 6 caracteres)" value={password}
+          onChange={e => setPassword(e.target.value)} autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+          onKeyDown={e => e.key === 'Enter' && submit()} />
+      </div>
+
+      {error   && <div style={{ color: '#ff4545', fontSize: 13, marginBottom: 12 }}>{error}</div>}
+      {success && <div style={{ color: '#47ff8a', fontSize: 13, marginBottom: 12 }}>{success}</div>}
+
+      <button className="btn-primary" disabled={loading} onClick={submit}>
+        {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
+      </button>
+    </div>
+  )
+}
+
+// ── INACTIVE SCREEN ───────────────────────────────────────────────────────────
+function InactiveScreen({ onRefresh, onSignOut }) {
+  const [checking, setChecking] = useState(false)
+  return (
+    <div style={{ padding: '100px 24px', textAlign: 'center' }}>
+      <div style={{ fontSize: 48, marginBottom: 20 }}>⏳</div>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
+        Cuenta pendiente
+      </div>
+      <div style={{ color: '#555', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
+        Tu cuenta está esperando activación.<br />Contactá al administrador para habilitarla.
+      </div>
+      <button className="btn-primary" style={{ marginBottom: 10 }} disabled={checking} onClick={async () => {
+        setChecking(true); await onRefresh(); setChecking(false)
+      }}>
+        {checking ? 'Verificando...' : 'Verificar activación'}
+      </button>
+      <button className="modal-close" onClick={onSignOut}>Cerrar sesión</button>
+    </div>
+  )
+}
+
+// ── ONBOARDING SCREEN ─────────────────────────────────────────────────────────
+function OnboardingScreen({ showToast, onComplete }) {
+  const [turnoBase, setTurnoBase] = useState('50000')
+  const [francoWeekday, setFrancoWeekday] = useState('1')
+  const [autos, setAutos] = useState([{ nombre: '', choferes: ['', ''] }])
+  const [saving, setSaving] = useState(false)
+
+  const addAuto = () => setAutos(p => [...p, { nombre: '', choferes: [''] }])
+  const removeAuto = i => setAutos(p => p.filter((_, idx) => idx !== i))
+  const setAutoNombre = (i, v) => setAutos(p => p.map((a, idx) => idx === i ? { ...a, nombre: v } : a))
+  const addChofer = i => setAutos(p => p.map((a, idx) => idx === i ? { ...a, choferes: [...a.choferes, ''] } : a))
+  const removeChofer = (ai, ci) => setAutos(p => p.map((a, i) => i === ai ? { ...a, choferes: a.choferes.filter((_, j) => j !== ci) } : a))
+  const setChofer = (ai, ci, v) => setAutos(p => p.map((a, i) => i === ai ? { ...a, choferes: a.choferes.map((c, j) => j === ci ? v : c) } : a))
+
+  const submit = async () => {
+    for (const auto of autos) {
+      if (!auto.nombre.trim()) return showToast('Ingresá el nombre de cada auto', 'error')
+      if (!auto.choferes.some(c => c.trim())) return showToast('Cada auto necesita al menos un chofer', 'error')
+    }
+    if (!turnoBase || parseInt(turnoBase) <= 0) return showToast('Ingresá un turno base válido', 'error')
+    setSaving(true)
+    const { error } = await createFleet({ turnoBase: parseInt(turnoBase), francoWeekday: parseInt(francoWeekday), autos })
+    setSaving(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Flota creada', 'success')
+    onComplete()
+  }
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", color: '#f0f0f0' }}>
+      <div style={{ padding: '52px 16px 100px' }}>
+        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
+          Configurar flota
+        </h2>
+        <p style={{ color: '#555', fontSize: 13, marginBottom: 24 }}>Podés cambiar estos datos después.</p>
+
+        <div className="stitle">Turno base ($)</div>
+        <div className="form-group">
+          <input className="form-input" type="number" inputMode="numeric" placeholder="Ej: 50000"
+            value={turnoBase} onChange={e => setTurnoBase(e.target.value)} />
+        </div>
+
+        <div className="stitle">Día de franco semanal</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          {DIAS_CORTOS.map((d, i) => (
+            <div key={i} className={`radio-opt ${francoWeekday == i ? 'sel' : ''}`}
+              style={{ flex: 'none', padding: '8px 14px' }}
+              onClick={() => setFrancoWeekday(String(i))}>
+              <div className="rl">{d}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="stitle">Autos y choferes</div>
+        {autos.map((auto, ai) => (
+          <div key={ai} className="card" style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              <input className="form-input" placeholder="Nombre del auto (ej: Prisma Negro)"
+                value={auto.nombre} onChange={e => setAutoNombre(ai, e.target.value)} style={{ flex: 1 }} />
+              {autos.length > 1 && (
+                <button onClick={() => removeAuto(ai)} style={{ padding: '0 12px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer' }}>✕</button>
+              )}
+            </div>
+            <div className="stitle" style={{ marginTop: 0 }}>Choferes</div>
+            {auto.choferes.map((c, ci) => (
+              <div key={ci} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                <input className="form-input" placeholder={`Chofer ${ci + 1}`}
+                  value={c} onChange={e => setChofer(ai, ci, e.target.value)} style={{ flex: 1 }} />
+                {auto.choferes.length > 1 && (
+                  <button onClick={() => removeChofer(ai, ci)} style={{ padding: '0 12px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer' }}>✕</button>
+                )}
+              </div>
+            ))}
+            <button onClick={() => addChofer(ai)} style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
+              + Agregar chofer
+            </button>
+          </div>
+        ))}
+
+        <button className="action-btn" style={{ width: '100%', marginBottom: 16 }} onClick={addAuto}>
+          + Agregar auto
+        </button>
+
+        <button className="btn-primary" disabled={saving} onClick={submit}>
+          {saving ? 'Creando flota...' : 'CREAR MI FLOTA'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── ADMIN SCREEN ──────────────────────────────────────────────────────────────
+function AdminScreen({ showToast }) {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    getAdminUsers().then(({ data }) => { setUsers(data || []); setLoading(false) })
+  }, [])
+
+  return (
+    <div className="page">
+      <div className="stitle">Usuarios registrados</div>
+      {loading ? (
+        <div className="loading"><div className="spinner" /></div>
+      ) : users.length === 0 ? (
+        <div className="loading">Sin usuarios registrados</div>
+      ) : (
+        users.map(u => (
+          <div key={u.id} className="card" style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, wordBreak: 'break-all' }}>{u.nombre}</div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: '#555' }}>
+                    {new Date(u.created_at).toLocaleDateString('es-AR')}
+                  </span>
+                  {u.is_admin && <span style={{ fontSize: 10, background: '#1a1a00', color: '#e8ff47', border: '1px solid #3a3a00', borderRadius: 4, padding: '1px 6px' }}>Admin</span>}
+                </div>
+              </div>
+              <button
+                className={`action-btn ${u.activo ? 'ab-quitar' : 'ab-primary'}`}
+                style={{ width: 'auto', padding: '8px 14px', flexShrink: 0 }}
+                onClick={async () => {
+                  const { error } = await setUserActivo(u.id, !u.activo)
+                  if (error) return showToast('⚠ ' + error.message, 'error')
+                  setUsers(prev => prev.map(x => x.id === u.id ? { ...x, activo: !x.activo } : x))
+                  showToast(u.activo ? '✕ Desactivado' : '✓ Activado', 'success')
+                }}
+              >
+                {u.activo ? 'Desactivar' : 'Activar'}
+              </button>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   )
 }
@@ -109,11 +390,10 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
   const [mantModal, setMantModal] = useState(null)
   if (!resumen) return <div className="loading"><div className="spinner" /></div>
 
-  const { autos, totales, config } = resumen
+  const { autos, totales } = resumen
 
   return (
     <div className="page">
-      {/* Alertas */}
       {Object.entries(autos).flatMap(([aid, adata]) =>
         (adata.mantenimiento || []).filter(m => m.estado === 'CAMBIAR').map(m => (
           <div key={aid+m.id} className="alert-banner">
@@ -122,7 +402,6 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
         ))
       )}
 
-      {/* Total flota */}
       <div className="stitle">Total flota</div>
       <div className="total-banner">
         <div><div className="total-label">Esta semana</div><div className="total-value">{fmt(totales.semana)}</div></div>
@@ -131,12 +410,11 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
 
       {Object.entries(autos).map(([aid, adata]) => {
         const gan = adata.ganancias || {}
-        const tagClass = aid === 'negro' ? 'tag-negro' : 'tag-blanco'
         const choferes = Object.values(adata.deudas || {}).map(d => d.nombre)
         return (
           <div key={aid} className="card">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span className={`auto-tag ${tagClass}`}>{adata.nombre}</span>
+              <span className="auto-tag tag-auto">{adata.nombre}</span>
               <span style={{ fontSize: 11, color: '#555' }}>{choferes.join(' · ')}</span>
             </div>
             <div className="gan-row">
@@ -149,7 +427,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
             </div>
             <div className="metric-grid">
               <div className="metric"><div className="metric-label">Gastos mes</div><div className="metric-value" style={{ color: '#ff6b35' }}>{fmt(gan.gastos_mes)}</div></div>
-              <div className="metric"><div className="metric-label">Kms actuales</div><div className="metric-value" style={{ color: '#f0f0f0' }}>{(adata.kms_actuales || 0).toLocaleString('es-AR')}</div></div>
+              <div className="metric"><div className="metric-label">Kms actuales</div><div className="metric-value">{(adata.kms_actuales || 0).toLocaleString('es-AR')}</div></div>
             </div>
             <div className="kms-row">
               <input className="kms-input" type="number" inputMode="numeric" placeholder="Actualizar kms..."
@@ -331,48 +609,27 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
 
   const doTurno = async (choferId, monto) => {
     setSaving(choferId + 'turno')
-
     const { error } = await upsertTurno(choferId, ds, monto)
-
     setSaving(null)
-
     if (error) return showToast('⚠ ' + error.message, 'error')
-
     showToast('✓ Turno anotado', 'success')
     onRefresh()
   }
 
   const doFranco = async (choferId, accion) => {
     setSaving(choferId + 'franco')
-
-    const { error } =
-      accion === 'marcar'
-        ? await marcarFranco(choferId, ds)
-        : await quitarFranco(choferId, ds)
-
+    const { error } = accion === 'marcar' ? await marcarFranco(choferId, ds) : await quitarFranco(choferId, ds)
     setSaving(null)
-
     if (error) return showToast('⚠ ' + error.message, 'error')
-
-    showToast(
-      accion === 'marcar'
-        ? '✓ Franco marcado'
-        : '✓ Franco quitado',
-      'success'
-    )
-
+    showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
     onRefresh()
   }
 
   const doBorrar = async (choferId) => {
     setSaving(choferId + 'borrar')
-
     const { error } = await deleteTurno(choferId, ds)
-
     setSaving(null)
-
     if (error) return showToast('⚠ ' + error.message, 'error')
-
     showToast('✓ Pago eliminado', 'success')
     onRefresh()
   }
@@ -475,13 +732,21 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
     </div>
   )
 }
+
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
 function GastosPage({ resumen, showToast }) {
   const [tab, setTab] = useState('lista')
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
-  const [form, setForm] = useState({ auto_id: 'negro', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
+  const autos = resumen?.config?.autos || []
+  const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
+
+  useEffect(() => {
+    if (autos.length > 0 && !form.auto_id) {
+      setForm(f => ({ ...f, auto_id: autos[0].id }))
+    }
+  }, [autos])
 
   const loadGastos = async () => {
     setLoadingG(true)
@@ -492,7 +757,6 @@ function GastosPage({ resumen, showToast }) {
 
   useEffect(() => { if (tab === 'lista') loadGastos() }, [tab])
 
-  const autos = resumen?.config?.autos || [{ id: 'negro', nombre: 'Prisma Negro' }, { id: 'blanco', nombre: 'Prisma Blanco' }]
   const categorias = ['mantenimiento', 'combustible', 'seguro', 'impuesto', 'multa', 'otro']
 
   return (
@@ -513,18 +777,14 @@ function GastosPage({ resumen, showToast }) {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
               <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
-              <button
-                className="gasto-del-btn"
-                disabled={deletingId === g.id}
-                onClick={async () => {
-                  setDeletingId(g.id)
-                  const { error } = await deleteGasto(g.id)
-                  setDeletingId(null)
-                  if (error) return showToast('⚠ ' + error.message, 'error')
-                  showToast('✓ Gasto eliminado', 'success')
-                  setGastos(prev => prev.filter(x => x.id !== g.id))
-                }}
-              >{deletingId === g.id ? '...' : '✕'}</button>
+              <button className="gasto-del-btn" disabled={deletingId === g.id} onClick={async () => {
+                setDeletingId(g.id)
+                const { error } = await deleteGasto(g.id)
+                setDeletingId(null)
+                if (error) return showToast('⚠ ' + error.message, 'error')
+                showToast('✓ Gasto eliminado', 'success')
+                setGastos(prev => prev.filter(x => x.id !== g.id))
+              }}>{deletingId === g.id ? '...' : '✕'}</button>
             </div>
           </div>
         ))
@@ -559,6 +819,7 @@ function GastosPage({ resumen, showToast }) {
             <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} style={{ colorScheme: 'dark' }} />
           </div>
           <button className="btn-primary" onClick={async () => {
+            if (!form.auto_id) return showToast('Seleccioná un auto', 'error')
             if (!form.descripcion || !form.monto) return showToast('Completá descripción y monto', 'error')
             const { error } = await insertGasto(form.auto_id, form.descripcion, parseFloat(form.monto), form.categoria, form.fecha)
             if (error) return showToast('⚠ ' + error.message, 'error')
@@ -573,9 +834,10 @@ function GastosPage({ resumen, showToast }) {
 }
 
 // ── ICONS ─────────────────────────────────────────────────────────────────────
-const GridIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-const CalIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+const GridIcon  = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+const CalIcon   = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
 const MoneyIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+const AdminIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function chunk(arr, size) {
@@ -596,7 +858,7 @@ const globalStyles = `
   .stitle{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:#555;margin:18px 0 8px}
   .card{background:#141414;border:1px solid #2a2a2a;border-radius:14px;padding:16px;margin-bottom:10px}
   .auto-tag{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:3px 10px;border-radius:5px;display:inline-block}
-  .tag-negro{background:#1c1c1c;color:#bbb;border:1px solid #3a3a3a}.tag-blanco{background:#f0f0f0;color:#111}
+  .tag-auto{background:#1c1c1c;color:#bbb;border:1px solid #3a3a3a}
   .divider{height:1px;background:#2a2a2a;margin:14px 0}
   .alert-banner{background:#1a0505;border:1px solid #3a1010;border-radius:12px;padding:11px 14px;margin-bottom:8px;display:flex;gap:10px;align-items:center;font-size:13px}
   .total-banner{background:linear-gradient(135deg,#0f1f0f,#0a0a0a);border:1px solid #1e3a1e;border-radius:14px;padding:16px 18px;display:flex;justify-content:space-between;margin-bottom:10px}
@@ -606,7 +868,7 @@ const globalStyles = `
   .gan-cell{background:#1e1e1e;border-radius:10px;padding:11px 13px}
   .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555;margin-bottom:3px;font-family:'DM Mono',monospace}
   .gan-value{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:#47ff8a}
-  .neto-row{background:linear-gradient(135deg,#0f1f0f,#0a1a0a);border:1px solid #1e3a1e;border-radius:10px;padding:11px 13px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .neto-row{background:linear-gradient(135deg,#0f1f0f,#0a0a0a);border:1px solid #1e3a1e;border-radius:10px;padding:11px 13px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
   .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#555;font-family:'DM Mono',monospace}
   .neto-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;color:#47ff8a}
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
@@ -645,6 +907,10 @@ const globalStyles = `
   .modal-sheet{background:#141414;border-radius:20px 20px 0 0;width:100%;padding:20px 18px 44px;max-height:85dvh;overflow-y:auto}
   .modal-date{font-family:'DM Mono',monospace;font-size:12px;color:#555;margin-bottom:3px}
   .modal-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:16px}
+  .modal-back{background:none;border:none;color:#555;font-size:14px;cursor:pointer;padding:0;margin-bottom:2px}
+  .modal-close{width:100%;padding:13px;background:transparent;color:#555;border:1px solid #2a2a2a;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px}
+  .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+  .auto-pick-btn:active{border-color:#e8ff47;opacity:0.8}
   .chofer-section{margin-bottom:12px;background:#1e1e1e;border-radius:12px;padding:14px}
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .chofer-sec-name{font-size:15px;font-weight:600}.chofer-sec-sub{font-size:11px;color:#555;margin-top:1px}
@@ -659,10 +925,6 @@ const globalStyles = `
   .monto-input:focus{border-color:#e8ff47}.monto-input::placeholder{color:#555}
   .monto-btn{padding:11px 16px;background:#1e1e1e;color:#f0f0f0;border:1px solid #2a2a2a;border-radius:10px;font-weight:600;font-size:13px;cursor:pointer}
   .monto-btn:active{background:#e8ff47;color:#000}.monto-btn:disabled{opacity:0.5}
-  .modal-close{width:100%;padding:13px;background:transparent;color:#555;border:1px solid #2a2a2a;border-radius:12px;font-size:14px;cursor:pointer;margin-top:10px}
-  .modal-back{background:none;border:none;color:#555;font-size:14px;cursor:pointer;padding:0;margin-bottom:2px}
-  .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px 14px;background:#1e1e1e;border:1px solid #2a2a2a;border-radius:12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
-  .auto-pick-btn:active{border-color:#e8ff47;opacity:0.8}
   .tabs{display:flex;gap:6px;margin-bottom:16px}
   .tab{flex:1;padding:10px;border-radius:10px;border:1px solid #2a2a2a;background:transparent;color:#555;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
   .tab.active{background:#e8ff47;color:#000;border-color:#e8ff47;font-weight:700}
@@ -681,7 +943,7 @@ const globalStyles = `
   .radio-opt.sel{border-color:#e8ff47;background:#1a1a00}
   .rl{font-size:13px;font-weight:500}
   .btn-primary{width:100%;padding:15px;background:#e8ff47;color:#000;border:none;border-radius:13px;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;transition:transform 0.15s,opacity 0.15s}
-  .btn-primary:active{transform:scale(0.98);opacity:0.9}
+  .btn-primary:active{transform:scale(0.98);opacity:0.9}.btn-primary:disabled{opacity:0.6;cursor:not-allowed}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:500;opacity:0;transition:all 0.3s;z-index:999;white-space:nowrap;max-width:92vw;text-align:center}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:#47ff8a;color:#47ff8a}.toast.error{border-color:#ff4545;color:#ff4545}
   .bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(10,10,10,0.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid #2a2a2a;padding:8px 0 24px;z-index:200}
