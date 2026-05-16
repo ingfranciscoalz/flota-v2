@@ -97,58 +97,77 @@ function BarChart({ data }) {
 
 // ── TUTORIAL OVERLAY ──────────────────────────────────────────────────────────
 const TUTORIAL_STEPS = [
-  {
-    icon: '👋',
-    title: '¡Bienvenido a FLOTA!',
-    body: 'En Resumen ves el estado de toda tu flota en tiempo real: ganancias de la semana, del mes, neto después de gastos y alertas de mantenimiento.',
-  },
-  {
-    icon: '📅',
-    title: 'Calendario',
-    body: 'Registrá los turnos de cada chofer día a día. Podés marcar pagos completos, parciales o francos especiales con un tap.',
-  },
-  {
-    icon: '💸',
-    title: 'Gastos',
-    body: 'Cargá todos los gastos de cada auto (combustible, seguro, mantenimiento). El neto del mes se calcula automáticamente.',
-  },
-  {
-    icon: '📊',
-    title: 'Stats',
-    body: 'Analizá la rentabilidad de los últimos 6 meses y controlá la deuda acumulada de cada chofer en lo que va del año.',
-  },
+  { emoji: '🏎️', color: '#276EF1', subtitle: 'Bienvenido', title: 'Tu flota,\nen un lugar', body: 'Controlá todos tus remises desde el celular. Turnos, gastos, mantenimiento y rentabilidad — todo en tiempo real.', isWelcome: true },
+  { emoji: '📊', color: '#276EF1', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'Ves ganancias de la semana y del mes, el neto después de gastos, y alertas de mantenimiento para cada auto.' },
+  { emoji: '📅', color: '#60AFFF', subtitle: 'Pestaña Calendario', title: 'Turnos\ndía a día', body: 'Con un tap registrás turno completo, parcial o franco especial. Todo queda guardado y visible en el calendario.' },
+  { emoji: '💸', color: '#F59E0B', subtitle: 'Pestaña Gastos', title: 'Control de\ncostos real', body: 'Cargá combustible, seguro, multas y más. El neto del mes se calcula automáticamente restando los gastos.' },
+  { emoji: '📈', color: '#10B981', subtitle: 'Pestaña Stats', title: 'Rentabilidad\na la vista', body: 'Analizá los últimos 6 meses de ganancias vs gastos y controlá la deuda acumulada de cada chofer.' },
 ]
 
 function TutorialOverlay({ onDone }) {
   const [step, setStep] = useState(0)
+  const [animKey, setAnimKey] = useState(0)
+  const [dir, setDir] = useState(1)
+  const touchStart = useRef(null)
   const isLast = step === TUTORIAL_STEPS.length - 1
   const s = TUTORIAL_STEPS[step]
+
+  const go = (delta) => {
+    const next = step + delta
+    if (next < 0 || next >= TUTORIAL_STEPS.length) return
+    setDir(delta); setAnimKey(k => k + 1); setStep(next)
+  }
+  const finish = () => { localStorage.setItem('flota_tutorial', 'done'); onDone() }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 900, display: 'flex', alignItems: 'flex-end' }}>
-      <div style={{ width: '100%', background: '#0D0D0D', borderRadius: '24px 24px 0 0', padding: '28px 24px 52px', borderTop: '1px solid #1C1C1C' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 24 }}>
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', flexDirection: 'column', background: '#000', overflow: 'hidden' }}
+      onTouchStart={e => { touchStart.current = e.touches[0].clientX }}
+      onTouchEnd={e => {
+        if (!touchStart.current) return
+        const diff = touchStart.current - e.changedTouches[0].clientX
+        if (Math.abs(diff) > 50) go(diff > 0 ? 1 : -1)
+        touchStart.current = null
+      }}
+    >
+      {/* Área de ilustración */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(ellipse at 50% 60%, ${s.color}1E 0%, #000 68%)`, transition: 'background 0.5s ease', overflow: 'hidden' }}>
+        <div key={animKey} className={dir >= 0 ? 'tsr' : 'tsl'} style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 96, lineHeight: 1, filter: `drop-shadow(0 0 52px ${s.color}77)` }}>{s.emoji}</div>
+          {s.isWelcome && (
+            <div style={{ marginTop: 20, fontFamily: "'Syne',sans-serif", fontSize: 42, fontWeight: 800, letterSpacing: -2, color: '#fff' }}>
+              FLOTA<span style={{ color: '#276EF1' }}>.</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Área de contenido */}
+      <div style={{ background: '#080808', borderTop: '1px solid #161616', padding: '22px 24px 44px' }}>
+        {/* Barra de progreso */}
+        <div style={{ display: 'flex', gap: 5, marginBottom: 20 }}>
           {TUTORIAL_STEPS.map((_, i) => (
-            <div key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 3, background: i === step ? '#276EF1' : '#2A2A2A', transition: 'width 0.3s' }} />
+            <div key={i} onClick={() => go(i - step)} style={{ flex: i === step ? 4 : 1, height: 3, borderRadius: 2, background: i < step ? '#1A3060' : i === step ? s.color : '#181818', transition: 'flex 0.4s cubic-bezier(0.22,1,0.36,1), background 0.4s', cursor: 'pointer' }} />
           ))}
         </div>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>{s.icon}</div>
-        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 10, letterSpacing: -0.3 }}>{s.title}</div>
-        <div style={{ fontSize: 14, color: '#888', lineHeight: 1.6, marginBottom: 28 }}>{s.body}</div>
-        <button className="btn-primary" onClick={() => {
-          if (isLast) { localStorage.setItem('flota_tutorial', 'done'); onDone() }
-          else setStep(s => s + 1)
-        }}>
-          {isLast ? 'EMPEZAR A USAR FLOTA' : 'SIGUIENTE'}
+
+        <div key={animKey + 'txt'} className={dir >= 0 ? 'tsr' : 'tsl'}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2.5, textTransform: 'uppercase', color: s.color, marginBottom: 6 }}>{s.subtitle}</div>
+          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'Syne',sans-serif", letterSpacing: -0.8, lineHeight: 1.2, marginBottom: 10, whiteSpace: 'pre-line' }}>{s.title}</div>
+          <div style={{ fontSize: 14, color: '#666', lineHeight: 1.7, marginBottom: 22 }}>{s.body}</div>
+        </div>
+
+        <button
+          style={{ width: '100%', padding: '15px 20px', background: s.color, color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", letterSpacing: 0.3, transition: 'transform 0.1s', marginBottom: 0 }}
+          onClick={() => isLast ? finish() : go(1)}
+          onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)' }}
+          onTouchEnd={e => { e.currentTarget.style.transform = '' }}
+        >
+          {isLast ? 'EMPEZAR →' : 'SIGUIENTE →'}
         </button>
-        {step > 0 && (
-          <button onClick={() => setStep(s => s - 1)} className="modal-close" style={{ marginTop: 8 }}>Anterior</button>
-        )}
-        {!isLast && (
-          <button onClick={() => { localStorage.setItem('flota_tutorial', 'done'); onDone() }}
-            style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 12, background: 'none', border: 'none', color: '#444', fontSize: 13, cursor: 'pointer' }}>
-            Saltar tutorial
-          </button>
-        )}
+        <button onClick={finish} style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 14, background: 'none', border: 'none', color: '#282828', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+          Saltar tutorial
+        </button>
       </div>
     </div>
   )
@@ -300,18 +319,14 @@ export default function App() {
         </div>
       </div>
 
-      {loading && !resumen ? (
-        <div className="loading"><div className="spinner" /><span>Cargando...</span></div>
-      ) : (
-        <>
-          {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-          {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || 50000} />}
-          {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-          {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-          {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} />}
-          {page === 'admin'      && <AdminScreen showToast={showToast} />}
-        </>
-      )}
+      <div key={page} className="page-anim">
+        {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} />}
+        {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+        {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} />}
+        {page === 'admin'      && <AdminScreen showToast={showToast} />}
+      </div>
 
       <nav className="bottom-nav">
         {navItems.map(({ id, label, icon }) => (
@@ -613,6 +628,33 @@ function AdminScreen({ showToast }) {
   )
 }
 
+// ── SKELETON LOADER ───────────────────────────────────────────────────────────
+function SkeletonResumen() {
+  return (
+    <div className="page" style={{ paddingTop: 16 }}>
+      <div className="skel" style={{ height: 86, borderRadius: 16, marginBottom: 12 }} />
+      {[0, 1].map(i => (
+        <div key={i} className="card" style={{ marginBottom: 10, animationDelay: `${i * 100}ms` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div className="skel" style={{ height: 22, width: '36%', borderRadius: 100 }} />
+            <div className="skel" style={{ height: 14, width: '28%', borderRadius: 6 }} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div className="skel" style={{ height: 62, borderRadius: 12 }} />
+            <div className="skel" style={{ height: 62, borderRadius: 12 }} />
+          </div>
+          <div className="skel" style={{ height: 48, borderRadius: 12, marginBottom: 8 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div className="skel" style={{ height: 52, borderRadius: 12 }} />
+            <div className="skel" style={{ height: 52, borderRadius: 12 }} />
+          </div>
+          <div className="skel" style={{ height: 42, borderRadius: 12 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── RESUMEN PAGE ──────────────────────────────────────────────────────────────
 function diasParaVencer(fecha) {
   if (!fecha) return null
@@ -622,7 +664,7 @@ function diasParaVencer(fecha) {
 function ResumenPage({ resumen, showToast, onRefresh }) {
   const [kmsInputs, setKmsInputs] = useState({})
   const [kmsLoading, setKmsLoading] = useState({})
-  if (!resumen) return <div className="loading"><div className="spinner" /></div>
+  if (!resumen) return <SkeletonResumen />
 
   const { autos, totales } = resumen
   const autoEntries = Object.entries(autos)
@@ -670,12 +712,12 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
         <div className="loading">Sin autos en la flota</div>
       )}
 
-      {autoEntries.map(([aid, adata]) => {
+      {autoEntries.map(([aid, adata], i) => {
         const gan = adata.ganancias || {}
         const choferes = Object.values(adata.deudas || {}).map(d => d.nombre)
         const isLoadingKms = !!kmsLoading[aid]
         return (
-          <div key={aid} className="card">
+          <div key={aid} className="card" style={{ animationDelay: `${i * 70}ms` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span className="auto-tag tag-auto">{adata.nombre}</span>
               <span style={{ fontSize: 11, color: '#555' }}>{choferes.join(' · ')}</span>
@@ -1840,7 +1882,48 @@ const globalStyles = `
   .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;background:none;border:none;cursor:pointer;color:#444;transition:color 0.2s}
   .bnav-btn svg{width:22px;height:22px}.bnav-label{font-size:9px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
   .bnav-btn.active{color:#fff}
+  .bnav-btn{transition:color 0.2s}
+  .bnav-btn.active svg{filter:drop-shadow(0 0 6px rgba(39,110,241,0.55))}
+  .bnav-btn svg{transition:filter 0.25s}
+  .bnav-btn.active .bnav-label{color:#276EF1}
 
+  /* ── Animaciones ─────────────────────────────────────────────── */
+  @keyframes pageIn   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes cardIn   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes shimmer  { 0%{background-position:-200% center} 100%{background-position:200% center} }
+  @keyframes modalUp  { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes overlayIn{ from{opacity:0} to{opacity:1} }
+  @keyframes tsr      { from{opacity:0;transform:translateX(32px)} to{opacity:1;transform:translateX(0)} }
+  @keyframes tsl      { from{opacity:0;transform:translateX(-32px)} to{opacity:1;transform:translateX(0)} }
+
+  .page-anim{animation:pageIn 0.22s ease-out}
+  .card{animation:cardIn 0.28s ease-out both}
+  .tsr{animation:tsr 0.35s cubic-bezier(0.22,1,0.36,1)}
+  .tsl{animation:tsl 0.35s cubic-bezier(0.22,1,0.36,1)}
+
+  /* ── Skeleton ────────────────────────────────────────────────── */
+  .skel{background:linear-gradient(90deg,#0D0D0D 25%,#181818 50%,#0D0D0D 75%);background-size:200% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:8px}
+
+  /* ── Modal ───────────────────────────────────────────────────── */
+  .modal-overlay{animation:overlayIn 0.25s ease-out}
+  .modal-sheet{animation:modalUp 0.38s cubic-bezier(0.32,0.72,0,1)}
+
+  /* ── Botones ─────────────────────────────────────────────────── */
+  .btn-primary{transition:transform 0.1s,opacity 0.15s}
+  .btn-primary:active{transform:scale(0.97);opacity:0.88}
+  .action-btn{transition:transform 0.1s,opacity 0.15s,background 0.15s,border-color 0.15s}
+  .action-btn:active{transform:scale(0.95)}
+  .kms-btn{transition:transform 0.1s,background 0.15s}
+  .kms-btn:active{transform:scale(0.95)}
+  .sync-btn{transition:background 0.15s,transform 0.15s}
+  .sync-btn:active{transform:scale(0.88)}
+
+  /* ── Tarjetas ────────────────────────────────────────────────── */
+  .card{transition:border-color 0.2s}
+  .gasto-item{transition:background 0.15s}
+  .mant-item{transition:border-color 0.15s,background 0.15s}
+
+  /* ── Alertas ─────────────────────────────────────────────────── */
   .alert-warn{background:#1A1200;border-color:#3A2800;color:#F59E0B}
   .alert-danger{background:#1A0000;border-color:#3A0000;color:#EF4444}
 
