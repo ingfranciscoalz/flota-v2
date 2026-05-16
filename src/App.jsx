@@ -818,7 +818,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
         <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
       </div>
       <div className="cal-legend">
-        {[['#0A1428','Completo'],['#2b2000','Parcial'],['#2b0d0d','Debe'],['#0d1a2b','Franco']].map(([bg,lbl]) => (
+        {[['#0A1A10','Completo'],['#2b2000','Parcial'],['#2b0d0d','Debe'],['#0d1a2b','Franco']].map(([bg,lbl]) => (
           <div key={lbl} className="leg-item"><div className="leg-dot" style={{ background: bg }} />{lbl}</div>
         ))}
       </div>
@@ -943,7 +943,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
               const hayDebe = pills.some(p => p?.estado === 'debe')
               const hayCompleto = pills.some(p => p?.estado === 'completo')
               const allFranco = pills.every(p => p?.estado === 'franco')
-              const dot = allFranco ? '#4a9eff' : hayDebe ? '#ff4545' : hayCompleto ? '#60AFFF' : '#555'
+              const dot = allFranco ? '#4a9eff' : hayDebe ? '#ff4545' : hayCompleto ? '#10B981' : '#555'
               return (
                 <div key={aid} className="auto-pick-btn" onClick={() => setSelectedAuto(aid)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1821,7 +1821,7 @@ const globalStyles = `
   .day-cell.today .day-num{color:#fff;font-weight:700}
   .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%}
   .chofer-pill{border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;padding:2px 3px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pill-completo{background:#091428;color:#276EF1}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A2A}
+  .pill-completo{background:#0A1A10;color:#10B981}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A2A}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;display:flex;align-items:flex-end}
   .modal-sheet{background:#0D0D0D;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid #1C1C1C}
@@ -1837,7 +1837,7 @@ const globalStyles = `
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .chofer-sec-name{font-size:16px;font-weight:600}
   .eb{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
-  .eb-completo{background:#091428;color:#276EF1}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1A1A1A;color:#555}
+  .eb-completo{background:#0A1A10;color:#10B981}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1A1A1A;color:#555}
 
   .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
   .action-btn{padding:12px 8px;border-radius:12px;border:1px solid #1C1C1C;background:#111;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:opacity 0.15s}
