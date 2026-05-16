@@ -238,6 +238,10 @@ export async function insertGasto(auto_id, descripcion, monto, categoria, fecha)
   return supabase.from('gastos').insert({ auto_id, descripcion, monto, categoria, fecha })
 }
 
+export async function deleteGasto(id) {
+  return supabase.from('gastos').delete().eq('id', id)
+}
+
 export async function getGastos(auto_id = null) {
   let q = supabase.from('gastos').select('*, autos(nombre)').order('fecha', { ascending: false })
   if (auto_id) q = q.eq('auto_id', auto_id)

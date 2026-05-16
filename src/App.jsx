@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco, insertGasto, getGastos, updateKms, insertMantenimiento } from './data'
+import { getResumen, getCalendario, upsertTurno, deleteTurno, marcarFranco, quitarFranco, insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento } from './data'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
@@ -480,6 +480,7 @@ function GastosPage({ resumen, showToast }) {
   const [tab, setTab] = useState('lista')
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
   const [form, setForm] = useState({ auto_id: 'negro', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
 
   const loadGastos = async () => {
@@ -506,11 +507,25 @@ function GastosPage({ resumen, showToast }) {
         gastos.length === 0 ? <div className="loading">Sin gastos registrados</div> :
         gastos.map(g => (
           <div key={g.id} className="gasto-item">
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className="gasto-desc">{g.descripcion}</div>
               <div className="gasto-auto">{g.autos?.nombre} · {g.fecha} · {g.categoria}</div>
             </div>
-            <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
+              <button
+                className="gasto-del-btn"
+                disabled={deletingId === g.id}
+                onClick={async () => {
+                  setDeletingId(g.id)
+                  const { error } = await deleteGasto(g.id)
+                  setDeletingId(null)
+                  if (error) return showToast('⚠ ' + error.message, 'error')
+                  showToast('✓ Gasto eliminado', 'success')
+                  setGastos(prev => prev.filter(x => x.id !== g.id))
+                }}
+              >{deletingId === g.id ? '...' : '✕'}</button>
+            </div>
           </div>
         ))
       )}
@@ -653,7 +668,9 @@ const globalStyles = `
   .tab.active{background:#e8ff47;color:#000;border-color:#e8ff47;font-weight:700}
   .gasto-item{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;background:#141414;border:1px solid #2a2a2a;border-radius:12px;margin-bottom:8px}
   .gasto-desc{font-size:14px;font-weight:500}.gasto-auto{font-size:11px;color:#555;margin-top:2px}
-  .gasto-monto{font-family:'DM Mono',monospace;font-size:14px;color:#ff6b35;font-weight:500;white-space:nowrap;margin-left:10px}
+  .gasto-monto{font-family:'DM Mono',monospace;font-size:14px;color:#ff6b35;font-weight:500;white-space:nowrap}
+  .gasto-del-btn{width:28px;height:28px;border-radius:8px;border:1px solid #3a1010;background:#1a0505;color:#ff4545;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .gasto-del-btn:disabled{opacity:0.5;cursor:not-allowed}
   .form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#555;font-family:'DM Mono',monospace;display:block;margin-bottom:6px}
   .form-input{width:100%;padding:13px 14px;background:#141414;border:1px solid #2a2a2a;border-radius:12px;color:#f0f0f0;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
   .form-input:focus{border-color:#e8ff47}.form-input::placeholder{color:#555}
