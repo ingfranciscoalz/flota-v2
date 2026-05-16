@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import {
+  getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoDeudaHistorica,
+} from './demoData'
+import {
   getResumen, getCalendario, getConfig, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, getProfile, checkFleet, createFleet,
@@ -13,8 +16,6 @@ import {
 // ── CONSTANTES ────────────────────────────────────────────────────────────────
 const TURNO_BASE_DEFAULT = 50000
 const TOAST_DURATION = 3000
-const DEMO_EMAIL = 'demo@flotaapp.com'
-const DEMO_PASSWORD = 'demo1234'
 const ALERTA_DIAS = 5   // días de anticipación para alertas VTV/seguro
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
@@ -175,9 +176,10 @@ function TutorialOverlay({ onDone }) {
 
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app
+  const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app|demo
   const [inactiveReason, setInactiveReason] = useState('pending') // pending|expired
   const [profile, setProfile] = useState(null)
+  const [isDemoMode, setIsDemoMode] = useState(false)
   const [page, setPage] = useState('resumen')
   const [resumen, setResumen] = useState(null)
   const [cal, setCal] = useState(null)
@@ -221,6 +223,14 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [handleSession])
 
+  const enterDemoMode = useCallback(() => {
+    setIsDemoMode(true)
+    setAuthState('demo')
+    setPage('resumen')
+    setResumen(getDemoResumen())
+    setCal(getDemoCalendario(new Date().getFullYear(), new Date().getMonth() + 1))
+  }, [])
+
   const loadResumen = useCallback(async (cfg = null) => {
     const data = await getResumen(cfg); setResumen(data)
   }, [])
@@ -229,6 +239,11 @@ export default function App() {
   }, [])
 
   const loadAll = useCallback(async () => {
+    if (isDemoMode) {
+      setResumen(getDemoResumen())
+      setCal(getDemoCalendario(calYear, calMonth))
+      return
+    }
     setLoading(true)
     try {
       const cfg = await getConfig()
@@ -238,7 +253,7 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [loadResumen, loadCal, calYear, calMonth])
+  }, [isDemoMode, loadResumen, loadCal, calYear, calMonth])
 
   useEffect(() => { if (authState === 'app') loadAll() }, [authState, loadAll])
 
@@ -247,6 +262,7 @@ export default function App() {
     if (m > 12) { m = 1; y++ }
     if (m < 1)  { m = 12; y-- }
     setCalMonth(m); setCalYear(y)
+    if (isDemoMode) { setCal(getDemoCalendario(y, m)); return }
     const data = await getCalendario(y, m)
     setCal(data)
   }
@@ -264,7 +280,7 @@ export default function App() {
     return (
       <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
-        <AuthScreen />
+        <AuthScreen onEnterDemo={enterDemoMode} />
         {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       </div>
     )
@@ -302,29 +318,39 @@ export default function App() {
     { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
     { id: 'flota',      label: 'Flota',      icon: <FleetIcon /> },
     { id: 'stats',      label: 'Stats',      icon: <StatsIcon /> },
-    ...(profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
+    ...(!isDemoMode && profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#0a0a0a', color: '#f0f0f0', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
 
+      {isDemoMode && (
+        <div style={{ background: '#091428', borderBottom: '1px solid #0D1E42', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#276EF1', fontWeight: 700, letterSpacing: 1 }}>👁 MODO DEMO — los cambios no se guardan</span>
+          <button
+            onClick={() => { setIsDemoMode(false); setAuthState('auth'); setResumen(null); setCal(null) }}
+            style={{ background: 'none', border: '1px solid #0D1E42', borderRadius: 8, color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', letterSpacing: 0.5 }}
+          >SALIR</button>
+        </div>
+      )}
+
       <div className="header">
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5 }}>
           FLOTA<span style={{ color: '#276EF1' }}>.</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="sync-btn" onClick={loadAll}>↻</button>
-          <button className="sync-btn" onClick={async () => { await signOut(); setAuthState('auth') }} title="Cerrar sesión">⏏</button>
+          {!isDemoMode && <button className="sync-btn" onClick={loadAll}>↻</button>}
+          {!isDemoMode && <button className="sync-btn" onClick={async () => { await signOut(); setAuthState('auth') }} title="Cerrar sesión">⏏</button>}
         </div>
       </div>
 
       <div key={page} className="page-anim">
         {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => loadCal(calYear, calMonth)} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} />}
-        {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-        {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} />}
+        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) loadCal(calYear, calMonth) }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} />}
+        {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
+        {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
+        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
 
@@ -343,7 +369,7 @@ export default function App() {
 }
 
 // ── AUTH SCREEN ───────────────────────────────────────────────────────────────
-function AuthScreen() {
+function AuthScreen({ onEnterDemo }) {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -394,13 +420,7 @@ function AuthScreen() {
         <div style={{ fontSize: 11, color: '#444', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.5 }}>¿Querés ver cómo funciona?</div>
         <button
           style={{ width: '100%', padding: '14px', background: '#091428', color: '#276EF1', border: '1px solid #0D1E42', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
-          disabled={loading}
-          onClick={async () => {
-            setLoading(true); setError(''); setSuccess('')
-            const { error: err } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
-            setLoading(false)
-            if (err) setError('La cuenta demo no está disponible en este momento.')
-          }}
+          onClick={onEnterDemo}
         >
           PROBAR DEMO
         </button>
@@ -883,13 +903,14 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           onClose={() => setDayModal(null)}
           showToast={showToast}
           onRefresh={async () => { await onRefresh(); setDayModal(null) }}
+          isDemoMode={isDemoMode}
         />
       )}
     </div>
   )
 }
 
-function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
+function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMode }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
@@ -899,7 +920,10 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
 
   const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
 
+  const demoBlock = () => { showToast('👁 Modo demo — los cambios no se guardan', 'info'); return true }
+
   const doTurno = async (choferId, monto) => {
+    if (isDemoMode) return demoBlock()
     setSaving(choferId + 'turno')
     const { error } = await upsertTurno(choferId, ds, monto)
     setSaving(null)
@@ -909,6 +933,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
   }
 
   const doFranco = async (choferId, accion) => {
+    if (isDemoMode) return demoBlock()
     setSaving(choferId + 'franco')
     const { error } = accion === 'marcar' ? await marcarFranco(choferId, ds) : await quitarFranco(choferId, ds)
     setSaving(null)
@@ -918,6 +943,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
   }
 
   const doBorrar = async (choferId) => {
+    if (isDemoMode) return demoBlock()
     setSaving(choferId + 'borrar')
     const { error } = await deleteTurno(choferId, ds)
     setSaving(null)
@@ -1026,7 +1052,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh }) {
 }
 
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
-function GastosPage({ resumen, showToast, onRefresh }) {
+function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
   const [tab, setTab] = useState('lista')
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
@@ -1042,6 +1068,7 @@ function GastosPage({ resumen, showToast, onRefresh }) {
   }, [autos])
 
   const loadGastos = async () => {
+    if (isDemoMode) { setGastos(getDemoGastos()); return }
     setLoadingG(true)
     const { data } = await getGastos()
     setGastos(data || [])
@@ -1053,6 +1080,7 @@ function GastosPage({ resumen, showToast, onRefresh }) {
   const categorias = ['mantenimiento', 'combustible', 'seguro', 'impuesto', 'multa', 'otro']
 
   const handleDeleteConfirmed = async () => {
+    if (isDemoMode) { setDeleteConfirm(null); showToast('👁 Modo demo — los cambios no se guardan', 'info'); return }
     const id = deleteConfirm
     setDeleteConfirm(null)
     setDeletingId(id)
@@ -1120,6 +1148,7 @@ function GastosPage({ resumen, showToast, onRefresh }) {
             <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} style={{ colorScheme: 'dark' }} />
           </div>
           <button className="btn-primary" onClick={async () => {
+            if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
             if (!form.auto_id) return showToast('Seleccioná un auto', 'error')
             if (!form.descripcion || !form.monto) return showToast('Completá descripción y monto', 'error')
             const { error } = await insertGasto(form.auto_id, form.descripcion, parseFloat(form.monto), form.categoria, form.fecha)
@@ -1146,7 +1175,7 @@ function GastosPage({ resumen, showToast, onRefresh }) {
 }
 
 // ── FLOTA PAGE ────────────────────────────────────────────────────────────────
-function FlotaPage({ resumen, showToast, onRefresh }) {
+function FlotaPage({ resumen, showToast, onRefresh, isDemoMode }) {
   const [tab, setTab] = useState('autos')
   return (
     <div className="page">
@@ -1154,13 +1183,13 @@ function FlotaPage({ resumen, showToast, onRefresh }) {
         <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
       </div>
-      {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
-      {tab === 'mant'  && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} />}
+      {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'mant'  && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
     </div>
   )
 }
 
-function AutosTab({ resumen, showToast, onRefresh }) {
+function AutosTab({ resumen, showToast, onRefresh, isDemoMode }) {
   const [showNewAuto, setShowNewAuto] = useState(false)
   const [newAutoNombre, setNewAutoNombre] = useState('')
   const [newAutoTurno, setNewAutoTurno] = useState('')
@@ -1183,6 +1212,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   const globalTurnoBase = resumen?.config?.turno_base || TURNO_BASE_DEFAULT
 
   const handleSaveVencimientos = async (autoId) => {
+    if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
     const v = vencimientos[autoId] || {}
     setSavingVenc(autoId)
     const { error } = await updateAutoVencimientos(autoId, v.vtv || null, v.seguro || null)
@@ -1193,6 +1223,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   }
 
   const handleCreateAuto = async () => {
+    if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
     if (!newAutoNombre.trim()) return showToast('Ingresá el nombre del auto', 'error')
     if (!newAutoTurno || parseInt(newAutoTurno) <= 0) return showToast('Ingresá el turno base', 'error')
     setSaving(true)
@@ -1205,6 +1236,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   }
 
   const handleUpdateTurno = async (autoId) => {
+    if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
     const v = editingTurno[autoId]
     if (!v || parseInt(v) <= 0) return showToast('Ingresá un turno válido', 'error')
     setSavingTurno(autoId)
@@ -1216,7 +1248,10 @@ function AutosTab({ resumen, showToast, onRefresh }) {
     onRefresh()
   }
 
+  const demoBlock = () => showToast('👁 Modo demo — los cambios no se guardan', 'info')
+
   const handleDeleteAutoConfirmed = async () => {
+    if (isDemoMode) { setDeleteConfirm(null); return demoBlock() }
     if (!deleteConfirm) return
     setDeletingAuto(true)
     const { error } = await deleteAuto(deleteConfirm.id)
@@ -1228,6 +1263,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   }
 
   const handleCreateChofer = async (autoId) => {
+    if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
     if (!newChoferNombre.trim()) return showToast('Ingresá el nombre del chofer', 'error')
     setSavingChofer(true)
     const { error } = await createChofer(autoId, newChoferNombre.trim())
@@ -1239,6 +1275,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   }
 
   const handleEditChofer = async (id) => {
+    if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
     if (!editChoferNombre.trim()) return showToast('Ingresá el nombre', 'error')
     setSavingChoferEdit(true)
     const { error } = await updateChofer(id, editChoferNombre.trim())
@@ -1393,7 +1430,7 @@ function AutosTab({ resumen, showToast, onRefresh }) {
   )
 }
 
-function MantItemsTab({ resumen, showToast, onRefresh }) {
+function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
   const autos = resumen?.config?.autos || []
   const autosData = resumen?.autos || {}
 
@@ -1412,6 +1449,11 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
   const [deleteConfirm, setDeleteConfirm] = useState(null) // id del item a confirmar
 
   const reloadItems = async () => {
+    if (isDemoMode) {
+      setItems(resumen?.config?.mant_items || [])
+      setLoadingItems(false)
+      return
+    }
     setLoadingItems(true)
     const { data } = await getUserMantItems()
     setItems(data || [])
@@ -1421,7 +1463,10 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
 
   const autoNombre = (autoId) => autos.find(a => a.id === autoId)?.nombre || null
 
+  const demoBlock = () => showToast('👁 Modo demo — los cambios no se guardan', 'info')
+
   const handleCreate = async () => {
+    if (isDemoMode) return demoBlock()
     if (!newItem.nombre.trim()) return showToast('Ingresá el nombre', 'error')
     if (!newItem.frecuencia || parseInt(newItem.frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
     setSaving(true)
@@ -1434,6 +1479,7 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
   }
 
   const handleEdit = async () => {
+    if (isDemoMode) return demoBlock()
     if (!editForm.nombre.trim()) return showToast('Ingresá el nombre', 'error')
     if (!editForm.frecuencia || parseInt(editForm.frecuencia) <= 0) return showToast('Ingresá la frecuencia en kms', 'error')
     setSavingEdit(true)
@@ -1599,6 +1645,7 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
   )
 
   const handleDeleteItemConfirmed = async () => {
+    if (isDemoMode) { setDeleteConfirm(null); return demoBlock() }
     const id = deleteConfirm
     setDeleteConfirm(null)
     setDeletingId(id)
@@ -1644,12 +1691,18 @@ function MantItemsTab({ resumen, showToast, onRefresh }) {
 }
 
 // ── STATS PAGE ────────────────────────────────────────────────────────────────
-function StatsPage({ resumen, showToast }) {
+function StatsPage({ resumen, showToast, isDemoMode }) {
   const [monthlyData, setMonthlyData] = useState(null)
   const [deuda, setDeuda] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isDemoMode) {
+      setMonthlyData(getDemoMonthlyStats())
+      setDeuda(getDemoDeudaHistorica())
+      setLoading(false)
+      return
+    }
     const load = async () => {
       setLoading(true)
       try {
@@ -1664,7 +1717,7 @@ function StatsPage({ resumen, showToast }) {
       }
     }
     load()
-  }, [])
+  }, [isDemoMode])
 
   if (loading) return <div className="loading"><div className="spinner" /></div>
 
