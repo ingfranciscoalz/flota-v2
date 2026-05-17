@@ -16,6 +16,12 @@ export async function signIn(email, password) {
 export async function signOut() {
   return supabase.auth.signOut()
 }
+export async function signInWithGoogle() {
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  })
+}
 export async function getProfile() {
   const { data } = await supabase.from('profiles').select('*').maybeSingle()
   return data

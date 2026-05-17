@@ -6,7 +6,7 @@ import {
 import {
   getResumen, getCalendario, getConfig, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
-  signIn, signUp, signOut, getProfile, checkFleet, createFleet,
+  signIn, signUp, signOut, signInWithGoogle, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
   createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
@@ -449,6 +449,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -460,6 +461,13 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
     setLoading(false)
     if (err) { setError(err.message); return }
     if (tab === 'register') setSuccess('Cuenta creada. Esperá la activación del administrador.')
+  }
+
+  const handleGoogle = async () => {
+    setGoogleLoading(true); setError('')
+    const { error: err } = await signInWithGoogle()
+    if (err) { setError(err.message); setGoogleLoading(false) }
+    // Si no hay error, el browser redirige a Google — no hay más código acá
   }
 
   return (
@@ -505,6 +513,27 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
 
       <button className="btn-primary" disabled={loading} onClick={submit}>
         {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
+      </button>
+
+      {/* Separador */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
+        <div style={{ flex: 1, height: 1, background: '#1A1A1A' }} />
+        <span style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1.5 }}>o</span>
+        <div style={{ flex: 1, height: 1, background: '#1A1A1A' }} />
+      </div>
+
+      {/* Botón Google */}
+      <button
+        disabled={googleLoading}
+        onClick={handleGoogle}
+        style={{ width: '100%', padding: '13px 16px', background: '#fff', border: '1px solid #2A2A35', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: googleLoading ? 0.6 : 1 }}>
+        {/* Ícono Google SVG */}
+        <svg width="18" height="18" viewBox="0 0 48 48">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.8 6C12.7 13.1 17.9 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17z" /><path fill="#FBBC05" d="M10.8 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7L2.5 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.3-5.9z"/>
+          <path fill="#34A853" d="M24 48c6.2 0 11.4-2 15.2-5.5l-7.5-5.8c-2 1.4-4.6 2.2-7.7 2.2-6.1 0-11.3-3.6-13.2-9.2l-8.3 5.9C6.9 42.6 14.8 48 24 48z"/>
+        </svg>
+        {googleLoading ? 'Redirigiendo...' : 'Continuar con Google'}
       </button>
 
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1A1A1A' }}>
