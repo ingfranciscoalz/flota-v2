@@ -231,6 +231,16 @@ export default function App() {
       setInactiveReason('expired'); setAuthState('inactive'); return
     }
     if (!prof.activo) { setInactiveReason('pending'); setAuthState('inactive'); return }
+
+    // Subscription check (skip for admin)
+    if (!prof.is_admin) {
+      const trialValid = prof.trial_hasta && new Date(prof.trial_hasta) > new Date()
+      const subActive = prof.suscripcion_activa && prof.suscripcion_vence && new Date(prof.suscripcion_vence) > new Date()
+      if (!trialValid && !subActive) {
+        setAuthState('subscription'); return
+      }
+    }
+
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -340,6 +350,19 @@ export default function App() {
     )
   }
 
+  if (authState === 'subscription') {
+    return (
+      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+        <style>{globalStyles}</style>
+        <SubscriptionScreen
+          profile={profile}
+          onSignOut={async () => { await signOut(); setAuthState('auth') }}
+          onSubscribed={handleSession}
+        />
+      </div>
+    )
+  }
+
   if (authState === 'onboarding') {
     return (
       <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
@@ -444,6 +467,110 @@ function IosInstallHint() {
 }
 
 // ── AUTH SCREEN ───────────────────────────────────────────────────────────────
+// ── SUBSCRIPTION SCREEN ───────────────────────────────────────────────────────
+function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (msg, type = '') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const trialExpired = !profile?.trial_hasta || new Date(profile.trial_hasta) <= new Date()
+  const trialDaysLeft = profile?.trial_hasta && new Date(profile.trial_hasta) > new Date()
+    ? Math.ceil((new Date(profile.trial_hasta) - new Date()) / (1000 * 60 * 60 * 24))
+    : 0
+
+  const handleSubscribe = async () => {
+    setLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { showToast('Sesión expirada, volvé a iniciar sesión', 'error'); setLoading(false); return }
+      const userId = session.user.id
+      const userEmail = session.user.email
+
+      const res = await fetch('/api/mobbex-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, userEmail }),
+      })
+      const data = await res.json()
+
+      if (data.error === 'not_configured') {
+        showToast('El pago no está configurado aún', 'error')
+        setLoading(false)
+        return
+      }
+      if (data.error || !data.checkoutUrl) {
+        showToast('Error al iniciar el pago. Intentá de nuevo.', 'error')
+        setLoading(false)
+        return
+      }
+
+      window.location.href = data.checkoutUrl
+    } catch (err) {
+      showToast('Error de conexión. Intentá de nuevo.', 'error')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ padding: '80px 24px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', textAlign: 'center' }}>
+      {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+
+      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, marginBottom: 6, color: '#f0f0f0', alignSelf: 'flex-start' }}>
+        TuFlota<span style={{ color: '#276EF1' }}>.</span>
+      </h1>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
+        <div style={{ fontSize: 56, marginBottom: 20 }}>📋</div>
+
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10, color: '#f0f0f0' }}>
+          {trialExpired ? 'Tu período de prueba venció' : `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba`}
+        </div>
+
+        <div style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
+          {trialExpired
+            ? 'Suscribite para seguir usando TuFlota sin interrupciones.'
+            : 'Suscribite ahora para no perder el acceso cuando termine tu prueba.'}
+        </div>
+
+        <div style={{ background: '#111', border: '1px solid #1A1A1A', borderRadius: 16, padding: '24px 28px', width: '100%', marginBottom: 28 }}>
+          <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Plan mensual</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: '#f0f0f0', marginBottom: 4 }}>
+            $5.000
+          </div>
+          <div style={{ fontSize: 13, color: '#555' }}>ARS / mes</div>
+        </div>
+
+        <button
+          className="btn-primary"
+          style={{ width: '100%', maxWidth: 400, marginBottom: 16, fontSize: 15, fontWeight: 700, letterSpacing: 0.5 }}
+          disabled={loading}
+          onClick={handleSubscribe}
+        >
+          {loading ? 'Cargando...' : 'Suscribirme'}
+        </button>
+
+        <button
+          onClick={onSubscribed}
+          style={{ background: 'none', border: 'none', color: '#444', fontSize: 12, cursor: 'pointer', marginBottom: 8, padding: '4px 8px' }}
+        >
+          Ya pagué — verificar acceso
+        </button>
+      </div>
+
+      <button
+        onClick={onSignOut}
+        style={{ background: 'none', border: 'none', color: '#444', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', marginTop: 'auto', paddingTop: 24 }}
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  )
+}
+
 function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
