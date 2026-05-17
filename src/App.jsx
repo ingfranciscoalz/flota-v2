@@ -385,6 +385,17 @@ export default function App() {
     ...(!isDemoMode && profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
+  // Trial banner logic
+  const trialDaysLeft = profile?.trial_hasta && new Date(profile.trial_hasta) > new Date()
+    ? Math.ceil((new Date(profile.trial_hasta) - new Date()) / (1000 * 60 * 60 * 24))
+    : 0
+  const trialActive = !profile?.is_admin && trialDaysLeft > 0 && !profile?.suscripcion_activa
+  const [trialWelcomeDismissed, setTrialWelcomeDismissed] = useState(
+    () => !!localStorage.getItem('flota_trial_welcome')
+  )
+  const showTrialWelcome = trialActive && !trialWelcomeDismissed && trialDaysLeft >= 25
+  const showTrialWarning = trialActive && trialDaysLeft <= 7
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#0a0a0a', color: '#f0f0f0', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
@@ -396,6 +407,30 @@ export default function App() {
             onClick={() => { setIsDemoMode(false); setAuthState('auth'); setResumen(null); setCal(null) }}
             style={{ background: 'none', border: '1px solid #0D1E42', borderRadius: 8, color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', letterSpacing: 0.5 }}
           >SALIR</button>
+        </div>
+      )}
+
+      {showTrialWelcome && (
+        <div style={{ background: '#091428', borderBottom: '1px solid #0D1E42', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#5AACFF', fontWeight: 600 }}>
+            🎉 Bienvenido — tenés <strong>{trialDaysLeft} días</strong> de prueba gratuita
+          </span>
+          <button
+            onClick={() => { localStorage.setItem('flota_trial_welcome', '1'); setTrialWelcomeDismissed(true) }}
+            style={{ background: 'none', border: 'none', color: '#444', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
+          >×</button>
+        </div>
+      )}
+
+      {showTrialWarning && (
+        <div style={{ background: '#1A1000', borderBottom: '1px solid #3A2800', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>
+            ⚠ Tu período de prueba vence en <strong>{trialDaysLeft} día{trialDaysLeft !== 1 ? 's' : ''}</strong>
+          </span>
+          <button
+            onClick={() => setAuthState('subscription')}
+            style={{ background: '#F59E0B', border: 'none', borderRadius: 8, color: '#000', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', flexShrink: 0 }}
+          >Suscribirme</button>
         </div>
       )}
 
