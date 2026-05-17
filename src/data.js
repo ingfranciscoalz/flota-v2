@@ -511,6 +511,27 @@ export async function getDeudaHistorica(cfg = null) {
   return resultado
 }
 
+// ── DEUDAS MANUALES ───────────────────────────────────────────────────────────
+export async function getDeudas() {
+  return supabase
+    .from('deudas')
+    .select('*, choferes(id, nombre, auto_id, autos(nombre))')
+    .order('fecha', { ascending: false })
+}
+
+export async function insertDeuda(chofer_id, descripcion, monto, fecha) {
+  const user_id = await uid()
+  return supabase.from('deudas').insert({ user_id, chofer_id, descripcion, monto: parseFloat(monto), fecha })
+}
+
+export async function saldarDeuda(id) {
+  return supabase.from('deudas').update({ saldado: true, saldado_en: new Date().toISOString() }).eq('id', id)
+}
+
+export async function deleteDeuda(id) {
+  return supabase.from('deudas').delete().eq('id', id)
+}
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function getLunes(d) {
   const lunes = new Date(d)

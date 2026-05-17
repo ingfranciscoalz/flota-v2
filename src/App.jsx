@@ -11,10 +11,17 @@ import {
   createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
   getMonthlyStats, getDeudaHistorica,
+  getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
 } from './data'
 
 // ── CONSTANTES ────────────────────────────────────────────────────────────────
 const TURNO_BASE_DEFAULT = 50000
+
+const DEMO_DEUDAS = [
+  { id: 'dd1', chofer_id: 'dc2', descripcion: 'Multa de tránsito', monto: 15000, fecha: '2026-05-01', saldado: false, choferes: { nombre: 'Roberto P.', autos: { nombre: 'Corsa Blanco' } } },
+  { id: 'dd2', chofer_id: 'dc4', descripcion: 'Adelanto de turno', monto: 25000, fecha: '2026-04-28', saldado: false, choferes: { nombre: 'Diego F.', autos: { nombre: 'Gol Negro' } } },
+  { id: 'dd3', chofer_id: 'dc3', descripcion: 'Reparación espejo', monto: 8500,  fecha: '2026-04-15', saldado: true,  choferes: { nombre: 'Miguel A.', autos: { nombre: 'Gol Negro' } } },
+]
 const TOAST_DURATION = 3000
 const ALERTA_DIAS = 5   // días de anticipación para alertas VTV/seguro
 
@@ -1516,10 +1523,196 @@ function FlotaPage({ resumen, showToast, onRefresh, isDemoMode }) {
       <div className="tabs">
         <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
+        <button className={`tab ${tab === 'deudas' ? 'active' : ''}`} onClick={() => setTab('deudas')}>Deudas</button>
       </div>
-      {tab === 'autos' && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
-      {tab === 'mant'  && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'mant'    && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'deudas'  && <DeudasTab resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
     </div>
+  )
+}
+
+function DeudasTab({ resumen, showToast, isDemoMode }) {
+  const [deudas, setDeudas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [filtro, setFiltro] = useState('pendientes') // 'pendientes' | 'todas'
+  const [saving, setSaving] = useState(false)
+  const [actionId, setActionId] = useState(null)
+  const [form, setForm] = useState({ chofer_id: '', descripcion: '', monto: '', fecha: today() })
+
+  const choferes = resumen?.config?.choferes || []
+
+  const load = useCallback(async () => {
+    if (isDemoMode) { setDeudas(DEMO_DEUDAS); setLoading(false); return }
+    setLoading(true)
+    const { data, error } = await getDeudas()
+    setLoading(false)
+    if (error) { showToast('⚠ ' + error.message, 'error'); return }
+    setDeudas(data || [])
+  }, [isDemoMode, showToast])
+
+  useEffect(() => { load() }, [load])
+
+  const handleAdd = async () => {
+    if (!form.chofer_id) return showToast('Seleccioná un chofer', 'error')
+    if (!form.descripcion.trim()) return showToast('Ingresá una descripción', 'error')
+    const monto = parseFloat(form.monto)
+    if (!monto || monto <= 0) return showToast('Ingresá un monto válido', 'error')
+    if (isDemoMode) {
+      const chofer = choferes.find(c => c.id === form.chofer_id)
+      setDeudas(prev => [{
+        id: 'demo-' + Date.now(), chofer_id: form.chofer_id, descripcion: form.descripcion,
+        monto, fecha: form.fecha, saldado: false,
+        choferes: { nombre: chofer?.nombre || '?', autos: { nombre: '' } }
+      }, ...prev])
+      showToast('✓ Deuda registrada', 'success')
+      setForm({ chofer_id: '', descripcion: '', monto: '', fecha: today() }); setShowForm(false); return
+    }
+    setSaving(true)
+    const { error } = await insertDeuda(form.chofer_id, form.descripcion, monto, form.fecha)
+    setSaving(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Deuda registrada', 'success')
+    setForm({ chofer_id: '', descripcion: '', monto: '', fecha: today() }); setShowForm(false)
+    load()
+  }
+
+  const handleSaldar = async (id) => {
+    if (isDemoMode) {
+      setDeudas(prev => prev.map(d => d.id === id ? { ...d, saldado: true } : d))
+      showToast('✓ Marcada como saldada', 'success'); return
+    }
+    setActionId(id + 'saldar')
+    const { error } = await saldarDeuda(id)
+    setActionId(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Marcada como saldada', 'success')
+    load()
+  }
+
+  const handleDelete = async (id) => {
+    if (isDemoMode) {
+      setDeudas(prev => prev.filter(d => d.id !== id))
+      showToast('✓ Eliminada', 'success'); return
+    }
+    setActionId(id + 'del')
+    const { error } = await deleteDeuda(id)
+    setActionId(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Eliminada', 'success')
+    load()
+  }
+
+  const visibles = filtro === 'pendientes' ? deudas.filter(d => !d.saldado) : deudas
+  const totalPendiente = deudas.filter(d => !d.saldado).reduce((s, d) => s + parseFloat(d.monto || 0), 0)
+
+  return (
+    <>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div className="stitle" style={{ marginBottom: 2 }}>Deudas de choferes</div>
+          {totalPendiente > 0 && (
+            <div style={{ fontSize: 12, color: '#EF4444', fontFamily: "'DM Mono',monospace" }}>
+              Pendiente: {fmt(totalPendiente)}
+            </div>
+          )}
+        </div>
+        <button className="action-btn ab-primary" style={{ padding: '8px 14px', fontSize: 13 }} onClick={() => setShowForm(f => !f)}>
+          {showForm ? '✕ Cancelar' : '+ Agregar'}
+        </button>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="stitle" style={{ marginTop: 0 }}>Chofer</div>
+          <div className="form-group">
+            <select className="form-input" value={form.chofer_id} onChange={e => setForm(f => ({ ...f, chofer_id: e.target.value }))}>
+              <option value="">Seleccioná un chofer...</option>
+              {choferes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </div>
+          <div className="stitle">Descripción</div>
+          <div className="form-group">
+            <input className="form-input" placeholder="Ej: Multa, adelanto, daño al auto..." value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div>
+              <div className="stitle" style={{ marginTop: 0 }}>Monto ($)</div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <input className="form-input" type="number" inputMode="numeric" placeholder="0" style={{ fontFamily: "'DM Mono',monospace" }} value={form.monto} onChange={e => setForm(f => ({ ...f, monto: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <div className="stitle" style={{ marginTop: 0 }}>Fecha</div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
+              </div>
+            </div>
+          </div>
+          <button className="btn-primary" disabled={saving} onClick={handleAdd}>
+            {saving ? 'Guardando...' : 'REGISTRAR DEUDA'}
+          </button>
+        </div>
+      )}
+
+      {/* Filtro */}
+      <div className="tabs" style={{ marginBottom: 12 }}>
+        <button className={`tab ${filtro === 'pendientes' ? 'active' : ''}`} onClick={() => setFiltro('pendientes')}>
+          Pendientes {deudas.filter(d => !d.saldado).length > 0 ? `(${deudas.filter(d => !d.saldado).length})` : ''}
+        </button>
+        <button className={`tab ${filtro === 'todas' ? 'active' : ''}`} onClick={() => setFiltro('todas')}>Todas</button>
+      </div>
+
+      {/* Lista */}
+      {loading ? (
+        <div className="loading">Cargando...</div>
+      ) : visibles.length === 0 ? (
+        <div className="loading">{filtro === 'pendientes' ? 'Sin deudas pendientes 🎉' : 'Sin deudas registradas'}</div>
+      ) : (
+        visibles.map(d => (
+          <div key={d.id} className="card" style={{ marginBottom: 8, opacity: d.saldado ? 0.5 : 1 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
+                  <span className="auto-tag tag-auto" style={{ fontSize: 11 }}>{d.choferes?.nombre || '?'}</span>
+                  {d.choferes?.autos?.nombre && <span style={{ fontSize: 11, color: '#555' }}>{d.choferes.autos.nombre}</span>}
+                  {d.saldado && <span style={{ fontSize: 10, color: '#10B981', fontWeight: 700, letterSpacing: 0.5 }}>SALDADO</span>}
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{d.descripcion}</div>
+                <div style={{ fontSize: 11, color: '#555' }}>{d.fecha}</div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: d.saldado ? '#555' : '#EF4444', marginBottom: 8 }}>
+                  {fmt(parseFloat(d.monto))}
+                </div>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  {!d.saldado && (
+                    <button
+                      className="action-btn ab-primary"
+                      style={{ padding: '5px 10px', fontSize: 11, borderRadius: 8 }}
+                      disabled={!!actionId}
+                      onClick={() => handleSaldar(d.id)}
+                    >
+                      {actionId === d.id + 'saldar' ? '...' : '✓ Saldar'}
+                    </button>
+                  )}
+                  <button
+                    className="gasto-del-btn"
+                    disabled={!!actionId}
+                    onClick={() => handleDelete(d.id)}
+                  >
+                    {actionId === d.id + 'del' ? '...' : '✕'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </>
   )
 }
 
