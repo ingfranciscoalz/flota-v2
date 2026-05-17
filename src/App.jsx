@@ -188,6 +188,9 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const [showInstall, setShowInstall] = useState(false)
+  const [trialWelcomeDismissed, setTrialWelcomeDismissed] = useState(
+    () => !!localStorage.getItem('flota_trial_welcome')
+  )
   const installPrompt = useRef(null)
   const { toast, show: showToast } = useToast()
 
@@ -390,9 +393,6 @@ export default function App() {
     ? Math.ceil((new Date(profile.trial_hasta) - new Date()) / (1000 * 60 * 60 * 24))
     : 0
   const trialActive = !profile?.is_admin && trialDaysLeft > 0 && !profile?.suscripcion_activa
-  const [trialWelcomeDismissed, setTrialWelcomeDismissed] = useState(
-    () => !!localStorage.getItem('flota_trial_welcome')
-  )
   const showTrialWelcome = trialActive && !trialWelcomeDismissed && trialDaysLeft >= 25
   const showTrialWarning = trialActive && trialDaysLeft <= 7
 
