@@ -1,0 +1,91 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:   # se ejecuta manualmente desde GitHub Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate keystore
+        working-directory: twa
+        run: |
+          keytool -genkeypair -v \
+            -keystore android-key.keystore \
+            -alias flota \
+            -keyalg RSA -keysize 2048 -validity 9125 \
+            -dname "CN=Flota App, OU=Mobile, O=Flota, L=Buenos Aires, ST=Buenos Aires, C=AR" \
+            -storepass flotaapp2024 \
+            -keypass flotaapp2024
+
+      - name: Extract SHA-256 fingerprint
+        id: fingerprint
+        working-directory: twa
+        run: |
+          FP=$(keytool -list -v \
+            -keystore android-key.keystore \
+            -alias flota \
+            -storepass flotaapp2024 2>/dev/null \
+            | grep "SHA256:" | awk '{print $2}')
+          echo "sha256=$FP" >> $GITHUB_OUTPUT
+          echo "SHA-256 fingerprint: $FP"
+
+      - name: Update assetlinks.json
+        run: |
+          FP="${{ steps.fingerprint.outputs.sha256 }}"
+          cat > public/.well-known/assetlinks.json << EOF
+          [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+              "namespace": "android_app",
+              "package_name": "com.flota.app",
+              "sha256_cert_fingerprints": ["$FP"]
+            }
+          }]
+          EOF
+          echo "Updated assetlinks.json with fingerprint: $FP"
+
+      - name: Build APK with Bubblewrap
+        working-directory: twa
+        env:
+          KEYSTORE_PASS: flotaapp2024
+          KEY_PASS: flotaapp2024
+        run: |
+          bubblewrap build \
+            --skipPwaValidation \
+            --config ./twa-manifest.json \
+            --signingKeyPassword flotaapp2024 \
+            --signingKeyAliasPassword flotaapp2024
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flota-android-apk
+          path: |
+            twa/*.apk
+            twa/*.aab
+          retention-days: 30
+
+      - name: Show fingerprint summary
+        run: |
+          echo "## ✅ APK generado" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA-256 fingerprint:** \`${{ steps.fingerprint.outputs.sha256 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Descargá el APK desde la sección **Artifacts** de este workflow." >> $GITHUB_STEP_SUMMARY
