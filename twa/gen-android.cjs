@@ -16,20 +16,29 @@ function write(p, content) {
   console.log('✓', path.relative(OUT, p))
 }
 
-// settings.gradle
-write(path.join(OUT, 'settings.gradle'), `rootProject.name = 'Flota'
+// settings.gradle — formato moderno Gradle 8.x
+write(path.join(OUT, 'settings.gradle'), `pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'Flota'
 include ':app'
 `)
 
-// root build.gradle
-write(path.join(OUT, 'build.gradle'), `buildscript {
-    repositories { google(); mavenCentral() }
-    dependencies { classpath 'com.android.tools.build:gradle:8.3.2' }
+// root build.gradle — declara plugin sin aplicarlo
+write(path.join(OUT, 'build.gradle'), `plugins {
+    id 'com.android.application' version '8.3.2' apply false
 }
-allprojects {
-    repositories { google(); mavenCentral() }
-}
-task clean(type: Delete) { delete rootProject.buildDir }
 `)
 
 // gradle.properties
