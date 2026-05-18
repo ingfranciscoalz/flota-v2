@@ -1,15 +1,22 @@
 {
+  "id": "/",
   "name": "Flota — Gestión de flota",
   "short_name": "Flota",
-  "description": "Gestión de flotas de remises. Turnos, gastos, mantenimiento y rentabilidad.",
+  "description": "Controlá turnos, gastos y mantenimiento de tu flota de remises desde el celular. En tiempo real.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "orientation": "portrait",
+  "lang": "es",
+  "categories": ["business", "productivity"],
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/screen1.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow" }
   ]
 }
