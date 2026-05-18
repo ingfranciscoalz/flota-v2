@@ -29,14 +29,14 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         total: price,
-        description: 'TuFlota - Suscripción mensual',
+        description: 'Flota - Suscripción mensual',
         reference,
         return_url: 'https://flota-v2.vercel.app',
         webhook: 'https://flota-v2.vercel.app/api/mobbex-webhook',
         items: [
           {
             image: '',
-            description: 'TuFlota - Suscripción mensual',
+            description: 'Flota - Suscripción mensual',
             quantity: 1,
             price,
           },

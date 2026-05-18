@@ -144,7 +144,7 @@ function TutorialOverlay({ onDone }) {
           <div style={{ fontSize: 96, lineHeight: 1, filter: `drop-shadow(0 0 52px ${s.color}77)` }}>{s.emoji}</div>
           {s.isWelcome && (
             <div style={{ marginTop: 20, fontFamily: "'Syne',sans-serif", fontSize: 42, fontWeight: 800, letterSpacing: -2, color: '#fff' }}>
-              TuFlota<span style={{ color: '#276EF1' }}>.</span>
+              Flota<span style={{ color: '#276EF1' }}>.</span>
             </div>
           )}
         </div>
@@ -443,7 +443,7 @@ export default function App() {
 
       <div className="header">
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: '#f0f0f0' }}>
-          TuFlota<span style={{ color: '#276EF1' }}>.</span>
+          Flota<span style={{ color: '#276EF1' }}>.</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           {showInstall && (
@@ -562,7 +562,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
 
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, marginBottom: 6, color: '#f0f0f0', alignSelf: 'flex-start' }}>
-        TuFlota<span style={{ color: '#276EF1' }}>.</span>
+        Flota<span style={{ color: '#276EF1' }}>.</span>
       </h1>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
@@ -574,7 +574,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
 
         <div style={{ color: '#666', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
           {trialExpired
-            ? 'Suscribite para seguir usando TuFlota sin interrupciones.'
+            ? 'Suscribite para seguir usando Flota sin interrupciones.'
             : 'Suscribite ahora para no perder el acceso cuando termine tu prueba.'}
         </div>
 
@@ -642,12 +642,12 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
   return (
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6, color: '#f0f0f0' }}>
-        TuFlota<span style={{ color: '#276EF1' }}>.</span>
+        Flota<span style={{ color: '#276EF1' }}>.</span>
       </h1>
       {showInstall && (
         <button onClick={onInstall}
           style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
-          ⬇ Instalar TuFlota
+          ⬇ Instalar Flota
         </button>
       )}
       {showIosInstall && !showInstall && (
