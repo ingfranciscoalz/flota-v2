@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Generate keystore
+        working-directory: twa
+        run: |
+          keytool -genkeypair -v \
+            -keystore android-key.keystore -alias flota \
+            -keyalg RSA -keysize 2048 -validity 9125 \
+            -dname "CN=Flota App, O=Flota, C=AR" \
+            -storepass flotaapp2024 -keypass flotaapp2024
+
+      - name: Get SHA-256 fingerprint
+        id: fp
+        working-directory: twa
+        run: |
+          FP=$(keytool -list -v -keystore android-key.keystore \
+            -alias flota -storepass flotaapp2024 2>/dev/null \
+            | grep "SHA256:" | awk '{print $2}')
+          echo "sha256=$FP" >> $GITHUB_OUTPUT
+          echo "Fingerprint: $FP"
+
+      - name: Build APK
+        working-directory: twa
+        run: |
+          bubblewrap build --skipPwaValidation \
+            --signingKeyPassword flotaapp2024 \
+            --signingKeyAliasPassword flotaapp2024
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flota-android-apk
+          path: twa/*.apk
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## ✅ APK generado" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA-256:** \`${{ steps.fp.outputs.sha256 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "Descargá el APK desde Artifacts." >> $GITHUB_STEP_SUMMARY
