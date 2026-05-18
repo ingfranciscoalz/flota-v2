@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.flota.app",
-    "sha256_cert_fingerprints": ["PLACEHOLDER_SHA256_FINGERPRINT"]
+    "sha256_cert_fingerprints": ["71:97:27:04:BE:87:8B:B6:46:A2:95:B8:E3:61:27:60:9B:DD:AB:E5:5E:6A:C4:11:CF:FA:99:0F:37:B8:5D:A2"]
   }
 }]
