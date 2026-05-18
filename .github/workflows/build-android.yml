@@ -21,18 +21,30 @@ jobs:
         with:
           gradle-version: '8.6'
 
-      - name: Generate keystore
+      - name: Restore or create keystore
         working-directory: twa
         run: |
-          keytool -genkeypair -v -keystore android-key.keystore -alias flota -keyalg RSA -keysize 2048 -validity 9125 -dname "CN=Flota App, O=Flota, C=AR" -storepass flotaapp2024 -keypass flotaapp2024
+          if [ -n "${{ secrets.KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android-key.keystore
+            echo "✅ Keystore restaurado desde secreto"
+          else
+            keytool -genkeypair -v -keystore android-key.keystore -alias flota \
+              -keyalg RSA -keysize 2048 -validity 9125 \
+              -dname "CN=Flota App, O=Flota, C=AR" \
+              -storepass flotaapp2024 -keypass flotaapp2024
+            echo "⚠️ Keystore nuevo generado — guardalo como secreto KEYSTORE_B64"
+          fi
 
       - name: Get fingerprint
         id: fp
         working-directory: twa
         run: |
-          FP=$(keytool -list -v -keystore android-key.keystore -alias flota -storepass flotaapp2024 2>/dev/null | grep "SHA256:" | awk '{print $2}')
+          FP=$(keytool -list -v -keystore android-key.keystore -alias flota \
+            -storepass flotaapp2024 2>/dev/null | grep "SHA256:" | awk '{print $2}')
           echo "sha256=$FP" >> $GITHUB_OUTPUT
-          echo "Fingerprint $FP"
+          echo "Fingerprint: $FP"
+          B64=$(base64 -w 0 android-key.keystore)
+          echo "keystore_b64=$B64" >> $GITHUB_OUTPUT
 
       - name: Generate Android project
         working-directory: twa
@@ -60,3 +72,20 @@ jobs:
           name: flota-android-apk
           path: twa/android/app/build/outputs/apk/release/*.apk
           retention-days: 30
+
+      - name: Upload keystore
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-keystore
+          path: twa/android-key.keystore
+          retention-days: 90
+
+      - name: Summary
+        run: |
+          echo "## ✅ APK generado" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA-256:** \`${{ steps.fp.outputs.sha256 }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Keystore base64 (guardalo como secreto KEYSTORE_B64)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.fp.outputs.keystore_b64 }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
