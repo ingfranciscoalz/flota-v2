@@ -103,7 +103,7 @@ write(path.join(MAIN, 'AndroidManifest.xml'), `<?xml version="1.0" encoding="utf
         android:theme="@style/AppTheme">
 
         <activity
-            android:name="com.flota.app.LauncherActivity"
+            android:name="com.flota.app.TwaActivity"
             android:exported="true"
             android:theme="@style/AppTheme">
             <intent-filter>
@@ -135,10 +135,9 @@ write(path.join(MAIN, 'AndroidManifest.xml'), `<?xml version="1.0" encoding="utf
 </manifest>
 `)
 
-// LauncherActivity.java
-write(path.join(JAVA, 'LauncherActivity.java'), `package com.flota.app;
-import com.google.androidbrowserhelper.trusted.LauncherActivity;
-public class LauncherActivity extends LauncherActivity {}
+// TwaActivity.java — nombre distinto al padre para evitar herencia circular
+write(path.join(JAVA, 'TwaActivity.java'), `package com.flota.app;
+public class TwaActivity extends com.google.androidbrowserhelper.trusted.LauncherActivity {}
 `)
 
 // strings.xml
