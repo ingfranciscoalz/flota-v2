@@ -69,7 +69,7 @@ android {
     }
     signingConfigs {
         release {
-            storeFile     file(System.getenv('KEYSTORE_PATH') ?: '../android-key.keystore')
+            storeFile     rootProject.file(System.getenv('KEYSTORE_PATH') ?: '../android-key.keystore')
             storePassword (System.getenv('KEYSTORE_PASSWORD') ?: 'flotaapp2024')
             keyAlias      'flota'
             keyPassword   (System.getenv('KEY_PASSWORD') ?: 'flotaapp2024')
