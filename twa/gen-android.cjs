@@ -117,6 +117,9 @@ write(path.join(MAIN, 'AndroidManifest.xml'), `<?xml version="1.0" encoding="utf
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="https" android:host="\${hostName}"/>
             </intent-filter>
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="\${defaultUrl}"/>
         </activity>
 
         <service
