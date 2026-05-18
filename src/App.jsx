@@ -103,13 +103,227 @@ function BarChart({ data }) {
   )
 }
 
+// ── TUTORIAL ILLUSTRATIONS ────────────────────────────────────────────────────
+function IllustWelcome() {
+  return (
+    <div style={{ textAlign: 'center' }}>
+      <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 58, fontWeight: 800, letterSpacing: -3, color: '#fff', lineHeight: 1 }}>
+        Flota<span style={{ color: '#276EF1' }}>.</span>
+      </div>
+      <div style={{ color: '#333', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE REMISES</div>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 28 }}>
+        {['$312k', '6 autos', '4 choferes'].map((t, i) => (
+          <div key={i} style={{ background: '#131318', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#555', fontWeight: 700 }}>{t}</div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function IllustResumen() {
+  return (
+    <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ flex: 1, background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTA SEMANA</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$84.500</div>
+          <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, fontWeight: 600 }}>▲ 12% vs semana anterior</div>
+        </div>
+        <div style={{ flex: 1, background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTE MES</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$312k</div>
+          <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 4, fontWeight: 600 }}>neto $218.400</div>
+        </div>
+      </div>
+      <div style={{ background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+        <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 8 }}>AUTOS EN TURNO HOY</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {['Corolla','Gol','Logan','Sandero'].map((a, i) => (
+            <div key={i} style={{ flex: 1, background: i < 3 ? '#276EF118' : '#1a1a1a', borderRadius: 8, padding: '6px 4px', textAlign: 'center', fontSize: 9, color: i < 3 ? '#276EF1' : '#333', fontWeight: 700, border: `1px solid ${i < 3 ? '#276EF133' : '#222'}` }}>{a}</div>
+          ))}
+        </div>
+      </div>
+      <div style={{ background: '#1A1208', border: '1px solid #F59E0B33', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 20 }}>🔧</div>
+        <div>
+          <div style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700 }}>SERVICE PRÓXIMO</div>
+          <div style={{ fontSize: 11, color: '#555', marginTop: 1 }}>Toyota Corolla · faltan 500 km</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IllustCalendario() {
+  const days = ['L','M','M','J','V','S','D']
+  const grid = [
+    [null,null,null,null,'#276EF1','#276EF1',null],
+    ['#276EF1','#276EF1','#276EF1','#276EF1',null,'#10B981',null],
+    ['#276EF1',null,'#276EF1','#276EF1','#276EF1','#276EF1',null],
+    ['#276EF1','#276EF1',null,'#276EF1',null,null,null],
+  ]
+  const labels = [[null,null,null,null,3,4,null],[5,6,7,8,null,9,null],[10,null,12,13,14,15,null],[16,17,null,19,null,null,null]]
+  return (
+    <div style={{ width: 260 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>Mayo 2025</div>
+        <div style={{ display: 'flex', gap: 16, fontSize: 16, color: '#444' }}><span>‹</span><span style={{ color: '#fff' }}>›</span></div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 4 }}>
+        {days.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: '#333', fontWeight: 700, paddingBottom: 4 }}>{d}</div>)}
+      </div>
+      {grid.map((row, ri) => (
+        <div key={ri} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
+          {row.map((color, ci) => (
+            <div key={ci} style={{ aspectRatio: '1', borderRadius: 7, background: color || '#0e0e0e', border: `1px solid ${color ? color + '44' : '#181818'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: color ? '#fff' : '#2a2a2a', fontWeight: 600 }}>
+              {labels[ri][ci] || ''}
+            </div>
+          ))}
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 16, marginTop: 10, justifyContent: 'center' }}>
+        {[['#276EF1','Turno completo'],['#10B981','Franco']].map(([c,l]) => (
+          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#555' }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function IllustGastos() {
+  const items = [
+    { icon: '⛽', label: 'Combustible', sub: 'Corolla · hoy', amount: '-$12.400', color: '#F59E0B' },
+    { icon: '🛡️', label: 'Seguro mensual', sub: 'Todos los autos', amount: '-$28.000', color: '#EF4444' },
+    { icon: '🔧', label: 'Cambio de aceite', sub: 'VW Gol · 15 may', amount: '-$8.500', color: '#F59E0B' },
+  ]
+  return (
+    <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {items.map((item, i) => (
+        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{item.icon}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{item.label}</div>
+            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{item.sub}</div>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: item.color, flexShrink: 0 }}>{item.amount}</div>
+        </div>
+      ))}
+      <div style={{ background: '#0D1F0D', border: '1px solid #10B98133', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 9, color: '#10B981', fontWeight: 700, letterSpacing: 1.5 }}>NETO DEL MES</div>
+          <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>ingresos $312k − gastos $93.6k</div>
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>$218.400</div>
+      </div>
+    </div>
+  )
+}
+
+function IllustStats() {
+  const months = ['DIC','ENE','FEB','MAR','ABR','MAY']
+  const data = [{g:62,e:42},{g:75,e:50},{g:68,e:46},{g:88,e:58},{g:82,e:53},{g:100,e:65}]
+  return (
+    <div style={{ width: 270 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1.5 }}>ÚLTIMOS 6 MESES</div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[['#276EF1','Ingresos'],['#F59E0B','Gastos']].map(([c,l]) => (
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555' }}>
+              <div style={{ width: 7, height: 7, borderRadius: 2, background: c }} />{l}
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'flex-end', height: 100, marginBottom: 6 }}>
+        {data.map((d, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 86 }}>
+              <div style={{ width: 13, borderRadius: '4px 4px 0 0', background: '#276EF1', height: `${d.g}%`, opacity: i === 5 ? 1 : 0.35 }} />
+              <div style={{ width: 13, borderRadius: '4px 4px 0 0', background: '#F59E0B', height: `${d.e}%`, opacity: i === 5 ? 1 : 0.35 }} />
+            </div>
+            <div style={{ fontSize: 8, color: i === 5 ? '#777' : '#2a2a2a', fontWeight: 700 }}>{months[i]}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <div style={{ flex: 1, background: '#131318', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
+          <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>TOTAL INGRESOS</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#276EF1', marginTop: 4 }}>$487k</div>
+        </div>
+        <div style={{ flex: 1, background: '#131318', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
+          <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>MARGEN NETO</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#10B981', marginTop: 4 }}>35.4%</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function IllustAutos() {
+  const autos = [
+    { nombre: 'Toyota Corolla', patente: 'AB 123 CD', chofer: 'Juan Pérez', color: '#276EF1', km: '87.420 km', ok: true },
+    { nombre: 'VW Gol', patente: 'EF 456 GH', chofer: 'Carlos López', color: '#10B981', km: '124.800 km', ok: true },
+    { nombre: 'Renault Logan', patente: 'IJ 789 KL', chofer: 'Sin asignar', color: '#333', km: '203.100 km', ok: false },
+  ]
+  return (
+    <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
+      {autos.map((a, i) => (
+        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: `3px solid ${a.color}`, border: '1px solid #1e1e1e', borderLeftColor: a.color, borderLeftWidth: 3 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#ddd' }}>{a.nombre}</div>
+              {!a.ok && <div style={{ fontSize: 9, background: '#F59E0B22', color: '#F59E0B', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>SERVICE</div>}
+            </div>
+            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{a.patente} · {a.chofer}</div>
+          </div>
+          <div style={{ fontSize: 10, color: '#333', fontWeight: 600 }}>{a.km}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function IllustDeudas() {
+  const deudas = [
+    { chofer: 'Juan Pérez', desc: 'Adelanto en efectivo', monto: '$15.000', pending: true },
+    { chofer: 'Carlos López', desc: 'Multa de tránsito', monto: '$8.500', pending: true },
+    { chofer: 'Roberto Díaz', desc: 'Reparación de espejo', monto: '$3.200', pending: false },
+  ]
+  return (
+    <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1.5 }}>DEUDAS DE CHOFERES</div>
+        <div style={{ fontSize: 9, background: '#EF444422', color: '#EF4444', borderRadius: 6, padding: '3px 8px', fontWeight: 700 }}>TOTAL $23.500</div>
+      </div>
+      {deudas.map((d, i) => (
+        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e', opacity: d.pending ? 1 : 0.45 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{d.chofer}</div>
+              <div style={{ fontSize: 9, background: d.pending ? '#EF444422' : '#10B98122', color: d.pending ? '#EF4444' : '#10B981', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>
+                {d.pending ? 'PENDIENTE' : 'SALDADO'}
+              </div>
+            </div>
+            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{d.desc}</div>
+          </div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: d.pending ? '#EF4444' : '#444' }}>{d.monto}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── TUTORIAL OVERLAY ──────────────────────────────────────────────────────────
 const TUTORIAL_STEPS = [
-  { emoji: '🏎️', color: '#276EF1', subtitle: 'Bienvenido', title: 'Tu flota,\nen un lugar', body: 'Controlá todos tus remises desde el celular. Turnos, gastos, mantenimiento y rentabilidad — todo en tiempo real.', isWelcome: true },
-  { emoji: '📊', color: '#276EF1', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'Ves ganancias de la semana y del mes, el neto después de gastos, y alertas de mantenimiento para cada auto.' },
-  { emoji: '📅', color: '#60AFFF', subtitle: 'Pestaña Calendario', title: 'Turnos\ndía a día', body: 'Con un tap registrás turno completo, parcial o franco especial. Todo queda guardado y visible en el calendario.' },
-  { emoji: '💸', color: '#F59E0B', subtitle: 'Pestaña Gastos', title: 'Control de\ncostos real', body: 'Cargá combustible, seguro, multas y más. El neto del mes se calcula automáticamente restando los gastos.' },
-  { emoji: '📈', color: '#10B981', subtitle: 'Pestaña Stats', title: 'Rentabilidad\na la vista', body: 'Analizá los últimos 6 meses de ganancias vs gastos y controlá la deuda acumulada de cada chofer.' },
+  { color: '#276EF1', subtitle: 'Bienvenido a', title: 'Flota.', body: 'Todo lo que necesitás para gestionar tu flota de remises. Rápido, claro y desde el celular.', Illust: IllustWelcome },
+  { color: '#276EF1', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'De un vistazo: ganancias de la semana, neto del mes, qué autos están en turno y alertas de mantenimiento.', Illust: IllustResumen },
+  { color: '#60AFFF', subtitle: 'Pestaña Calendario', title: 'Turnos\ndía a día', body: 'Tocás un día y registrás turno completo, parcial o franco. Todo queda guardado por auto y por chofer.', Illust: IllustCalendario },
+  { color: '#F59E0B', subtitle: 'Pestaña Gastos', title: 'Control de\ncostos real', body: 'Cargá combustible, seguros, multas y lo que sea. El neto del mes se calcula solo restando los gastos.', Illust: IllustGastos },
+  { color: '#10B981', subtitle: 'Pestaña Stats', title: 'Rentabilidad\na la vista', body: 'Analizá los últimos 6 meses de ingresos vs gastos, detectá tendencias y medí el margen real de tu negocio.', Illust: IllustStats },
+  { color: '#8B5CF6', subtitle: 'Autos & Choferes', title: 'Tu flota\norganizada', body: 'Registrá cada auto con su historial de km y mantenimiento. Asigná choferes y controlá el estado de cada uno.', Illust: IllustAutos },
+  { color: '#EF4444', subtitle: 'Pestaña Deudas', title: 'Deudas de\nchoferes', body: 'Registrá adelantos, multas o gastos a cargo del chofer. Marcalos como saldados cuando te devuelvan el dinero.', Illust: IllustDeudas },
 ]
 
 function TutorialOverlay({ onDone }) {
@@ -119,6 +333,7 @@ function TutorialOverlay({ onDone }) {
   const touchStart = useRef(null)
   const isLast = step === TUTORIAL_STEPS.length - 1
   const s = TUTORIAL_STEPS[step]
+  const Illust = s.Illust
 
   const go = (delta) => {
     const next = step + delta
@@ -139,41 +354,36 @@ function TutorialOverlay({ onDone }) {
       }}
     >
       {/* Área de ilustración */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(ellipse at 50% 60%, ${s.color}1E 0%, #000 68%)`, transition: 'background 0.5s ease', overflow: 'hidden' }}>
-        <div key={animKey} className={dir >= 0 ? 'tsr' : 'tsl'} style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 96, lineHeight: 1, filter: `drop-shadow(0 0 52px ${s.color}77)` }}>{s.emoji}</div>
-          {s.isWelcome && (
-            <div style={{ marginTop: 20, fontFamily: "'Syne',sans-serif", fontSize: 42, fontWeight: 800, letterSpacing: -2, color: '#fff' }}>
-              Flota<span style={{ color: '#276EF1' }}>.</span>
-            </div>
-          )}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: `radial-gradient(ellipse at 50% 55%, ${s.color}22 0%, #000 70%)`, transition: 'background 0.5s ease', overflow: 'hidden', padding: '0 20px' }}>
+        <div key={animKey} className={dir >= 0 ? 'tsr' : 'tsl'} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          <Illust />
         </div>
       </div>
 
       {/* Área de contenido */}
-      <div style={{ background: '#080808', borderTop: '1px solid #161616', padding: '22px 24px 44px' }}>
+      <div style={{ background: '#060606', borderTop: '1px solid #141414', padding: '20px 24px 40px', flexShrink: 0 }}>
         {/* Barra de progreso */}
-        <div style={{ display: 'flex', gap: 5, marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {TUTORIAL_STEPS.map((_, i) => (
-            <div key={i} onClick={() => go(i - step)} style={{ flex: i === step ? 4 : 1, height: 3, borderRadius: 2, background: i < step ? '#1A3060' : i === step ? s.color : '#181818', transition: 'flex 0.4s cubic-bezier(0.22,1,0.36,1), background 0.4s', cursor: 'pointer' }} />
+            <div key={i} onClick={() => go(i - step)} style={{ flex: i === step ? 4 : 1, height: 3, borderRadius: 2, background: i < step ? s.color + '55' : i === step ? s.color : '#181818', transition: 'flex 0.4s cubic-bezier(0.22,1,0.36,1), background 0.4s', cursor: 'pointer' }} />
           ))}
         </div>
 
         <div key={animKey + 'txt'} className={dir >= 0 ? 'tsr' : 'tsl'}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2.5, textTransform: 'uppercase', color: s.color, marginBottom: 6 }}>{s.subtitle}</div>
-          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'Syne',sans-serif", letterSpacing: -0.8, lineHeight: 1.2, marginBottom: 10, whiteSpace: 'pre-line' }}>{s.title}</div>
-          <div style={{ fontSize: 14, color: '#666', lineHeight: 1.7, marginBottom: 22 }}>{s.body}</div>
+          <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'Syne',sans-serif", letterSpacing: -0.8, lineHeight: 1.2, marginBottom: 9, whiteSpace: 'pre-line' }}>{s.title}</div>
+          <div style={{ fontSize: 14, color: '#555', lineHeight: 1.65, marginBottom: 20 }}>{s.body}</div>
         </div>
 
         <button
-          style={{ width: '100%', padding: '15px 20px', background: s.color, color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", letterSpacing: 0.3, transition: 'transform 0.1s', marginBottom: 0 }}
+          style={{ width: '100%', padding: '15px 20px', background: s.color, color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", letterSpacing: 0.3, transition: 'transform 0.1s, background 0.4s' }}
           onClick={() => isLast ? finish() : go(1)}
           onTouchStart={e => { e.currentTarget.style.transform = 'scale(0.97)' }}
           onTouchEnd={e => { e.currentTarget.style.transform = '' }}
         >
           {isLast ? 'EMPEZAR →' : 'SIGUIENTE →'}
         </button>
-        <button onClick={finish} style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 14, background: 'none', border: 'none', color: '#282828', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+        <button onClick={finish} style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 14, background: 'none', border: 'none', color: '#252525', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
           Saltar tutorial
         </button>
       </div>
