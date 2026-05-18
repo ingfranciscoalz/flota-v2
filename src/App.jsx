@@ -632,6 +632,18 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
     if (tab === 'register') setSuccess('Cuenta creada. Esperá la activación del administrador.')
   }
 
+  // Si el usuario vuelve atrás desde Google OAuth, resetear el estado
+  useEffect(() => {
+    const reset = () => setGoogleLoading(false)
+    window.addEventListener('pageshow', reset)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reset()
+    })
+    return () => {
+      window.removeEventListener('pageshow', reset)
+    }
+  }, [])
+
   const handleGoogle = async () => {
     setGoogleLoading(true); setError('')
     const { error: err } = await signInWithGoogle()
