@@ -500,6 +500,7 @@ export default function App() {
     setPage('resumen')
     setResumen(getDemoResumen())
     setCal(getDemoCalendario(new Date().getFullYear(), new Date().getMonth() + 1))
+    setShowTutorial(true)
   }, [])
 
   const loadResumen = useCallback(async (cfg = null) => {
