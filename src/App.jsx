@@ -81,17 +81,17 @@ function BarChart({ data }) {
           const label = MESES[d.mes - 1].slice(0, 3)
           return (
             <g key={d.key}>
-              <rect x={x - BW - GAP} y={H - hT} width={BW} height={hT} fill="#276EF1" rx="3" />
+              <rect x={x - BW - GAP} y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="3" />
               <rect x={x + GAP} y={H - hG} width={BW} height={hG} fill="#EF4444" rx="3" opacity="0.85" />
               <text x={x} y={H + 14} textAnchor="middle" fill="#555" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
             </g>
           )
         })}
-        <line x1="0" y1={H} x2={data.length * SW} y2={H} stroke="#1C1C1C" strokeWidth="1" />
+        <line x1="0" y1={H} x2={data.length * SW} y2={H} stroke="#23232E" strokeWidth="1" />
       </svg>
       <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#276EF1' }} />
+          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#3F7DF5' }} />
           <span style={{ fontSize: 10, color: '#555' }}>Ganancias</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -108,12 +108,12 @@ function IllustWelcome() {
   return (
     <div style={{ textAlign: 'center' }}>
       <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 58, fontWeight: 800, letterSpacing: -3, color: '#fff', lineHeight: 1 }}>
-        Flota<span style={{ color: '#276EF1' }}>.</span>
+        Flota<span style={{ color: '#3F7DF5' }}>.</span>
       </div>
       <div style={{ color: '#333', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE REMISES</div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 28 }}>
         {['$312k', '6 autos', '4 choferes'].map((t, i) => (
-          <div key={i} style={{ background: '#131318', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#555', fontWeight: 700 }}>{t}</div>
+          <div key={i} style={{ background: '#15151B', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#555', fontWeight: 700 }}>{t}</div>
         ))}
       </div>
     </div>
@@ -124,22 +124,22 @@ function IllustResumen() {
   return (
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8 }}>
-        <div style={{ flex: 1, background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+        <div style={{ flex: 1, background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
           <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTA SEMANA</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$84.500</div>
           <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, fontWeight: 600 }}>▲ 12% vs semana anterior</div>
         </div>
-        <div style={{ flex: 1, background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+        <div style={{ flex: 1, background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
           <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTE MES</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$312k</div>
           <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 4, fontWeight: 600 }}>neto $218.400</div>
         </div>
       </div>
-      <div style={{ background: '#131318', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
+      <div style={{ background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
         <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 8 }}>AUTOS EN TURNO HOY</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['Corolla','Gol','Logan','Sandero'].map((a, i) => (
-            <div key={i} style={{ flex: 1, background: i < 3 ? '#276EF118' : '#1a1a1a', borderRadius: 8, padding: '6px 4px', textAlign: 'center', fontSize: 9, color: i < 3 ? '#276EF1' : '#333', fontWeight: 700, border: `1px solid ${i < 3 ? '#276EF133' : '#222'}` }}>{a}</div>
+            <div key={i} style={{ flex: 1, background: i < 3 ? '#3F7DF518' : '#1F1F26', borderRadius: 8, padding: '6px 4px', textAlign: 'center', fontSize: 9, color: i < 3 ? '#3F7DF5' : '#333', fontWeight: 700, border: `1px solid ${i < 3 ? '#3F7DF533' : '#222'}` }}>{a}</div>
           ))}
         </div>
       </div>
@@ -157,10 +157,10 @@ function IllustResumen() {
 function IllustCalendario() {
   const days = ['L','M','M','J','V','S','D']
   const grid = [
-    [null,null,null,null,'#276EF1','#276EF1',null],
-    ['#276EF1','#276EF1','#276EF1','#276EF1',null,'#10B981',null],
-    ['#276EF1',null,'#276EF1','#276EF1','#276EF1','#276EF1',null],
-    ['#276EF1','#276EF1',null,'#276EF1',null,null,null],
+    [null,null,null,null,'#3F7DF5','#3F7DF5',null],
+    ['#3F7DF5','#3F7DF5','#3F7DF5','#3F7DF5',null,'#10B981',null],
+    ['#3F7DF5',null,'#3F7DF5','#3F7DF5','#3F7DF5','#3F7DF5',null],
+    ['#3F7DF5','#3F7DF5',null,'#3F7DF5',null,null,null],
   ]
   const labels = [[null,null,null,null,3,4,null],[5,6,7,8,null,9,null],[10,null,12,13,14,15,null],[16,17,null,19,null,null,null]]
   return (
@@ -175,14 +175,14 @@ function IllustCalendario() {
       {grid.map((row, ri) => (
         <div key={ri} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
           {row.map((color, ci) => (
-            <div key={ci} style={{ aspectRatio: '1', borderRadius: 7, background: color || '#0e0e0e', border: `1px solid ${color ? color + '44' : '#181818'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: color ? '#fff' : '#2a2a2a', fontWeight: 600 }}>
+            <div key={ci} style={{ aspectRatio: '1', borderRadius: 7, background: color || '#0e0e0e', border: `1px solid ${color ? color + '44' : '#181818'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: color ? '#fff' : '#2A2A35', fontWeight: 600 }}>
               {labels[ri][ci] || ''}
             </div>
           ))}
         </div>
       ))}
       <div style={{ display: 'flex', gap: 16, marginTop: 10, justifyContent: 'center' }}>
-        {[['#276EF1','Turno completo'],['#10B981','Franco']].map(([c,l]) => (
+        {[['#3F7DF5','Turno completo'],['#10B981','Franco']].map(([c,l]) => (
           <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#555' }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
           </div>
@@ -201,7 +201,7 @@ function IllustGastos() {
   return (
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
       {items.map((item, i) => (
-        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e' }}>
+        <div key={i} style={{ background: '#15151B', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e' }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{item.icon}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{item.label}</div>
@@ -229,7 +229,7 @@ function IllustStats() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1.5 }}>ÚLTIMOS 6 MESES</div>
         <div style={{ display: 'flex', gap: 10 }}>
-          {[['#276EF1','Ingresos'],['#F59E0B','Gastos']].map(([c,l]) => (
+          {[['#3F7DF5','Ingresos'],['#F59E0B','Gastos']].map(([c,l]) => (
             <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555' }}>
               <div style={{ width: 7, height: 7, borderRadius: 2, background: c }} />{l}
             </div>
@@ -240,19 +240,19 @@ function IllustStats() {
         {data.map((d, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, height: '100%', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 86 }}>
-              <div style={{ width: 13, borderRadius: '4px 4px 0 0', background: '#276EF1', height: `${d.g}%`, opacity: i === 5 ? 1 : 0.35 }} />
+              <div style={{ width: 13, borderRadius: '4px 4px 0 0', background: '#3F7DF5', height: `${d.g}%`, opacity: i === 5 ? 1 : 0.35 }} />
               <div style={{ width: 13, borderRadius: '4px 4px 0 0', background: '#F59E0B', height: `${d.e}%`, opacity: i === 5 ? 1 : 0.35 }} />
             </div>
-            <div style={{ fontSize: 8, color: i === 5 ? '#777' : '#2a2a2a', fontWeight: 700 }}>{months[i]}</div>
+            <div style={{ fontSize: 8, color: i === 5 ? '#777' : '#2A2A35', fontWeight: 700 }}>{months[i]}</div>
           </div>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <div style={{ flex: 1, background: '#131318', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
+        <div style={{ flex: 1, background: '#15151B', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
           <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>TOTAL INGRESOS</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: '#276EF1', marginTop: 4 }}>$487k</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: '#3F7DF5', marginTop: 4 }}>$487k</div>
         </div>
-        <div style={{ flex: 1, background: '#131318', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
+        <div style={{ flex: 1, background: '#15151B', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
           <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>MARGEN NETO</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: '#10B981', marginTop: 4 }}>35.4%</div>
         </div>
@@ -263,14 +263,14 @@ function IllustStats() {
 
 function IllustAutos() {
   const autos = [
-    { nombre: 'Toyota Corolla', patente: 'AB 123 CD', chofer: 'Juan Pérez', color: '#276EF1', km: '87.420 km', ok: true },
+    { nombre: 'Toyota Corolla', patente: 'AB 123 CD', chofer: 'Juan Pérez', color: '#3F7DF5', km: '87.420 km', ok: true },
     { nombre: 'VW Gol', patente: 'EF 456 GH', chofer: 'Carlos López', color: '#10B981', km: '124.800 km', ok: true },
     { nombre: 'Renault Logan', patente: 'IJ 789 KL', chofer: 'Sin asignar', color: '#333', km: '203.100 km', ok: false },
   ]
   return (
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
       {autos.map((a, i) => (
-        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: `3px solid ${a.color}`, border: '1px solid #1e1e1e', borderLeftColor: a.color, borderLeftWidth: 3 }}>
+        <div key={i} style={{ background: '#15151B', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: `3px solid ${a.color}`, border: '1px solid #1e1e1e', borderLeftColor: a.color, borderLeftWidth: 3 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#ddd' }}>{a.nombre}</div>
@@ -298,7 +298,7 @@ function IllustDeudas() {
         <div style={{ fontSize: 9, background: '#EF444422', color: '#EF4444', borderRadius: 6, padding: '3px 8px', fontWeight: 700 }}>TOTAL $23.500</div>
       </div>
       {deudas.map((d, i) => (
-        <div key={i} style={{ background: '#131318', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e', opacity: d.pending ? 1 : 0.45 }}>
+        <div key={i} style={{ background: '#15151B', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e', opacity: d.pending ? 1 : 0.45 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{d.chofer}</div>
@@ -317,8 +317,8 @@ function IllustDeudas() {
 
 // ── TUTORIAL OVERLAY ──────────────────────────────────────────────────────────
 const TUTORIAL_STEPS = [
-  { color: '#276EF1', subtitle: 'Bienvenido a', title: 'Flota.', body: 'Todo lo que necesitás para gestionar tu flota de remises. Rápido, claro y desde el celular.', Illust: IllustWelcome },
-  { color: '#276EF1', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'De un vistazo: ganancias de la semana, neto del mes, qué autos están en turno y alertas de mantenimiento.', Illust: IllustResumen },
+  { color: '#3F7DF5', subtitle: 'Bienvenido a', title: 'Flota.', body: 'Todo lo que necesitás para gestionar tu flota de remises. Rápido, claro y desde el celular.', Illust: IllustWelcome },
+  { color: '#3F7DF5', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'De un vistazo: ganancias de la semana, neto del mes, qué autos están en turno y alertas de mantenimiento.', Illust: IllustResumen },
   { color: '#60AFFF', subtitle: 'Pestaña Calendario', title: 'Turnos\ndía a día', body: 'Tocás un día y registrás turno completo, parcial o franco. Todo queda guardado por auto y por chofer.', Illust: IllustCalendario },
   { color: '#F59E0B', subtitle: 'Pestaña Gastos', title: 'Control de\ncostos real', body: 'Cargá combustible, seguros, multas y lo que sea. El neto del mes se calcula solo restando los gastos.', Illust: IllustGastos },
   { color: '#10B981', subtitle: 'Pestaña Stats', title: 'Rentabilidad\na la vista', body: 'Analizá los últimos 6 meses de ingresos vs gastos, detectá tendencias y medí el margen real de tu negocio.', Illust: IllustStats },
@@ -541,7 +541,7 @@ export default function App() {
 
   if (authState === 'loading') {
     return (
-      <div style={{ background: '#0a0a0a', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#08080A', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <style>{globalStyles}</style>
         <div className="spinner" />
       </div>
@@ -550,7 +550,7 @@ export default function App() {
 
   if (authState === 'auth') {
     return (
-      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+      <div style={{ background: '#08080A', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
         <AuthScreen onEnterDemo={enterDemoMode} showInstall={showInstall} onInstall={handleInstall} showIosInstall={showIosInstall} />
         {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
@@ -560,7 +560,7 @@ export default function App() {
 
   if (authState === 'inactive') {
     return (
-      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+      <div style={{ background: '#08080A', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
         <InactiveScreen
           reason={inactiveReason}
@@ -573,7 +573,7 @@ export default function App() {
 
   if (authState === 'subscription') {
     return (
-      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+      <div style={{ background: '#08080A', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
         <SubscriptionScreen
           profile={profile}
@@ -586,7 +586,7 @@ export default function App() {
 
   if (authState === 'onboarding') {
     return (
-      <div style={{ background: '#0a0a0a', minHeight: '100dvh' }}>
+      <div style={{ background: '#08080A', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
         <OnboardingScreen
           showToast={showToast}
@@ -615,22 +615,22 @@ export default function App() {
   const showTrialWarning = trialActive && trialDaysLeft <= 7
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#0a0a0a', color: '#f0f0f0', minHeight: '100dvh' }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#08080A', color: '#F4F4F8', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
 
       {isDemoMode && (
-        <div style={{ background: '#091428', borderBottom: '1px solid #0D1E42', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, color: '#276EF1', fontWeight: 700, letterSpacing: 1 }}>👁 MODO DEMO — los cambios no se guardan</span>
+        <div style={{ background: '#0B1A3A', borderBottom: '1px solid #1A2B5C', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 700, letterSpacing: 1 }}>👁 MODO DEMO — los cambios no se guardan</span>
           <button
             onClick={() => { setIsDemoMode(false); setAuthState('auth'); setResumen(null); setCal(null) }}
-            style={{ background: 'none', border: '1px solid #0D1E42', borderRadius: 8, color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', letterSpacing: 0.5 }}
+            style={{ background: 'none', border: '1px solid #1A2B5C', borderRadius: 8, color: '#3F7DF5', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', letterSpacing: 0.5 }}
           >SALIR</button>
         </div>
       )}
 
       {showTrialWelcome && (
-        <div style={{ background: '#091428', borderBottom: '1px solid #0D1E42', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#5AACFF', fontWeight: 600 }}>
+        <div style={{ background: '#0B1A3A', borderBottom: '1px solid #1A2B5C', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 12, color: '#7EB1FF', fontWeight: 600 }}>
             🎉 Bienvenido — tenés <strong>{trialDaysLeft} días</strong> de prueba gratuita
           </span>
           <button
@@ -653,13 +653,13 @@ export default function App() {
       )}
 
       <div className="header">
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: '#f0f0f0' }}>
-          Flota<span style={{ color: '#276EF1' }}>.</span>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: '#F4F4F8' }}>
+          Flota<span style={{ color: '#3F7DF5' }}>.</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           {showInstall && (
             <button className="sync-btn" onClick={handleInstall} title="Instalar app"
-              style={{ background: '#091428', border: '1px solid #0D1E42', color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '0 10px', letterSpacing: 0.5 }}>
+              style={{ background: '#0B1A3A', border: '1px solid #1A2B5C', color: '#3F7DF5', fontSize: 11, fontWeight: 700, padding: '0 10px', letterSpacing: 0.5 }}>
               ⬇ Instalar
             </button>
           )}
@@ -701,18 +701,18 @@ function IosInstallHint() {
     <div style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(o => !o)}
-        style={{ background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 11, fontWeight: 700, padding: '6px 10px', cursor: 'pointer', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+        style={{ background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 10, color: '#3F7DF5', fontSize: 11, fontWeight: 700, padding: '6px 10px', cursor: 'pointer', letterSpacing: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
         ⬇ Instalar
       </button>
       {open && (
-        <div style={{ position: 'absolute', top: '110%', right: 0, width: 230, background: '#131318', border: '1px solid #2A2A35', borderRadius: 14, padding: '14px 16px', zIndex: 999, boxShadow: '0 8px 32px #000a' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#f0f0f0', marginBottom: 8 }}>Instalar en iPhone / iPad</div>
+        <div style={{ position: 'absolute', top: '110%', right: 0, width: 230, background: '#15151B', border: '1px solid #2E2E3B', borderRadius: 14, padding: '14px 16px', zIndex: 999, boxShadow: '0 8px 32px #000a' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#F4F4F8', marginBottom: 8 }}>Instalar en iPhone / iPad</div>
           <div style={{ fontSize: 12, color: '#aaa', lineHeight: 1.6 }}>
-            1. Tocá el ícono <span style={{ fontSize: 14 }}>⎙</span> <strong style={{ color: '#f0f0f0' }}>Compartir</strong> en Safari<br />
-            2. Elegí <strong style={{ color: '#f0f0f0' }}>Añadir a pantalla de inicio</strong><br />
-            3. Tocá <strong style={{ color: '#f0f0f0' }}>Añadir</strong>
+            1. Tocá el ícono <span style={{ fontSize: 14 }}>⎙</span> <strong style={{ color: '#F4F4F8' }}>Compartir</strong> en Safari<br />
+            2. Elegí <strong style={{ color: '#F4F4F8' }}>Añadir a pantalla de inicio</strong><br />
+            3. Tocá <strong style={{ color: '#F4F4F8' }}>Añadir</strong>
           </div>
-          <button onClick={() => setOpen(false)} style={{ marginTop: 12, background: 'none', border: 'none', color: '#276EF1', fontSize: 12, cursor: 'pointer', padding: 0 }}>Cerrar</button>
+          <button onClick={() => setOpen(false)} style={{ marginTop: 12, background: 'none', border: 'none', color: '#3F7DF5', fontSize: 12, cursor: 'pointer', padding: 0 }}>Cerrar</button>
         </div>
       )}
     </div>
@@ -772,14 +772,14 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
     <div style={{ padding: '80px 24px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', textAlign: 'center' }}>
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
 
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, marginBottom: 6, color: '#f0f0f0', alignSelf: 'flex-start' }}>
-        Flota<span style={{ color: '#276EF1' }}>.</span>
+      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, marginBottom: 6, color: '#F4F4F8', alignSelf: 'flex-start' }}>
+        Flota<span style={{ color: '#3F7DF5' }}>.</span>
       </h1>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
         <div style={{ fontSize: 56, marginBottom: 20 }}>📋</div>
 
-        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10, color: '#f0f0f0' }}>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10, color: '#F4F4F8' }}>
           {trialExpired ? 'Tu período de prueba venció' : `Te quedan ${trialDaysLeft} día${trialDaysLeft !== 1 ? 's' : ''} de prueba`}
         </div>
 
@@ -789,9 +789,9 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
             : 'Suscribite ahora para no perder el acceso cuando termine tu prueba.'}
         </div>
 
-        <div style={{ background: '#111', border: '1px solid #1A1A1A', borderRadius: 16, padding: '24px 28px', width: '100%', marginBottom: 28 }}>
+        <div style={{ background: '#111', border: '1px solid #1F1F26', borderRadius: 16, padding: '24px 28px', width: '100%', marginBottom: 28 }}>
           <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Plan mensual</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: '#f0f0f0', marginBottom: 4 }}>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: '#F4F4F8', marginBottom: 4 }}>
             $5.000
           </div>
           <div style={{ fontSize: 13, color: '#555' }}>ARS / mes</div>
@@ -864,18 +864,18 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
 
   return (
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6, color: '#f0f0f0' }}>
-        Flota<span style={{ color: '#276EF1' }}>.</span>
+      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6, color: '#F4F4F8' }}>
+        Flota<span style={{ color: '#3F7DF5' }}>.</span>
       </h1>
       {showInstall && (
         <button onClick={onInstall}
-          style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 10, color: '#276EF1', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
+          style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 10, color: '#3F7DF5', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
           ⬇ Instalar Flota
         </button>
       )}
       {showIosInstall && !showInstall && (
-        <div style={{ alignSelf: 'stretch', marginBottom: 16, padding: '12px 16px', background: '#091428', border: '1px solid #0D1E42', borderRadius: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#5AACFF', marginBottom: 6 }}>⬇ Instalar en iPhone / iPad</div>
+        <div style={{ alignSelf: 'stretch', marginBottom: 16, padding: '12px 16px', background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#7EB1FF', marginBottom: 6 }}>⬇ Instalar en iPhone / iPad</div>
           <div style={{ fontSize: 12, color: '#888', lineHeight: 1.7 }}>
             1. Tocá el ícono <span style={{ fontSize: 13 }}>⎙</span> <strong style={{ color: '#ccc' }}>Compartir</strong> en Safari<br />
             2. Elegí <strong style={{ color: '#ccc' }}>Añadir a pantalla de inicio</strong><br />
@@ -901,7 +901,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
       </div>
 
       {error   && <div style={{ color: '#ff4545', fontSize: 13, marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: '#276EF1', fontSize: 13, marginBottom: 12 }}>{success}</div>}
+      {success && <div style={{ color: '#3F7DF5', fontSize: 13, marginBottom: 12 }}>{success}</div>}
 
       <button className="btn-primary" disabled={loading} onClick={submit}>
         {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
@@ -909,16 +909,16 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
 
       {/* Separador */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
-        <div style={{ flex: 1, height: 1, background: '#1A1A1A' }} />
+        <div style={{ flex: 1, height: 1, background: '#1F1F26' }} />
         <span style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1.5 }}>o</span>
-        <div style={{ flex: 1, height: 1, background: '#1A1A1A' }} />
+        <div style={{ flex: 1, height: 1, background: '#1F1F26' }} />
       </div>
 
       {/* Botón Google */}
       <button
         disabled={googleLoading}
         onClick={handleGoogle}
-        style={{ width: '100%', padding: '13px 16px', background: '#fff', border: '1px solid #2A2A35', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: googleLoading ? 0.6 : 1 }}>
+        style={{ width: '100%', padding: '13px 16px', background: '#fff', border: '1px solid #2E2E3B', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: googleLoading ? 0.6 : 1 }}>
         {/* Ícono Google SVG */}
         <svg width="18" height="18" viewBox="0 0 48 48">
           <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.8 6C12.7 13.1 17.9 9.5 24 9.5z"/>
@@ -928,10 +928,10 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
         {googleLoading ? 'Redirigiendo...' : 'Continuar con Google'}
       </button>
 
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1A1A1A' }}>
+      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1F1F26' }}>
         <div style={{ fontSize: 11, color: '#444', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.5 }}>¿Querés ver cómo funciona?</div>
         <button
-          style={{ width: '100%', padding: '14px', background: '#091428', color: '#276EF1', border: '1px solid #0D1E42', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
+          style={{ width: '100%', padding: '14px', background: '#0B1A3A', color: '#3F7DF5', border: '1px solid #1A2B5C', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
           onClick={onEnterDemo}
         >
           PROBAR DEMO
@@ -999,7 +999,7 @@ function OnboardingScreen({ showToast, onComplete }) {
   }
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", color: '#f0f0f0' }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", color: '#F4F4F8' }}>
       <div style={{ padding: '52px 16px 100px' }}>
         <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
           Configurar flota
@@ -1094,7 +1094,7 @@ function AdminScreen({ showToast }) {
           const dias = diasRestantes(u.activo_hasta)
           const expirado = dias !== null && dias <= 0
           const pocoTiempo = dias !== null && dias > 0 && dias <= 5
-          const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#276EF1'
+          const diasColor = expirado ? '#ff4545' : pocoTiempo ? '#ffb347' : '#3F7DF5'
           const loadingPago = !!loadingAction[u.id + 'pago']
           const loadingActivo = !!loadingAction[u.id + 'activo']
 
@@ -1218,7 +1218,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
       {/* Botón PDF */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
         <button onClick={() => window.print()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #1C1C1C', borderRadius: 10, color: '#555', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #23232E', borderRadius: 10, color: '#555', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
           ↓ Exportar PDF
         </button>
       </div>
@@ -1241,7 +1241,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
           <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
           <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
         </div>
-        <div style={{ width: 1, background: '#2A2A35', alignSelf: 'stretch', margin: '0 18px' }} />
+        <div style={{ width: 1, background: '#2E2E3B', alignSelf: 'stretch', margin: '0 18px' }} />
         <div style={{ flex: 1, textAlign: 'right' }}>
           <div className="total-label">Este mes</div>
           <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
@@ -2119,7 +2119,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode }) {
               ) : (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#161616', borderRadius: 10, marginBottom: 6 }}>
                   <span style={{ fontSize: 14, color: '#ccc' }}>{c.nombre}</span>
-                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#1A1A1A', borderColor: '#2A2A2A' }}
+                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#1F1F26', borderColor: '#2A2A35' }}
                     onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
                     ✎
                   </button>
@@ -2340,13 +2340,13 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
                       <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
                         Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
                         {' · '}
-                        <span style={{ color: item.auto_id ? '#276EF1' : '#666' }}>
+                        <span style={{ color: item.auto_id ? '#3F7DF5' : '#666' }}>
                           {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
                         </span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A2A' }}
+                      <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A35' }}
                         onClick={() => { setEditingId(item.id); setEditForm({ nombre: item.nombre, frecuencia: String(item.frecuencia_kms), autoId: item.auto_id || null }) }}>
                         ✎
                       </button>
@@ -2441,7 +2441,7 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
 }
 
 // ── STATS PAGE ────────────────────────────────────────────────────────────────
-const AUTO_COLORS = ['#276EF1', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444']
+const AUTO_COLORS = ['#3F7DF5', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444']
 
 function MultiLineChart({ data, metric }) {
   if (!data || data.length === 0) return null
@@ -2516,7 +2516,7 @@ function MultiLineChart({ data, metric }) {
 function AutosComparisonTab({ isDemoMode }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [metric] = useState('neto')
+  const [metric, setMetric] = useState('ingresos') // 'ingresos' | 'neto'
 
   useEffect(() => {
     if (isDemoMode) { setData(getDemoMonthlyStatsByAuto()); setLoading(false); return }
@@ -2543,7 +2543,15 @@ function AutosComparisonTab({ isDemoMode }) {
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
+          {/* Toggle ingresos / neto */}
+          <div style={{ display: 'flex', background: '#111', borderRadius: 8, padding: 3, gap: 2 }}>
+            {[['ingresos', 'Bruto'], ['neto', 'Neto']].map(([id, label]) => (
+              <button key={id} onClick={() => setMetric(id)}
+                style={{ padding: '4px 10px', background: metric === id ? '#1e1e2e' : 'transparent', border: metric === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 6, color: metric === id ? '#3F7DF5' : '#444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <MultiLineChart data={data} metric={metric} />
@@ -2561,13 +2569,13 @@ function AutosComparisonTab({ isDemoMode }) {
             <div key={auto.id} style={{ flex: 1, background: '#0e0e0e', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{fmt(last[metric])}</div>
-              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
+              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>{metric === 'neto' ? 'neto este mes' : 'ingresos este mes'}</div>
               {delta !== null && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#10B981' : '#EF4444', marginBottom: 6 }}>
                   {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs mes ant.
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #1a1a1a', paddingTop: 8, marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #1F1F26', paddingTop: 8, marginTop: 4 }}>
                 <div>
                   <div style={{ fontSize: 8, color: '#333', letterSpacing: 1 }}>GASTOS</div>
                   <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{fmt(last.gastos)}</div>
@@ -2626,7 +2634,7 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 18, background: '#0e0e0e', borderRadius: 12, padding: 4 }}>
         {[['general', 'General'], ['autos', 'Por auto']].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px', background: tab === id ? '#1a1a2e' : 'transparent', border: tab === id ? '1px solid #276EF133' : '1px solid transparent', borderRadius: 9, color: tab === id ? '#276EF1' : '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px', background: tab === id ? '#1a1a2e' : 'transparent', border: tab === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 9, color: tab === id ? '#3F7DF5' : '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
             {label}
           </button>
         ))}
@@ -2639,16 +2647,16 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
                 <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ganancias 6m</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#276EF1' }}>{fmt(totalGan)}</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 6m</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
             </div>
-            <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 6 meses</span>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#276EF1' : '#EF4444' }}>
+              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#3F7DF5' : '#EF4444' }}>
                 {fmt(totalGan - totalGas)}
               </span>
             </div>
@@ -2659,7 +2667,7 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
           {deudaEntries.length === 0 ? (
             <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
           ) : !hayDeuda ? (
-            <div className="card" style={{ textAlign: 'center', color: '#276EF1', fontSize: 13 }}>✓ Todos los choferes al día</div>
+            <div className="card" style={{ textAlign: 'center', color: '#3F7DF5', fontSize: 13 }}>✓ Todos los choferes al día</div>
           ) : (
             deudaEntries.map(([cid, d]) => (
               <div key={cid} className="card" style={{ marginBottom: 8 }}>
@@ -2679,14 +2687,14 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
                         </div>
                       </>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#276EF1', fontWeight: 600 }}>✓ Al día</div>
+                      <div style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 600 }}>✓ Al día</div>
                     )}
                   </div>
                 </div>
                 {d.ganTotal > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#276EF1' }}>{fmt(d.ganTotal)}</span>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#3F7DF5' }}>{fmt(d.ganTotal)}</span>
                   </div>
                 )}
               </div>
@@ -2737,65 +2745,65 @@ const globalStyles = `
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   body{background:#000}
 
-  .header{padding:52px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid #1A1A1A}
-  .sync-btn{width:36px;height:36px;border-radius:50%;background:#1A1A1A;border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
-  .sync-btn:active{background:#2A2A2A}
+  .header{padding:52px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:rgba(0,0,0,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid #1F1F26}
+  .sync-btn{width:36px;height:36px;border-radius:50%;background:#1F1F26;border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
+  .sync-btn:active{background:#2A2A35}
 
   .page{padding:0 20px 100px}
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:#555;font-size:13px}
-  .spinner{width:28px;height:28px;border:2px solid #1F1F1F;border-top-color:#276EF1;border-radius:50%;animation:spin 0.75s linear infinite}
+  .spinner{width:28px;height:28px;border:2px solid #1F1F1F;border-top-color:#3F7DF5;border-radius:50%;animation:spin 0.75s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
   .stitle{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#888;margin:24px 0 10px}
-  .card{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:20px;margin-bottom:16px}
+  .card{background:#15151B;border:1px solid #2E2E3B;border-radius:20px;padding:20px;margin-bottom:16px}
   .auto-tag{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border-radius:100px;display:inline-block}
-  .tag-auto{background:#0D1E42;color:#7EB8FF;border:1px solid #1A3468}
+  .tag-auto{background:#1A2B5C;color:#A6CBFF;border:1px solid #2D4F9C}
   .divider{height:1px;background:#222228;margin:14px 0}
 
   .alert-banner{background:#1A0A00;border:1px solid #3A1800;border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:13px}
 
-  .total-banner{background:#131318;border:1px solid #2A2A35;border-radius:20px;padding:18px 20px;display:flex;align-items:stretch;margin-bottom:16px;overflow:hidden}
+  .total-banner{background:#15151B;border:1px solid #2E2E3B;border-radius:20px;padding:18px 20px;display:flex;align-items:stretch;margin-bottom:16px;overflow:hidden}
   .total-label{font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
-  .total-value{font-family:'DM Mono',monospace;font-size:min(22px,5.5vw);font-weight:500;color:#5AACFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .total-value{font-family:'DM Mono',monospace;font-size:min(22px,5.5vw);font-weight:500;color:#7EB1FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   .gan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
-  .gan-cell{background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;padding:12px 14px}
+  .gan-cell{background:#1D1D26;border:1px solid #2E2E3B;border-radius:12px;padding:12px 14px}
   .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:5px}
-  .gan-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:#5AACFF}
+  .gan-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:#7EB1FF}
 
-  .neto-row{background:#091428;border:1px solid #1E3A6A;border-radius:12px;padding:14px 16px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
+  .neto-row{background:#0B1A3A;border:1px solid #1E3A6A;border-radius:12px;padding:14px 16px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
   .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#4A7AB5}
-  .neto-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:#5AACFF}
+  .neto-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:#7EB1FF}
 
   .ab-danger{background:#1A0808;color:#EF4444;border:1px solid #3A1010}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-  .metric{background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;padding:12px 14px}
+  .metric{background:#1D1D26;border:1px solid #2E2E3B;border-radius:12px;padding:12px 14px}
   .metric-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#666;margin-bottom:5px}
   .metric-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
 
   .kms-row{display:flex;gap:8px;align-items:center;margin-top:12px}
-  .kms-input{flex:1;padding:11px 14px;background:#1C1C24;border:1px solid #2A2A35;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:14px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .kms-input:focus{border-color:#276EF1}
-  .kms-btn{padding:11px 18px;background:#276EF1;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+  .kms-input{flex:1;padding:11px 14px;background:#1D1D26;border:1px solid #2E2E3B;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:14px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
+  .kms-input:focus{border-color:#3F7DF5}
+  .kms-btn{padding:11px 18px;background:#3F7DF5;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
 
   .mant-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-  .mant-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#1C1C24;border-radius:14px;cursor:pointer;border:1px solid #2A2A35;transition:border-color 0.15s}
+  .mant-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#1D1D26;border-radius:14px;cursor:pointer;border:1px solid #2E2E3B;transition:border-color 0.15s}
   .mant-item:active{border-color:#444}
-  .mant-nombre{font-size:13px;font-weight:600;color:#E8E8F0}
+  .mant-nombre{font-size:13px;font-weight:600;color:#CFCFD8}
   .mant-sub{font-family:'DM Mono',monospace;font-size:10px;color:#666;margin-top:3px}
   .mbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
-  .mbadge-ok{background:#091428;color:#5AACFF}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
+  .mbadge-ok{background:#0B1A3A;color:#7EB1FF}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-  .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:#1A1A1A;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:#1F1F26;border:none;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .cal-month-label{font-size:17px;font-weight:700;letter-spacing:-0.3px}
   .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
   .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#555}
   .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
   .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-  .filter-chip{padding:6px 14px;border-radius:100px;border:1px solid #1C1C1C;background:#111;color:#555;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+  .filter-chip{padding:6px 14px;border-radius:100px;border:1px solid #23232E;background:#111;color:#555;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
   .filter-chip:active{opacity:0.7}
   .fchip-active{background:#fff;color:#000;border-color:#fff}
 
@@ -2809,71 +2817,71 @@ const globalStyles = `
   .day-cell.today .day-num{color:#fff;font-weight:700}
   .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%}
   .chofer-pill{border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;padding:2px 3px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .pill-completo{background:#0A1A10;color:#10B981}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A2A}
+  .pill-completo{background:#0A1A10;color:#10B981}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:#111;color:#2A2A35}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;display:flex;align-items:flex-end}
-  .modal-sheet{background:#0D0D0D;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid #1C1C1C}
+  .modal-sheet{background:#0F0F14;border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid #23232E}
   .modal-date{font-family:'DM Mono',monospace;font-size:11px;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
   .modal-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-0.3px}
   .modal-back{background:none;border:none;color:#555;font-size:14px;cursor:pointer;padding:0;margin-bottom:4px}
-  .modal-close{width:100%;padding:14px;background:transparent;color:#555;border:1px solid #1C1C1C;border-radius:14px;font-size:14px;cursor:pointer;margin-top:12px}
+  .modal-close{width:100%;padding:14px;background:transparent;color:#555;border:1px solid #23232E;border-radius:14px;font-size:14px;cursor:pointer;margin-top:12px}
 
-  .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px;background:#161616;border:1px solid #1C1C1C;border-radius:14px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
+  .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px;background:#161616;border:1px solid #23232E;border-radius:14px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
   .auto-pick-btn:active{border-color:#333}
 
   .chofer-section{margin-bottom:10px;background:#161616;border-radius:14px;padding:16px}
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .chofer-sec-name{font-size:16px;font-weight:600}
   .eb{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
-  .eb-completo{background:#0A1A10;color:#10B981}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1A1A1A;color:#555}
+  .eb-completo{background:#0A1A10;color:#10B981}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:#1F1F26;color:#555}
 
   .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-  .action-btn{padding:12px 8px;border-radius:12px;border:1px solid #1C1C1C;background:#111;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:opacity 0.15s}
+  .action-btn{padding:12px 8px;border-radius:12px;border:1px solid #23232E;background:#111;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:opacity 0.15s}
   .action-btn:active{opacity:0.7}.action-btn:disabled{opacity:0.35;cursor:not-allowed}
   .ab-primary{background:#fff;color:#000;border-color:#fff;font-weight:700}
   .ab-franco{background:#08111F;color:#60A5FA;border-color:#0F2040}
   .ab-quitar{background:#1A0808;color:#F59E0B;border-color:#2A1010}
 
   .monto-row{display:flex;gap:8px}
-  .monto-input{flex:1;padding:12px 14px;background:#111;border:1px solid #1C1C1C;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .monto-input:focus{border-color:#276EF1}.monto-input::placeholder{color:#333}
-  .monto-btn{padding:12px 18px;background:#1A1A1A;color:#fff;border:1px solid #2A2A2A;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;transition:background 0.15s}
+  .monto-input{flex:1;padding:12px 14px;background:#111;border:1px solid #23232E;border-radius:12px;color:#fff;font-family:'DM Mono',monospace;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
+  .monto-input:focus{border-color:#3F7DF5}.monto-input::placeholder{color:#333}
+  .monto-btn{padding:12px 18px;background:#1F1F26;color:#fff;border:1px solid #2A2A35;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;transition:background 0.15s}
   .monto-btn:active{background:#fff;color:#000}.monto-btn:disabled{opacity:0.4}
 
-  .tabs{display:flex;gap:6px;margin-bottom:18px;background:#0D0D0D;padding:4px;border-radius:14px;border:1px solid #1C1C1C}
+  .tabs{display:flex;gap:6px;margin-bottom:18px;background:#0F0F14;padding:4px;border-radius:14px;border:1px solid #23232E}
   .tab{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:#555;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
   .tab.active{background:#fff;color:#000;font-weight:700}
 
-  .gasto-item{display:flex;align-items:center;padding:14px 16px;background:#0D0D0D;border:1px solid #1C1C1C;border-radius:14px;margin-bottom:8px}
+  .gasto-item{display:flex;align-items:center;padding:14px 16px;background:#0F0F14;border:1px solid #23232E;border-radius:14px;margin-bottom:8px}
   .gasto-desc{font-size:14px;font-weight:600}.gasto-auto{font-size:11px;color:#555;margin-top:2px}
   .gasto-monto{font-family:'DM Mono',monospace;font-size:14px;color:#EF4444;font-weight:500;white-space:nowrap}
   .gasto-del-btn{width:30px;height:30px;border-radius:10px;border:1px solid #2A1010;background:#1A0808;color:#EF4444;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .gasto-del-btn:disabled{opacity:0.4;cursor:not-allowed}
 
   .form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#555;display:block;margin-bottom:8px}
-  .form-input{width:100%;padding:14px 16px;background:#111;border:1px solid #1C1C1C;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
-  .form-input:focus{border-color:#276EF1}.form-input::placeholder{color:#333}
+  .form-input{width:100%;padding:14px 16px;background:#111;border:1px solid #23232E;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
+  .form-input:focus{border-color:#3F7DF5}.form-input::placeholder{color:#333}
   .form-group{margin-bottom:14px}
   select.form-input{cursor:pointer}
   .radio-group{display:flex;gap:8px}
-  .radio-opt{flex:1;padding:12px;border-radius:12px;border:1px solid #1C1C1C;background:#111;text-align:center;cursor:pointer;transition:all 0.15s}
-  .radio-opt.sel{border-color:#276EF1;background:#091428}
+  .radio-opt{flex:1;padding:12px;border-radius:12px;border:1px solid #23232E;background:#111;text-align:center;cursor:pointer;transition:all 0.15s}
+  .radio-opt.sel{border-color:#3F7DF5;background:#0B1A3A}
   .rl{font-size:13px;font-weight:600;color:#fff}
 
   .btn-primary{width:100%;padding:16px;background:#fff;color:#000;border:none;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity 0.15s}
   .btn-primary:active{opacity:0.85}.btn-primary:disabled{opacity:0.4;cursor:not-allowed}
 
-  .toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(16px);background:#1A1A1A;border:1px solid #2A2A2A;color:#fff;padding:12px 20px;border-radius:100px;font-size:13px;font-weight:600;opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;max-width:92vw;text-align:center}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:#276EF1;color:#276EF1}.toast.error{border-color:#EF4444;color:#EF4444}
+  .toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(16px);background:#1F1F26;border:1px solid #2A2A35;color:#fff;padding:12px 20px;border-radius:100px;font-size:13px;font-weight:600;opacity:0;transition:all 0.25s;z-index:999;white-space:nowrap;max-width:92vw;text-align:center}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}.toast.success{border-color:#3F7DF5;color:#3F7DF5}.toast.error{border-color:#EF4444;color:#EF4444}
 
-  .bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(0,0,0,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid #1A1A1A;padding:10px 0 26px;z-index:200}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:rgba(0,0,0,0.95);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid #1F1F26;padding:10px 0 26px;z-index:200}
   .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 0;background:none;border:none;cursor:pointer;color:#444;transition:color 0.2s}
   .bnav-btn svg{width:22px;height:22px}.bnav-label{font-size:9px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
   .bnav-btn.active{color:#fff}
   .bnav-btn{transition:color 0.2s}
   .bnav-btn.active svg{filter:drop-shadow(0 0 6px rgba(39,110,241,0.55))}
   .bnav-btn svg{transition:filter 0.25s}
-  .bnav-btn.active .bnav-label{color:#276EF1}
+  .bnav-btn.active .bnav-label{color:#3F7DF5}
 
   /* ── Animaciones ─────────────────────────────────────────────── */
   @keyframes pageIn   { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
@@ -2890,7 +2898,7 @@ const globalStyles = `
   .tsl{animation:tsl 0.35s cubic-bezier(0.22,1,0.36,1)}
 
   /* ── Skeleton ────────────────────────────────────────────────── */
-  .skel{background:linear-gradient(90deg,#0D0D0D 25%,#181818 50%,#0D0D0D 75%);background-size:200% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:8px}
+  .skel{background:linear-gradient(90deg,#0F0F14 25%,#181818 50%,#0F0F14 75%);background-size:200% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:8px}
 
   /* ── Modal ───────────────────────────────────────────────────── */
   .modal-overlay{animation:overlayIn 0.25s ease-out}
@@ -2920,7 +2928,7 @@ const globalStyles = `
     body{background:#fff!important;color:#000!important}
     .page{padding:16px!important}
     .card{background:#f9f9f9!important;border-color:#ddd!important;break-inside:avoid;margin-bottom:12px}
-    .gan-cell,.neto-row,.metric,.total-banner{background:#f0f0f0!important;border-color:#ddd!important}
+    .gan-cell,.neto-row,.metric,.total-banner{background:#F4F4F8!important;border-color:#ddd!important}
     .gan-value,.neto-value,.metric-value,.total-value{color:#000!important}
     .gan-label,.neto-label,.metric-label,.total-label{color:#666!important}
     .auto-tag{background:#eee!important;color:#000!important;border-color:#ccc!important}
