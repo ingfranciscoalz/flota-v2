@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import {
-  getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoDeudaHistorica,
+  getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoDeudaHistorica, getDemoMonthlyStatsByAuto,
 } from './demoData'
 import {
   getResumen, getCalendario, getConfig, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
@@ -10,7 +10,7 @@ import {
   getAdminUsers, setUserActivo, addPayment,
   createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
-  getMonthlyStats, getDeudaHistorica,
+  getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto,
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
 } from './data'
 
@@ -2441,124 +2441,154 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
 }
 
 // ── STATS PAGE ────────────────────────────────────────────────────────────────
-function AutosComparisonTab({ resumen }) {
-  if (!resumen?.autos || Object.keys(resumen.autos).length === 0) {
-    return <div className="loading" style={{ padding: '40px 0' }}>Sin autos registrados</div>
-  }
+const AUTO_COLORS = ['#276EF1', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444']
 
-  const autos = Object.entries(resumen.autos)
-    .map(([id, a]) => ({ id, ...a }))
-    .sort((a, b) => b.ganancias.neto_mes - a.ganancias.neto_mes)
+function MultiLineChart({ data, metric }) {
+  if (!data || data.length === 0) return null
+  const W = 320, H = 190
+  const PAD = { top: 14, right: 18, bottom: 26, left: 46 }
+  const cW = W - PAD.left - PAD.right
+  const cH = H - PAD.top - PAD.bottom
+  const n = data[0].monthly.length
 
-  const maxIngresos = Math.max(...autos.map(a => a.ganancias.mes), 1)
-  const medals = ['🥇', '🥈', '🥉']
+  const allVals = data.flatMap(a => a.monthly.map(m => m[metric]))
+  const maxVal = Math.max(...allVals, 1)
 
-  // Totales flota
-  const totalMes    = autos.reduce((s, a) => s + a.ganancias.mes, 0)
-  const totalGastos = autos.reduce((s, a) => s + a.ganancias.gastos_mes, 0)
-  const totalNeto   = autos.reduce((s, a) => s + a.ganancias.neto_mes, 0)
+  // Nice round max for Y axis
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
+  const niceMax = Math.ceil(maxVal / magnitude) * magnitude
+
+  const X = i => PAD.left + (n > 1 ? (i / (n - 1)) * cW : cW / 2)
+  const Y = v => PAD.top + cH - (v / niceMax) * cH
+
+  const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+      {/* Grid horizontales */}
+      {[0, 0.25, 0.5, 0.75, 1].map(p => (
+        <line key={p}
+          x1={PAD.left} x2={W - PAD.right}
+          y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
+          stroke={p === 0 ? '#222' : '#141414'} strokeWidth={p === 0 ? 1.5 : 1} />
+      ))}
+
+      {/* Y labels */}
+      {[0, 0.5, 1].map(p => (
+        <text key={p} x={PAD.left - 6} y={PAD.top + cH * (1 - p) + 3}
+          textAnchor="end" fill="#333" fontSize="8" fontFamily="'DM Mono',monospace">
+          {fmtY(niceMax * p)}
+        </text>
+      ))}
+
+      {/* Líneas y áreas por auto */}
+      {data.map((auto, ai) => {
+        const color = AUTO_COLORS[ai % AUTO_COLORS.length]
+        const pts = auto.monthly.map((m, i) => [X(i), Y(m[metric])])
+        const polyPts = pts.map(p => p.join(',')).join(' ')
+        const areaPts = `${X(0)},${PAD.top + cH} ${polyPts} ${X(n - 1)},${PAD.top + cH}`
+        return (
+          <g key={auto.id}>
+            <polygon points={areaPts} fill={color} opacity="0.07" />
+            <polyline points={polyPts} fill="none" stroke={color} strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round" />
+            {pts.map(([cx, cy], i) => (
+              <g key={i}>
+                <circle cx={cx} cy={cy} r="5" fill="#000" />
+                <circle cx={cx} cy={cy} r="3.5" fill={color} />
+              </g>
+            ))}
+          </g>
+        )
+      })}
+
+      {/* X labels */}
+      {data[0].monthly.map((m, i) => (
+        <text key={i} x={X(i)} y={H - 4} textAnchor="middle"
+          fill="#3a3a3a" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
+          {m.mes}
+        </text>
+      ))}
+    </svg>
+  )
+}
+
+function AutosComparisonTab({ isDemoMode }) {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [metric, setMetric] = useState('ingresos') // 'ingresos' | 'neto'
+
+  useEffect(() => {
+    if (isDemoMode) { setData(getDemoMonthlyStatsByAuto()); setLoading(false); return }
+    getMonthlyStatsByAuto().then(d => { setData(d); setLoading(false) }).catch(() => setLoading(false))
+  }, [isDemoMode])
+
+  if (loading) return <div className="loading"><div className="spinner" /></div>
+  if (!data || data.length === 0) return <div className="loading" style={{ padding: '40px 0' }}>Sin autos registrados</div>
+
+  // Último mes = mes actual (último item del array)
+  const lastIdx = data[0].monthly.length - 1
 
   return (
     <>
-      {/* Resumen de flota */}
-      <div className="card" style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>Resumen flota — este mes</div>
-        <div style={{ display: 'flex', gap: 1 }}>
-          {[['Ingresos', fmt(totalMes), '#276EF1'], ['Gastos', fmt(totalGastos), '#F59E0B'], ['Neto', fmt(totalNeto), totalNeto >= 0 ? '#10B981' : '#EF4444']].map(([label, value, color]) => (
-            <div key={label} style={{ flex: 1, background: '#111', borderRadius: 8, padding: '9px 6px', textAlign: 'center' }}>
-              <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
-              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color }}>{value}</div>
-            </div>
-          ))}
+      {/* Gráfico principal */}
+      <div className="card" style={{ marginBottom: 10, padding: '16px 14px' }}>
+        {/* Leyenda + toggle */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', gap: 14 }}>
+            {data.map((auto, ai) => (
+              <div key={auto.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 3, background: AUTO_COLORS[ai % AUTO_COLORS.length] }} />
+                <span style={{ fontSize: 11, color: '#aaa', fontWeight: 600 }}>{auto.nombre}</span>
+              </div>
+            ))}
+          </div>
+          {/* Toggle ingresos / neto */}
+          <div style={{ display: 'flex', background: '#111', borderRadius: 8, padding: 3, gap: 2 }}>
+            {[['ingresos', 'Bruto'], ['neto', 'Neto']].map(([id, label]) => (
+              <button key={id} onClick={() => setMetric(id)}
+                style={{ padding: '4px 10px', background: metric === id ? '#1e1e2e' : 'transparent', border: metric === id ? '1px solid #276EF133' : '1px solid transparent', borderRadius: 6, color: metric === id ? '#276EF1' : '#444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
+        <MultiLineChart data={data} metric={metric} />
       </div>
 
-      {autos.map((auto, i) => {
-        const { ganancias, deudas, kms_actuales } = auto
-        const choferes = Object.values(deudas || {})
-        const margen = ganancias.mes > 0 ? Math.round(ganancias.neto_mes / ganancias.mes * 100) : 0
-        const pctIngresos = Math.min(100, ganancias.mes / maxIngresos * 100)
-        const pctGastos   = Math.min(100, ganancias.gastos_mes / maxIngresos * 100)
-        const margenColor = margen >= 50 ? '#10B981' : margen >= 25 ? '#F59E0B' : '#EF4444'
-
-        return (
-          <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
-            {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 24, lineHeight: 1 }}>{medals[i] || `#${i + 1}`}</span>
+      {/* Cards de este mes por auto */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        {data.map((auto, ai) => {
+          const color = AUTO_COLORS[ai % AUTO_COLORS.length]
+          const last = auto.monthly[lastIdx]
+          const prev = lastIdx > 0 ? auto.monthly[lastIdx - 1] : null
+          const delta = prev && prev[metric] > 0 ? Math.round((last[metric] - prev[metric]) / prev[metric] * 100) : null
+          const margen = last.ingresos > 0 ? Math.round(last.neto / last.ingresos * 100) : 0
+          return (
+            <div key={auto.id} style={{ flex: 1, background: '#0e0e0e', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{fmt(last[metric])}</div>
+              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>{metric === 'neto' ? 'neto este mes' : 'ingresos este mes'}</div>
+              {delta !== null && (
+                <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#10B981' : '#EF4444', marginBottom: 6 }}>
+                  {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs mes ant.
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #1a1a1a', paddingTop: 8, marginTop: 4 }}>
                 <div>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>{auto.nombre}</div>
-                  <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
-                    {(kms_actuales || 0).toLocaleString('es-AR')} km · {choferes.length} chofer{choferes.length !== 1 ? 'es' : ''}
-                  </div>
+                  <div style={{ fontSize: 8, color: '#333', letterSpacing: 1 }}>GASTOS</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{fmt(last.gastos)}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 8, color: '#333', letterSpacing: 1 }}>MARGEN</div>
+                  <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: margen >= 50 ? '#10B981' : margen >= 25 ? '#F59E0B' : '#EF4444', marginTop: 2 }}>{margen}%</div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 800, color: ganancias.neto_mes >= 0 ? '#276EF1' : '#EF4444' }}>
-                  {fmt(ganancias.neto_mes)}
-                </div>
-                <div style={{ fontSize: 10, color: '#444', marginTop: 1 }}>neto del mes</div>
-              </div>
             </div>
-
-            {/* Barras comparativas */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontSize: 9, color: '#276EF1', fontWeight: 700, letterSpacing: 1 }}>INGRESOS</span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: '#276EF1' }}>{fmt(ganancias.mes)}</span>
-              </div>
-              <div style={{ height: 5, borderRadius: 3, background: '#111', overflow: 'hidden', marginBottom: 6 }}>
-                <div style={{ height: '100%', borderRadius: 3, background: '#276EF1', width: `${pctIngresos}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 700, letterSpacing: 1 }}>GASTOS</span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: '#F59E0B' }}>{fmt(ganancias.gastos_mes)}</span>
-              </div>
-              <div style={{ height: 5, borderRadius: 3, background: '#111', overflow: 'hidden' }}>
-                <div style={{ height: '100%', borderRadius: 3, background: '#F59E0B', width: `${pctGastos}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
-              </div>
-            </div>
-
-            {/* Stats chips */}
-            <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
-              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>MARGEN</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 800, color: margenColor }}>{margen}%</div>
-              </div>
-              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>SEMANA</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: '#276EF1' }}>{fmt(ganancias.neto_semana)}</div>
-              </div>
-              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>KMS</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: '#888' }}>{((kms_actuales || 0) / 1000).toFixed(0)}k</div>
-              </div>
-            </div>
-
-            {/* Desglose por chofer */}
-            {choferes.length > 0 && (
-              <div style={{ borderTop: '1px solid #1C1C1C', paddingTop: 10 }}>
-                <div style={{ fontSize: 9, color: '#333', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Choferes</div>
-                {choferes.map((chofer, ci) => {
-                  const pct = ganancias.mes > 0 ? Math.round(chofer.gan_mes / ganancias.mes * 100) : 0
-                  return (
-                    <div key={ci} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: ci < choferes.length - 1 ? 7 : 0 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: 3, background: chofer.dias.length > 0 ? '#EF4444' : '#10B981', flexShrink: 0 }} />
-                      <span style={{ fontSize: 12, color: '#aaa', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chofer.nombre}</span>
-                      {chofer.dias.length > 0 && (
-                        <span style={{ fontSize: 10, color: '#EF4444', fontWeight: 600, flexShrink: 0 }}>{chofer.dias.length}d debe</span>
-                      )}
-                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', flexShrink: 0 }}>{fmt(chofer.gan_mes)}</span>
-                      <span style={{ fontSize: 10, color: '#333', flexShrink: 0, width: 28, textAlign: 'right' }}>{pct}%</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </>
   )
 }
@@ -2673,7 +2703,7 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
         </>
       )}
 
-      {tab === 'autos' && <AutosComparisonTab resumen={resumen} />}
+      {tab === 'autos' && <AutosComparisonTab isDemoMode={isDemoMode} />}
     </div>
   )
 }

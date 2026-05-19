@@ -451,6 +451,54 @@ export async function getMonthlyStats() {
   return Object.values(meses)
 }
 
+export async function getMonthlyStatsByAuto() {
+  const now = new Date()
+  const since = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+  const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
+
+  const [turnosRes, gastosRes, autosRes, choferesRes] = await Promise.all([
+    supabase.from('turnos').select('fecha, monto, chofer_id').gte('fecha', since),
+    supabase.from('gastos').select('fecha, monto, auto_id').gte('fecha', since),
+    supabase.from('autos').select('id, nombre'),
+    supabase.from('choferes').select('id, auto_id'),
+  ])
+
+  const choferAutoMap = {}
+  for (const c of choferesRes.data || []) choferAutoMap[c.id] = c.auto_id
+
+  const mesKeys = []
+  for (let i = 0; i <= 5; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+    mesKeys.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: MONTHS[d.getMonth()] })
+  }
+
+  const ingresos = {}, gastos = {}
+  for (const auto of autosRes.data || []) {
+    ingresos[auto.id] = {}; gastos[auto.id] = {}
+    for (const m of mesKeys) { ingresos[auto.id][m.key] = 0; gastos[auto.id][m.key] = 0 }
+  }
+
+  for (const t of turnosRes.data || []) {
+    const aid = choferAutoMap[t.chofer_id]; const k = t.fecha.slice(0, 7)
+    if (aid && ingresos[aid]?.[k] !== undefined) ingresos[aid][k] += parseFloat(t.monto)
+  }
+  for (const g of gastosRes.data || []) {
+    const k = g.fecha.slice(0, 7)
+    if (gastos[g.auto_id]?.[k] !== undefined) gastos[g.auto_id][k] += parseFloat(g.monto)
+  }
+
+  return (autosRes.data || []).map(auto => ({
+    id: auto.id,
+    nombre: auto.nombre,
+    monthly: mesKeys.map(m => ({
+      mes: m.label,
+      ingresos: ingresos[auto.id]?.[m.key] || 0,
+      gastos: gastos[auto.id]?.[m.key] || 0,
+      neto: (ingresos[auto.id]?.[m.key] || 0) - (gastos[auto.id]?.[m.key] || 0),
+    })),
+  }))
+}
+
 export async function getDeudaHistorica(cfg = null) {
   const hoy = new Date()
   const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1)

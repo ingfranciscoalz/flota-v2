@@ -142,6 +142,23 @@ export function getDemoMonthlyStats() {
   })
 }
 
+export function getDemoMonthlyStatsByAuto() {
+  const now = new Date()
+  const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
+  const corsaIn  = [680000, 750000, 620000, 820000, 890000, 550000]
+  const corsaGas = [ 85000,  92000,  78000, 105000,  98000,  37000]
+  const golIn    = [770000, 870000, 760000, 930000, 1030000, 480000]
+  const golGas   = [ 95000, 118000,  87000, 120000,  97000,  41500]
+  const meses = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+    return MONTHS[d.getMonth()]
+  })
+  return [
+    { id: 'da1', nombre: 'Corsa Blanco', monthly: meses.map((mes, i) => ({ mes, ingresos: corsaIn[i], gastos: corsaGas[i], neto: corsaIn[i] - corsaGas[i] })) },
+    { id: 'da2', nombre: 'Gol Negro',    monthly: meses.map((mes, i) => ({ mes, ingresos: golIn[i],   gastos: golGas[i],   neto: golIn[i]   - golGas[i]   })) },
+  ]
+}
+
 export function getDemoDeudaHistorica() {
   return {
     dc1: { nombre: 'Carlos M.',  autoNombre: 'Corsa Blanco', diasDebe: 0, montoDebe: 0,      ganTotal: 2450000 },
