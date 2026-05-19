@@ -2441,7 +2441,130 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
 }
 
 // ── STATS PAGE ────────────────────────────────────────────────────────────────
+function AutosComparisonTab({ resumen }) {
+  if (!resumen?.autos || Object.keys(resumen.autos).length === 0) {
+    return <div className="loading" style={{ padding: '40px 0' }}>Sin autos registrados</div>
+  }
+
+  const autos = Object.entries(resumen.autos)
+    .map(([id, a]) => ({ id, ...a }))
+    .sort((a, b) => b.ganancias.neto_mes - a.ganancias.neto_mes)
+
+  const maxIngresos = Math.max(...autos.map(a => a.ganancias.mes), 1)
+  const medals = ['🥇', '🥈', '🥉']
+
+  // Totales flota
+  const totalMes    = autos.reduce((s, a) => s + a.ganancias.mes, 0)
+  const totalGastos = autos.reduce((s, a) => s + a.ganancias.gastos_mes, 0)
+  const totalNeto   = autos.reduce((s, a) => s + a.ganancias.neto_mes, 0)
+
+  return (
+    <>
+      {/* Resumen de flota */}
+      <div className="card" style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 10 }}>Resumen flota — este mes</div>
+        <div style={{ display: 'flex', gap: 1 }}>
+          {[['Ingresos', fmt(totalMes), '#276EF1'], ['Gastos', fmt(totalGastos), '#F59E0B'], ['Neto', fmt(totalNeto), totalNeto >= 0 ? '#10B981' : '#EF4444']].map(([label, value, color]) => (
+            <div key={label} style={{ flex: 1, background: '#111', borderRadius: 8, padding: '9px 6px', textAlign: 'center' }}>
+              <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {autos.map((auto, i) => {
+        const { ganancias, deudas, kms_actuales } = auto
+        const choferes = Object.values(deudas || {})
+        const margen = ganancias.mes > 0 ? Math.round(ganancias.neto_mes / ganancias.mes * 100) : 0
+        const pctIngresos = Math.min(100, ganancias.mes / maxIngresos * 100)
+        const pctGastos   = Math.min(100, ganancias.gastos_mes / maxIngresos * 100)
+        const margenColor = margen >= 50 ? '#10B981' : margen >= 25 ? '#F59E0B' : '#EF4444'
+
+        return (
+          <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 24, lineHeight: 1 }}>{medals[i] || `#${i + 1}`}</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>{auto.nombre}</div>
+                  <div style={{ fontSize: 11, color: '#444', marginTop: 2 }}>
+                    {(kms_actuales || 0).toLocaleString('es-AR')} km · {choferes.length} chofer{choferes.length !== 1 ? 'es' : ''}
+                  </div>
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 800, color: ganancias.neto_mes >= 0 ? '#276EF1' : '#EF4444' }}>
+                  {fmt(ganancias.neto_mes)}
+                </div>
+                <div style={{ fontSize: 10, color: '#444', marginTop: 1 }}>neto del mes</div>
+              </div>
+            </div>
+
+            {/* Barras comparativas */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 9, color: '#276EF1', fontWeight: 700, letterSpacing: 1 }}>INGRESOS</span>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: '#276EF1' }}>{fmt(ganancias.mes)}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: '#111', overflow: 'hidden', marginBottom: 6 }}>
+                <div style={{ height: '100%', borderRadius: 3, background: '#276EF1', width: `${pctIngresos}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                <span style={{ fontSize: 9, color: '#F59E0B', fontWeight: 700, letterSpacing: 1 }}>GASTOS</span>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: '#F59E0B' }}>{fmt(ganancias.gastos_mes)}</span>
+              </div>
+              <div style={{ height: 5, borderRadius: 3, background: '#111', overflow: 'hidden' }}>
+                <div style={{ height: '100%', borderRadius: 3, background: '#F59E0B', width: `${pctGastos}%`, transition: 'width 0.6s cubic-bezier(0.22,1,0.36,1)' }} />
+              </div>
+            </div>
+
+            {/* Stats chips */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 12 }}>
+              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>MARGEN</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 800, color: margenColor }}>{margen}%</div>
+              </div>
+              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>SEMANA</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: '#276EF1' }}>{fmt(ganancias.neto_semana)}</div>
+              </div>
+              <div style={{ flex: 1, background: '#111', borderRadius: 8, padding: '8px 6px', textAlign: 'center' }}>
+                <div style={{ fontSize: 9, color: '#444', letterSpacing: 1, marginBottom: 3 }}>KMS</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: '#888' }}>{((kms_actuales || 0) / 1000).toFixed(0)}k</div>
+              </div>
+            </div>
+
+            {/* Desglose por chofer */}
+            {choferes.length > 0 && (
+              <div style={{ borderTop: '1px solid #1C1C1C', paddingTop: 10 }}>
+                <div style={{ fontSize: 9, color: '#333', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Choferes</div>
+                {choferes.map((chofer, ci) => {
+                  const pct = ganancias.mes > 0 ? Math.round(chofer.gan_mes / ganancias.mes * 100) : 0
+                  return (
+                    <div key={ci} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: ci < choferes.length - 1 ? 7 : 0 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: 3, background: chofer.dias.length > 0 ? '#EF4444' : '#10B981', flexShrink: 0 }} />
+                      <span style={{ fontSize: 12, color: '#aaa', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chofer.nombre}</span>
+                      {chofer.dias.length > 0 && (
+                        <span style={{ fontSize: 10, color: '#EF4444', fontWeight: 600, flexShrink: 0 }}>{chofer.dias.length}d debe</span>
+                      )}
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', flexShrink: 0 }}>{fmt(chofer.gan_mes)}</span>
+                      <span style={{ fontSize: 10, color: '#333', flexShrink: 0, width: 28, textAlign: 'right' }}>{pct}%</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </>
+  )
+}
+
 function StatsPage({ resumen, showToast, isDemoMode }) {
+  const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
   const [deuda, setDeuda] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -2473,71 +2596,84 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
 
   const deudaEntries = deuda ? Object.entries(deuda) : []
   const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
-
-  // Totales del chart
   const totalGan = monthlyData?.reduce((s, d) => s + d.turnos, 0) || 0
   const totalGas = monthlyData?.reduce((s, d) => s + d.gastos, 0) || 0
 
   return (
     <div className="page">
-      <div className="stitle">Rentabilidad mensual</div>
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-          <div>
-            <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ganancias 6m</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#276EF1' }}>{fmt(totalGan)}</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 6m</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
-          </div>
-        </div>
-        <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 6 meses</span>
-          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#276EF1' : '#EF4444' }}>
-            {fmt(totalGan - totalGas)}
-          </span>
-        </div>
-        <BarChart data={monthlyData} />
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 18, background: '#0e0e0e', borderRadius: 12, padding: 4 }}>
+        {[['general', 'General'], ['autos', 'Por auto']].map(([id, label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px', background: tab === id ? '#1a1a2e' : 'transparent', border: tab === id ? '1px solid #276EF133' : '1px solid transparent', borderRadius: 9, color: tab === id ? '#276EF1' : '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      <div className="stitle">Deuda acumulada — {new Date().getFullYear()}</div>
-      {deudaEntries.length === 0 ? (
-        <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
-      ) : !hayDeuda ? (
-        <div className="card" style={{ textAlign: 'center', color: '#276EF1', fontSize: 13 }}>✓ Todos los choferes al día</div>
-      ) : (
-        deudaEntries.map(([cid, d]) => (
-          <div key={cid} className="card" style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      {tab === 'general' && (
+        <>
+          <div className="stitle">Rentabilidad mensual</div>
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
-                <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{d.autoNombre}</div>
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ganancias 6m</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#276EF1' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                {d.diasDebe > 0 ? (
-                  <>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, color: '#EF4444', fontWeight: 700 }}>
-                      {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''}
-                    </div>
-                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444' }}>
-                      ~{fmt(d.montoDebe)}
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12, color: '#276EF1', fontWeight: 600 }}>✓ Al día</div>
-                )}
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 6m</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
             </div>
-            {d.ganTotal > 0 && (
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#276EF1' }}>{fmt(d.ganTotal)}</span>
-              </div>
-            )}
+            <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 6 meses</span>
+              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#276EF1' : '#EF4444' }}>
+                {fmt(totalGan - totalGas)}
+              </span>
+            </div>
+            <BarChart data={monthlyData} />
           </div>
-        ))
+
+          <div className="stitle">Deuda acumulada — {new Date().getFullYear()}</div>
+          {deudaEntries.length === 0 ? (
+            <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
+          ) : !hayDeuda ? (
+            <div className="card" style={{ textAlign: 'center', color: '#276EF1', fontSize: 13 }}>✓ Todos los choferes al día</div>
+          ) : (
+            deudaEntries.map(([cid, d]) => (
+              <div key={cid} className="card" style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
+                    <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{d.autoNombre}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    {d.diasDebe > 0 ? (
+                      <>
+                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, color: '#EF4444', fontWeight: 700 }}>
+                          {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''}
+                        </div>
+                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444' }}>
+                          ~{fmt(d.montoDebe)}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#276EF1', fontWeight: 600 }}>✓ Al día</div>
+                    )}
+                  </div>
+                </div>
+                {d.ganTotal > 0 && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1C1C1C', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#276EF1' }}>{fmt(d.ganTotal)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </>
       )}
+
+      {tab === 'autos' && <AutosComparisonTab resumen={resumen} />}
     </div>
   )
 }
