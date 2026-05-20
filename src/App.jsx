@@ -2516,7 +2516,7 @@ function MultiLineChart({ data, metric }) {
 function AutosComparisonTab({ isDemoMode }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [metric, setMetric] = useState('ingresos') // 'ingresos' | 'neto'
+  const metric = 'neto'
 
   useEffect(() => {
     if (isDemoMode) { setData(getDemoMonthlyStatsByAuto()); setLoading(false); return }
@@ -2533,7 +2533,7 @@ function AutosComparisonTab({ isDemoMode }) {
     <>
       {/* Gráfico principal */}
       <div className="card" style={{ marginBottom: 10, padding: '16px 14px' }}>
-        {/* Leyenda + toggle */}
+        {/* Leyenda */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div style={{ display: 'flex', gap: 14 }}>
             {data.map((auto, ai) => (
@@ -2543,15 +2543,7 @@ function AutosComparisonTab({ isDemoMode }) {
               </div>
             ))}
           </div>
-          {/* Toggle ingresos / neto */}
-          <div style={{ display: 'flex', background: '#111', borderRadius: 8, padding: 3, gap: 2 }}>
-            {[['ingresos', 'Bruto'], ['neto', 'Neto']].map(([id, label]) => (
-              <button key={id} onClick={() => setMetric(id)}
-                style={{ padding: '4px 10px', background: metric === id ? '#1e1e2e' : 'transparent', border: metric === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 6, color: metric === id ? '#3F7DF5' : '#444', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-                {label}
-              </button>
-            ))}
-          </div>
+          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
         </div>
 
         <MultiLineChart data={data} metric={metric} />
@@ -2569,7 +2561,7 @@ function AutosComparisonTab({ isDemoMode }) {
             <div key={auto.id} style={{ flex: 1, background: '#0e0e0e', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{fmt(last[metric])}</div>
-              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>{metric === 'neto' ? 'neto este mes' : 'ingresos este mes'}</div>
+              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
               {delta !== null && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#10B981' : '#EF4444', marginBottom: 6 }}>
                   {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs mes ant.
