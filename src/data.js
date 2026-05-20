@@ -597,3 +597,17 @@ function isFranco(d, chofer_id, franco_weekday, francosMap) {
   const dowLunes = (d.getDay() + 6) % 7
   return dowLunes === parseInt(franco_weekday)
 }
+
+// ── PUSH SUBSCRIPTIONS ────────────────────────────────────────────────────────
+export async function savePushSubscription(subscriptionJson) {
+  const userId = await uid()
+  await supabase.from('push_subscriptions').upsert(
+    { user_id: userId, subscription: JSON.stringify(subscriptionJson), updated_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  )
+}
+
+export async function deletePushSubscription() {
+  const userId = await uid()
+  await supabase.from('push_subscriptions').delete().eq('user_id', userId)
+}
