@@ -1548,7 +1548,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
-    <div className="page">
+    <div className="page page-cal">
       <div className="cal-nav">
         <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
         <span className="cal-month-label">{MESES[calMonth - 1]} {calYear}</span>
@@ -2956,7 +2956,8 @@ const globalStyles = `
   /* ── App shell — centra en pantallas anchas ──────────────────── */
   .app-wrap{max-width:520px;margin:0 auto;position:relative;min-height:100dvh;overflow-x:hidden}
 
-  .page{padding:0 20px 100px}
+  .page{padding:0 16px 100px}
+  .page-cal{padding:0 10px 100px}
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:var(--text-muted);font-size:13px}
   .spinner{width:28px;height:28px;border:2px solid var(--bg-inner);border-top-color:#3F7DF5;border-radius:50%;animation:spin 0.75s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -3014,16 +3015,16 @@ const globalStyles = `
   .filter-chip:active{opacity:0.7}
   .fchip-active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
-  .cal-table{width:100%;border-collapse:separate;border-spacing:3px}
-  .cal-th{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:4px 2px;font-weight:500}
-  .cal-td{padding:1px;vertical-align:top;cursor:pointer}.cal-td.empty{cursor:default}
-  .day-cell{border-radius:10px;background:var(--bg-dark);border:1px solid transparent;padding:5px 3px 4px;min-height:64px;display:flex;flex-direction:column;align-items:center;gap:2px}
-  .day-cell-empty{min-height:64px}
+  .cal-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:2px}
+  .cal-th{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:4px 1px;font-weight:500}
+  .cal-td{padding:1px;vertical-align:top;cursor:pointer;width:calc(100%/7);min-width:0}.cal-td.empty{cursor:default}
+  .day-cell{border-radius:8px;background:var(--bg-dark);border:1px solid transparent;padding:4px 2px 3px;min-height:60px;display:flex;flex-direction:column;align-items:center;gap:2px;overflow:hidden;width:100%;box-sizing:border-box}
+  .day-cell-empty{min-height:60px}
   .day-cell.today{border-color:var(--text)}.day-cell.has-debe{border-color:#3A1515}.day-cell.all-franco{background:#080D14;border-color:#0F2040}.day-cell.future{opacity:0.25}
-  .day-num{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--text-faint);line-height:1}
+  .day-num{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--text-faint);line-height:1}
   .day-cell.today .day-num{color:var(--text);font-weight:700}
-  .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%}
-  .chofer-pill{border-radius:4px;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;padding:2px 3px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%;min-width:0}
+  .chofer-pill{border-radius:3px;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;padding:2px 2px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;display:block;box-sizing:border-box}
   .pill-completo{background:#0A1A10;color:#10B981}.pill-parcial{background:#1A1000;color:#F59E0B}.pill-debe{background:#1A0808;color:#EF4444}.pill-franco{background:#08111F;color:#60A5FA}.pill-futuro{background:var(--border);color:var(--text-dim)}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:flex-end}
@@ -3133,11 +3134,15 @@ const globalStyles = `
   /* ── Responsive ──────────────────────────────────────────────── */
   /* Pantallas pequeñas (<360px) */
   @media(max-width:359px){
-    .header{padding:48px 12px 12px}
-    .page{padding:0 12px 100px}
+    .header{padding:48px 10px 12px}
+    .page{padding:0 10px 100px}
+    .page-cal{padding:0 6px 100px}
     .sync-btn{width:30px;height:30px;font-size:13px}
     .modal-sheet{padding:20px 14px 40px}
-    .cal-table{font-size:9px}
+    .cal-table{border-spacing:1px}
+    .day-cell{padding:3px 1px 2px;min-height:52px;border-radius:6px}
+    .day-num{font-size:9px}
+    .chofer-pill{font-size:7px;padding:1px 1px}
   }
   /* Tablet / desktop (>520px) — centra header y nav */
   @media(min-width:560px){
