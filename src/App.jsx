@@ -685,6 +685,7 @@ export default function App() {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'var(--bg)', color: 'var(--text)', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
+      <div className="app-wrap">
 
       {isDemoMode && (
         <div style={{ background: '#0B1A3A', borderBottom: '1px solid #1A2B5C', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -782,6 +783,7 @@ export default function App() {
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
+      </div>{/* end app-wrap */}
     </div>
   )
 }
@@ -2928,6 +2930,8 @@ function chunk(arr, size) {
 
 // ── STYLES ────────────────────────────────────────────────────────────────────
 const globalStyles = `
+  html,body{overflow-x:hidden;width:100%}
+
   :root{
     --bg:#08080A;--bg-card:#15151B;--bg-input:#111;--bg-inner:#1D1D26;
     --bg-modal:#0F0F14;--bg-elem:#161616;--bg-dark:#0e0e0e;
@@ -2948,6 +2952,9 @@ const globalStyles = `
   .header{padding:52px 20px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border-nav)}
   .sync-btn{width:36px;height:36px;border-radius:50%;background:var(--bg-inner);border:none;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s}
   .sync-btn:active{background:var(--border-card)}
+
+  /* ── App shell — centra en pantallas anchas ──────────────────── */
+  .app-wrap{max-width:520px;margin:0 auto;position:relative;min-height:100dvh;overflow-x:hidden}
 
   .page{padding:0 20px 100px}
   .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:var(--text-muted);font-size:13px}
@@ -3122,6 +3129,24 @@ const globalStyles = `
   /* ── Alertas ─────────────────────────────────────────────────── */
   .alert-warn{background:#1A1200;border-color:#3A2800;color:#F59E0B}
   .alert-danger{background:#1A0000;border-color:#3A0000;color:#EF4444}
+
+  /* ── Responsive ──────────────────────────────────────────────── */
+  /* Pantallas pequeñas (<360px) */
+  @media(max-width:359px){
+    .header{padding:48px 12px 12px}
+    .page{padding:0 12px 100px}
+    .sync-btn{width:30px;height:30px;font-size:13px}
+    .modal-sheet{padding:20px 14px 40px}
+    .cal-table{font-size:9px}
+  }
+  /* Tablet / desktop (>520px) — centra header y nav */
+  @media(min-width:560px){
+    .header{left:calc(50% - 260px);right:calc(50% - 260px);width:520px;border-radius:0 0 20px 20px;border-left:1px solid var(--border-nav);border-right:1px solid var(--border-nav)}
+    .bottom-nav{left:calc(50% - 260px);right:calc(50% - 260px);width:520px;border-radius:20px 20px 0 0;border-left:1px solid var(--border-nav);border-right:1px solid var(--border-nav)}
+    .toast{bottom:110px}
+    .modal-overlay{justify-content:center;align-items:flex-end}
+    .modal-sheet{max-width:520px;width:100%;border-radius:20px 20px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  }
 
   @media print {
     .no-print,.header,.bottom-nav,.toast,.kms-row,.sync-btn,.stitle,.tabs,.action-btn,.gasto-del-btn,.modal-overlay{display:none!important}
