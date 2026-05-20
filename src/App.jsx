@@ -972,6 +972,9 @@ function InactiveScreen({ reason, onRefresh, onSignOut }) {
 
 // ── ONBOARDING SCREEN ─────────────────────────────────────────────────────────
 function OnboardingScreen({ showToast, onComplete }) {
+  const [step, setStep] = useState(0) // 0: turno/franco, 1: autos, 2: choferes, 3: listo
+  const [animDir, setAnimDir] = useState(1)
+  const [animKey, setAnimKey] = useState(0)
   const [turnoBase, setTurnoBase] = useState('50000')
   const [francoWeekday, setFrancoWeekday] = useState('1')
   const [autos, setAutos] = useState([{ nombre: '', choferes: ['', ''] }])
@@ -984,12 +987,23 @@ function OnboardingScreen({ showToast, onComplete }) {
   const removeChofer = (ai, ci) => setAutos(p => p.map((a, i) => i === ai ? { ...a, choferes: a.choferes.filter((_, j) => j !== ci) } : a))
   const setChofer = (ai, ci, v) => setAutos(p => p.map((a, i) => i === ai ? { ...a, choferes: a.choferes.map((c, j) => j === ci ? v : c) } : a))
 
-  const submit = async () => {
-    for (const auto of autos) {
-      if (!auto.nombre.trim()) return showToast('Ingresá el nombre de cada auto', 'error')
-      if (!auto.choferes.some(c => c.trim())) return showToast('Cada auto necesita al menos un chofer', 'error')
+  const go = (delta) => { setAnimDir(delta); setAnimKey(k => k + 1); setStep(s => s + delta) }
+
+  const next = () => {
+    if (step === 0) {
+      if (!turnoBase || parseInt(turnoBase) <= 0) return showToast('Ingresá un turno base válido', 'error')
+      go(1)
+    } else if (step === 1) {
+      if (!autos.some(a => a.nombre.trim())) return showToast('Agregá al menos un auto', 'error')
+      if (autos.some(a => !a.nombre.trim())) return showToast('Completá el nombre de todos los autos', 'error')
+      go(1)
+    } else if (step === 2) {
+      if (autos.some(a => !a.choferes.some(c => c.trim()))) return showToast('Cada auto necesita al menos un chofer', 'error')
+      go(1)
     }
-    if (!turnoBase || parseInt(turnoBase) <= 0) return showToast('Ingresá un turno base válido', 'error')
+  }
+
+  const submit = async () => {
     setSaving(true)
     const { error } = await createFleet({ turnoBase: parseInt(turnoBase), francoWeekday: parseInt(francoWeekday), autos })
     setSaving(false)
@@ -998,64 +1012,150 @@ function OnboardingScreen({ showToast, onComplete }) {
     onComplete()
   }
 
+  const STEPS = ['Configuración', 'Tus autos', 'Choferes', 'Listo']
+
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", color: '#F4F4F8' }}>
-      <div style={{ padding: '52px 16px 100px' }}>
-        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, fontWeight: 800, marginBottom: 4 }}>
-          Configurar flota
-        </h2>
-        <p style={{ color: '#555', fontSize: 13, marginBottom: 24 }}>Podés cambiar estos datos después.</p>
-
-        <div className="stitle">Turno base ($)</div>
-        <div className="form-group">
-          <input className="form-input" type="number" inputMode="numeric" placeholder="Ej: 50000"
-            value={turnoBase} onChange={e => setTurnoBase(e.target.value)} />
-        </div>
-
-        <div className="stitle">Día de franco semanal</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-          {DIAS_CORTOS.map((d, i) => (
-            <div key={i} className={`radio-opt ${francoWeekday == i ? 'sel' : ''}`}
-              style={{ flex: 'none', padding: '8px 14px' }}
-              onClick={() => setFrancoWeekday(String(i))}>
-              <div className="rl">{d}</div>
-            </div>
+    <div style={{ position: 'fixed', inset: 0, background: '#08080A', display: 'flex', flexDirection: 'column', zIndex: 800, fontFamily: "'DM Sans', sans-serif", color: '#F4F4F8' }}>
+      {/* Progress */}
+      <div style={{ padding: '52px 20px 0' }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
+          {STEPS.map((_, i) => (
+            <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i <= step ? '#3F7DF5' : '#1F1F26', transition: 'background 0.4s' }} />
           ))}
         </div>
+        <div style={{ fontSize: 10, color: '#3F7DF5', fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>
+          Paso {step + 1} de {STEPS.length}
+        </div>
+      </div>
 
-        <div className="stitle">Autos y choferes</div>
-        {autos.map((auto, ai) => (
-          <div key={ai} className="card" style={{ marginBottom: 10 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <input className="form-input" placeholder="Nombre del auto (ej: Prisma Negro)"
-                value={auto.nombre} onChange={e => setAutoNombre(ai, e.target.value)} style={{ flex: 1 }} />
-              {autos.length > 1 && (
-                <button onClick={() => removeAuto(ai)} style={{ padding: '0 12px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer' }}>✕</button>
-              )}
+      {/* Contenido animado */}
+      <div key={animKey} className={animDir >= 0 ? 'tsr' : 'tsl'} style={{ flex: 1, overflowY: 'auto', padding: '0 20px 24px' }}>
+
+        {/* Paso 0: Turno base + franco */}
+        {step === 0 && (
+          <>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
+              Configurá tu flota
+            </h2>
+            <p style={{ color: '#555', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
+              Estos son los valores por defecto para registrar turnos. Podés cambiarlos después.
+            </p>
+            <div className="form-label">Valor del turno base ($)</div>
+            <div className="form-group">
+              <input className="form-input" type="number" inputMode="numeric" placeholder="Ej: 50000"
+                value={turnoBase} onChange={e => setTurnoBase(e.target.value)} autoFocus />
+              <div style={{ fontSize: 11, color: '#444', marginTop: 6, paddingLeft: 4 }}>El monto que cobra un chofer en un turno completo</div>
             </div>
-            <div className="stitle" style={{ marginTop: 0 }}>Choferes</div>
-            {auto.choferes.map((c, ci) => (
-              <div key={ci} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                <input className="form-input" placeholder={`Chofer ${ci + 1}`}
-                  value={c} onChange={e => setChofer(ai, ci, e.target.value)} style={{ flex: 1 }} />
-                {auto.choferes.length > 1 && (
-                  <button onClick={() => removeChofer(ai, ci)} style={{ padding: '0 12px', background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer' }}>✕</button>
+            <div className="form-label" style={{ marginTop: 20 }}>Día de franco semanal</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {DIAS_CORTOS.map((d, i) => (
+                <div key={i} className={`radio-opt ${francoWeekday == i ? 'sel' : ''}`}
+                  style={{ flex: 1, padding: '10px 4px', textAlign: 'center' }}
+                  onClick={() => setFrancoWeekday(String(i))}>
+                  <div className="rl" style={{ fontSize: 12 }}>{d}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Paso 1: Autos */}
+        {step === 1 && (
+          <>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
+              ¿Qué autos tenés?
+            </h2>
+            <p style={{ color: '#555', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+              Podés agregar más autos después. Poné un nombre que los identifique fácil.
+            </p>
+            {autos.map((auto, ai) => (
+              <div key={ai} style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 10, background: '#1F1F26', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>🚗</div>
+                <input className="form-input" placeholder={`Auto ${ai + 1} (ej: Corsa Blanco)`}
+                  value={auto.nombre} onChange={e => setAutoNombre(ai, e.target.value)} style={{ flex: 1 }} />
+                {autos.length > 1 && (
+                  <button onClick={() => removeAuto(ai)} style={{ width: 32, height: 32, padding: 0, background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>✕</button>
                 )}
               </div>
             ))}
-            <button onClick={() => addChofer(ai)} style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
-              + Agregar chofer
+            <button className="action-btn" style={{ width: '100%', marginTop: 6 }} onClick={addAuto}>
+              + Agregar otro auto
             </button>
+          </>
+        )}
+
+        {/* Paso 2: Choferes */}
+        {step === 2 && (
+          <>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
+              ¿Quiénes manejan?
+            </h2>
+            <p style={{ color: '#555', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+              Asigná los choferes a cada auto. Un auto puede tener varios.
+            </p>
+            {autos.map((auto, ai) => (
+              <div key={ai} style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#3F7DF5' }}>🚗 {auto.nombre || `Auto ${ai + 1}`}</div>
+                </div>
+                {auto.choferes.map((c, ci) => (
+                  <div key={ci} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                    <input className="form-input" placeholder={`Nombre del chofer ${ci + 1}`}
+                      value={c} onChange={e => setChofer(ai, ci, e.target.value)} style={{ flex: 1 }} />
+                    {auto.choferes.length > 1 && (
+                      <button onClick={() => removeChofer(ai, ci)} style={{ width: 32, padding: 0, background: '#1a0505', border: '1px solid #3a1010', borderRadius: 10, color: '#ff4545', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button onClick={() => addChofer(ai)} style={{ background: 'none', border: 'none', color: '#3F7DF5', fontSize: 13, cursor: 'pointer', padding: '4px 0' }}>
+                  + Agregar chofer
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Paso 3: Listo */}
+        {step === 3 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', paddingTop: 40 }}>
+            <div style={{ fontSize: 64, marginBottom: 24 }}>🎉</div>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 10 }}>
+              Todo listo
+            </h2>
+            <p style={{ color: '#555', fontSize: 14, lineHeight: 1.7, maxWidth: 300, marginBottom: 32 }}>
+              Tu flota está configurada con <strong style={{ color: '#F4F4F8' }}>{autos.filter(a => a.nombre.trim()).length} auto{autos.filter(a => a.nombre.trim()).length !== 1 ? 's' : ''}</strong> y sus choferes.
+              Podés empezar a registrar turnos desde hoy.
+            </p>
+            <div style={{ background: '#111', borderRadius: 14, padding: '14px 20px', width: '100%', textAlign: 'left', marginBottom: 8 }}>
+              {autos.filter(a => a.nombre.trim()).map((a, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: i < autos.length - 1 ? '1px solid #1F1F26' : 'none' }}>
+                  <span style={{ fontSize: 14 }}>🚗</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>{a.nombre}</div>
+                    <div style={{ fontSize: 11, color: '#555', marginTop: 1 }}>{a.choferes.filter(c => c.trim()).join(' · ')}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        )}
+      </div>
 
-        <button className="action-btn" style={{ width: '100%', marginBottom: 16 }} onClick={addAuto}>
-          + Agregar auto
-        </button>
-
-        <button className="btn-primary" disabled={saving} onClick={submit}>
-          {saving ? 'Creando flota...' : 'CREAR MI FLOTA'}
-        </button>
+      {/* Footer botones */}
+      <div style={{ padding: '16px 20px 40px', display: 'flex', gap: 10, background: '#08080A', borderTop: '1px solid #1F1F26' }}>
+        {step > 0 && step < 3 && (
+          <button className="action-btn" style={{ flex: 1 }} onClick={() => go(-1)}>← Atrás</button>
+        )}
+        {step < 3 && (
+          <button className="btn-primary" style={{ flex: 2, marginTop: 0 }} onClick={next}>
+            {step === 2 ? 'Revisar →' : 'Continuar →'}
+          </button>
+        )}
+        {step === 3 && (
+          <button className="btn-primary" style={{ marginTop: 0 }} disabled={saving} onClick={submit}>
+            {saving ? 'Creando flota...' : 'EMPEZAR A USAR FLOTA →'}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -1274,6 +1374,8 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
             <div className="metric-grid">
               <div className="metric"><div className="metric-label">Gastos mes</div><div className="metric-value" style={{ color: '#ff6b35' }}>{fmt(gan.gastos_mes)}</div></div>
               <div className="metric"><div className="metric-label">Kms actuales</div><div className="metric-value">{(adata.kms_actuales || 0).toLocaleString('es-AR')}</div></div>
+              <div className="metric"><div className="metric-label">Costo / km</div><div className="metric-value" style={{ color: '#F59E0B' }}>{adata.kms_actuales > 0 ? '$' + (gan.gastos_mes / adata.kms_actuales).toFixed(1) : '—'}</div></div>
+              <div className="metric"><div className="metric-label">Margen</div><div className="metric-value" style={{ color: gan.mes > 0 && (gan.neto_mes / gan.mes) >= 0.5 ? '#10B981' : gan.mes > 0 && (gan.neto_mes / gan.mes) >= 0.25 ? '#F59E0B' : '#EF4444' }}>{gan.mes > 0 ? Math.round(gan.neto_mes / gan.mes * 100) + '%' : '—'}</div></div>
             </div>
             <div className="kms-row">
               <input className="kms-input" type="number" inputMode="numeric" placeholder="Actualizar kms..."
