@@ -1790,6 +1790,16 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
   )
 }
 
+// ── GASTO CATEGORY ICONS ──────────────────────────────────────────────────────
+const GASTO_CATS = {
+  mantenimiento: { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>, color: '#F59E0B', bg: '#1A1200' },
+  combustible:   { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V8l7-6 7 6v14"/><path d="M14 22v-4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v4"/><path d="M18 9.5V6a2 2 0 0 0-2-2"/><path d="M20 14v3a2 2 0 0 1-2 2h0"/><path d="M18 5h2a1 1 0 0 1 1 1v4"/></svg>, color: '#3F7DF5', bg: '#0B1530' },
+  seguro:        { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>, color: '#10B981', bg: '#071A0F' },
+  impuesto:      { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>, color: '#8B5CF6', bg: '#130B2A' },
+  multa:         { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>, color: '#EF4444', bg: '#1A0808' },
+  otro:          { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>, color: '#888', bg: '#1A1A22' },
+}
+
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
 function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
   const [tab, setTab] = useState('lista')
@@ -1847,21 +1857,31 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
       {tab === 'lista' && (
         loadingG ? <div className="loading"><div className="spinner" /></div> :
         gastos.length === 0 ? <div className="loading">Sin gastos registrados</div> :
-        gastos.map(g => (
-          <div key={g.id} className="gasto-item">
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div className="gasto-desc">{g.descripcion}</div>
-              <div className="gasto-auto">{g.autos?.nombre} · {g.fecha} · {g.categoria}</div>
+        gastos.map(g => {
+          const cat = GASTO_CATS[g.categoria] || GASTO_CATS.otro
+          return (
+            <div key={g.id} className="gasto-item">
+              {/* Icono de categoría */}
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: cat.bg, border: `1px solid ${cat.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12, color: cat.color }}>
+                <div style={{ width: 18, height: 18 }}>{cat.icon}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="gasto-desc">{g.descripcion}</div>
+                <div className="gasto-auto">
+                  {g.autos?.nombre} · {g.fecha}
+                  <span style={{ color: cat.color, fontWeight: 600, marginLeft: 4 }}>· {g.categoria}</span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
+                <button className="gasto-del-btn" disabled={deletingId === g.id}
+                  onClick={() => setDeleteConfirm(g.id)}>
+                  {deletingId === g.id ? '...' : '✕'}
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
-              <button className="gasto-del-btn" disabled={deletingId === g.id}
-                onClick={() => setDeleteConfirm(g.id)}>
-                {deletingId === g.id ? '...' : '✕'}
-              </button>
-            </div>
-          </div>
-        ))
+          )
+        })
       )}
 
       {tab === 'nuevo' && (
@@ -1883,10 +1903,18 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
             <input className="form-input" type="number" inputMode="numeric" placeholder="0" style={{ fontFamily: "'DM Mono',monospace" }} value={form.monto} onChange={e => setForm(f => ({ ...f, monto: e.target.value }))} />
           </div>
           <div className="stitle">Categoría</div>
-          <div className="form-group">
-            <select className="form-input" value={form.categoria} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))}>
-              {categorias.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 14 }}>
+            {categorias.map(c => {
+              const cat = GASTO_CATS[c] || GASTO_CATS.otro
+              const sel = form.categoria === c
+              return (
+                <button key={c} type="button" onClick={() => setForm(f => ({ ...f, categoria: c }))}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 8px', borderRadius: 12, border: `1px solid ${sel ? cat.color : 'var(--border)'}`, background: sel ? cat.bg : 'var(--bg-dark)', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  <div style={{ width: 22, height: 22, color: cat.color }}>{cat.icon}</div>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: sel ? cat.color : 'var(--text-muted)', letterSpacing: 0.3 }}>{c.charAt(0).toUpperCase() + c.slice(1)}</span>
+                </button>
+              )
+            })}
           </div>
           <div className="stitle">Fecha</div>
           <div className="form-group">
