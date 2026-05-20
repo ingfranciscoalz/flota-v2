@@ -404,8 +404,7 @@ function urlBase64ToUint8Array(base64String) {
 
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [authState, setAuthState] = useState('loading') // loading|auth|inactive|onboarding|app|demo
-  const [inactiveReason, setInactiveReason] = useState('pending') // pending|expired
+  const [authState, setAuthState] = useState('loading') // loading|auth|onboarding|app|demo
   const [profile, setProfile] = useState(null)
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [page, setPage] = useState('resumen')
@@ -416,9 +415,6 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const [showInstall, setShowInstall] = useState(false)
-  const [trialWelcomeDismissed, setTrialWelcomeDismissed] = useState(
-    () => !!localStorage.getItem('flota_trial_welcome')
-  )
   // Theme: 'dark' | 'light' — stored in localStorage, applied to :root
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('flota_theme') || 'dark'
@@ -509,26 +505,9 @@ export default function App() {
   }, [authState])
 
   const handleSession = useCallback(async () => {
+    // App gratuita — sin verificación de trial ni suscripción
     const prof = await getProfile()
-    if (!prof) {
-      // Perfil aún no creado (trigger puede demorar) — tratar como pendiente
-      setProfile(null); setInactiveReason('pending'); setAuthState('inactive'); return
-    }
-    setProfile(prof)
-    if (prof.activo_hasta && new Date(prof.activo_hasta) < new Date()) {
-      setInactiveReason('expired'); setAuthState('inactive'); return
-    }
-    if (!prof.activo) { setInactiveReason('pending'); setAuthState('inactive'); return }
-
-    // Subscription check (skip for admin)
-    if (!prof.is_admin) {
-      const trialValid = prof.trial_hasta && new Date(prof.trial_hasta) > new Date()
-      const subActive = prof.suscripcion_activa && prof.suscripcion_vence && new Date(prof.suscripcion_vence) > new Date()
-      if (!trialValid && !subActive) {
-        setAuthState('subscription'); return
-      }
-    }
-
+    setProfile(prof || null)
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -626,32 +605,6 @@ export default function App() {
     )
   }
 
-  if (authState === 'inactive') {
-    return (
-      <div style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
-        <style>{globalStyles}</style>
-        <InactiveScreen
-          reason={inactiveReason}
-          onRefresh={handleSession}
-          onSignOut={async () => { await signOut(); setAuthState('auth') }}
-        />
-      </div>
-    )
-  }
-
-  if (authState === 'subscription') {
-    return (
-      <div style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
-        <style>{globalStyles}</style>
-        <SubscriptionScreen
-          profile={profile}
-          onSignOut={async () => { await signOut(); setAuthState('auth') }}
-          onSubscribed={handleSession}
-        />
-      </div>
-    )
-  }
-
   if (authState === 'onboarding') {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
@@ -674,14 +627,6 @@ export default function App() {
     ...(!isDemoMode && profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
-  // Trial banner logic
-  const trialDaysLeft = profile?.trial_hasta && new Date(profile.trial_hasta) > new Date()
-    ? Math.ceil((new Date(profile.trial_hasta) - new Date()) / (1000 * 60 * 60 * 24))
-    : 0
-  const trialActive = !profile?.is_admin && trialDaysLeft > 0 && !profile?.suscripcion_activa
-  const showTrialWelcome = trialActive && !trialWelcomeDismissed && trialDaysLeft >= 25
-  const showTrialWarning = trialActive && trialDaysLeft <= 7
-
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'var(--bg)', color: 'var(--text)', minHeight: '100dvh' }}>
       <style>{globalStyles}</style>
@@ -694,30 +639,6 @@ export default function App() {
             onClick={() => { setIsDemoMode(false); setAuthState('auth'); setResumen(null); setCal(null) }}
             style={{ background: 'none', border: '1px solid #1A2B5C', borderRadius: 8, color: '#3F7DF5', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', letterSpacing: 0.5 }}
           >SALIR</button>
-        </div>
-      )}
-
-      {showTrialWelcome && (
-        <div style={{ background: '#0B1A3A', borderBottom: '1px solid #1A2B5C', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#7EB1FF', fontWeight: 600 }}>
-            🎉 Bienvenido — tenés <strong>{trialDaysLeft} días</strong> de prueba gratuita
-          </span>
-          <button
-            onClick={() => { localStorage.setItem('flota_trial_welcome', '1'); setTrialWelcomeDismissed(true) }}
-            style={{ background: 'none', border: 'none', color: '#444', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: '0 4px', flexShrink: 0 }}
-          >×</button>
-        </div>
-      )}
-
-      {showTrialWarning && (
-        <div style={{ background: '#1A1000', borderBottom: '1px solid #3A2800', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 600 }}>
-            ⚠ Tu período de prueba vence en <strong>{trialDaysLeft} día{trialDaysLeft !== 1 ? 's' : ''}</strong>
-          </span>
-          <button
-            onClick={() => setAuthState('subscription')}
-            style={{ background: '#F59E0B', border: 'none', borderRadius: 8, color: '#000', fontSize: 11, fontWeight: 700, padding: '4px 10px', cursor: 'pointer', flexShrink: 0 }}
-          >Suscribirme</button>
         </div>
       )}
 
