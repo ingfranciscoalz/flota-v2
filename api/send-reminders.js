@@ -2,11 +2,14 @@
 // Sends push notifications to fleet owners when a driver still owes yesterday's shift
 //
 // Required env vars (set in Vercel dashboard):
-//   SUPABASE_URL           — your Supabase project URL
-//   SUPABASE_SERVICE_ROLE_KEY — service role key (bypasses RLS)
-//   VAPID_PUBLIC_KEY       — BNfezjUZkM6Fl0ZuTM6gU25Atne4ezKvu06TYeSY7jNuZqcko7Kh2UGi7WUsiTdFBx2RSWT4-7_kH6eEc_YWBU8
-//   VAPID_PRIVATE_KEY      — 2iwOFG6OqhLsAITlz1FS6hAnOTE6q9ZHz2rqo84RP2E
-//   VAPID_SUBJECT          — mailto:tu@email.com
+//   VITE_SUPABASE_URL         — ya la tenés (misma que usa el frontend)
+//   SUPABASE_SERVICE_ROLE_KEY — service role key (bypasses RLS) — creá esta nueva
+//   VAPID_PUBLIC_KEY          — BNfezjUZkM6Fl0ZuTM6gU25Atne4ezKvu06TYeSY7jNuZqcko7Kh2UGi7WUsiTdFBx2RSWT4-7_kH6eEc_YWBU8
+//   VAPID_PRIVATE_KEY         — 2iwOFG6OqhLsAITlz1FS6hAnOTE6q9ZHz2rqo84RP2E
+//   VAPID_SUBJECT             — la URL de tu app, ej: https://flota-v2.vercel.app
+//                               (NO es el mail de los usuarios — es solo un contacto admin
+//                                para que los servidores push puedan escribirte si algo falla)
+//   CRON_SECRET               — cualquier string random, ej: flota-cron-2026
 
 import webpush from 'web-push'
 import { createClient } from '@supabase/supabase-js'
@@ -21,13 +24,13 @@ export default async function handler(req, res) {
   }
 
   const supabase = createClient(
-    process.env.SUPABASE_URL,
+    process.env.VITE_SUPABASE_URL,          // misma variable que usa el frontend
     process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } }
   )
 
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:admin@flota.app',
+    process.env.VAPID_SUBJECT || 'https://flota-v2.vercel.app',
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY,
   )
