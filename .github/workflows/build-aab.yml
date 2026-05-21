@@ -21,6 +21,19 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > twa/android-key.keystore
 
+      - name: Generate launcher icons
+        run: |
+          sudo apt-get install -y imagemagick
+          BASE="twa/android/app/src/main/res"
+          curl -s "https://flota-v2.vercel.app/icons/icon-512.png" -o /tmp/icon.png
+          for density in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            dir="${density%%:*}"
+            size="${density##*:}"
+            mkdir -p "$BASE/mipmap-$dir"
+            convert /tmp/icon.png -resize "${size}x${size}" "$BASE/mipmap-$dir/ic_launcher.png"
+            convert /tmp/icon.png -resize "${size}x${size}" "$BASE/mipmap-$dir/ic_launcher_round.png"
+          done
+
       - name: Make gradlew executable
         run: chmod +x twa/android/gradlew
 
