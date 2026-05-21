@@ -212,7 +212,7 @@ export async function getResumen(cfg = null) {
   const francosManuales = francosRes.data || []
 
   const kmsMap = {}
-  for (const k of kmsData) kmsMap[k.auto_id] = k.kms_actuales
+  for (const k of kmsData) kmsMap[k.auto_id] = { actuales: k.kms_actuales, iniciales: k.kms_iniciales || 0 }
 
   // Usar Map para unificar con getCalendario
   const francosMap = {}
@@ -264,7 +264,9 @@ export async function getResumen(cfg = null) {
     totalSemana += ganSemana
     totalMes += ganMes
 
-    const kmsAct = kmsMap[auto.id] || 0
+    const kmsEntry = kmsMap[auto.id] || { actuales: 0, iniciales: 0 }
+    const kmsAct = kmsEntry.actuales
+    const kmsIni = kmsEntry.iniciales
     const autoItems = resolvedCfg.mant_items.filter(item => !item.auto_id || item.auto_id === auto.id)
     const mantStatus = calcMantStatus(autoItems, mantRealizados.filter(m => m.auto_id === auto.id), kmsAct)
 
@@ -272,6 +274,7 @@ export async function getResumen(cfg = null) {
       nombre: auto.nombre,
       turno_base: autoTurnoBase,
       kms_actuales: kmsAct,
+      kms_iniciales: kmsIni,
       ganancias: {
         semana: ganSemana, mes: ganMes,
         gastos_semana: gastosSemana, gastos_mes: gastosMes,
@@ -410,10 +413,21 @@ export async function getGastos(auto_id = null) {
 // ── KMS ───────────────────────────────────────────────────────────────────────
 export async function updateKms(auto_id, kms_actuales) {
   const user_id = await uid()
-  return supabase.from('kms').upsert(
-    { user_id, auto_id, kms_actuales, actualizado_en: new Date().toISOString().split('T')[0] },
-    { onConflict: 'user_id,auto_id' }
-  )
+  // Verificar si ya existe un registro con kms_iniciales seteado
+  const { data: existing } = await supabase.from('kms')
+    .select('kms_iniciales')
+    .eq('user_id', user_id)
+    .eq('auto_id', auto_id)
+    .single()
+
+  const row = {
+    user_id, auto_id, kms_actuales,
+    actualizado_en: new Date().toISOString().split('T')[0],
+  }
+  // Solo setear kms_iniciales si no existe aún (primera carga)
+  if (!existing?.kms_iniciales) row.kms_iniciales = kms_actuales
+
+  return supabase.from('kms').upsert(row, { onConflict: 'user_id,auto_id' })
 }
 
 // ── MANTENIMIENTO ─────────────────────────────────────────────────────────────

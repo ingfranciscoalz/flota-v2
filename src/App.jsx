@@ -1555,7 +1555,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
             <div className="metric-grid">
               <div className="metric"><div className="metric-label">Gastos mes</div><div className="metric-value" style={{ color: '#ff6b35' }}>{fmt(gan.gastos_mes)}</div></div>
               <div className="metric"><div className="metric-label">Kms actuales</div><div className="metric-value">{(adata.kms_actuales || 0).toLocaleString('es-AR')}</div></div>
-              <div className="metric"><div className="metric-label">Costo / km</div><div className="metric-value" style={{ color: '#F59E0B' }}>{adata.kms_actuales > 0 ? '$' + (gan.gastos_mes / adata.kms_actuales).toFixed(1) : '—'}</div></div>
+              <div className="metric"><div className="metric-label">Costo / km</div><div className="metric-value" style={{ color: '#F59E0B' }}>{(adata.kms_actuales - (adata.kms_iniciales || 0)) > 0 ? '$' + (gan.gastos_mes / (adata.kms_actuales - (adata.kms_iniciales || 0))).toFixed(1) : '—'}</div></div>
               <div className="metric"><div className="metric-label">Margen</div><div className="metric-value" style={{ color: gan.mes > 0 && (gan.neto_mes / gan.mes) >= 0.5 ? '#10B981' : gan.mes > 0 && (gan.neto_mes / gan.mes) >= 0.25 ? '#F59E0B' : '#EF4444' }}>{gan.mes > 0 ? Math.round(gan.neto_mes / gan.mes * 100) + '%' : '—'}</div></div>
             </div>
             <div className="kms-row">
