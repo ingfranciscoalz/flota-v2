@@ -1,7 +1,7 @@
 name: Build Android AAB
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # Solo se ejecuta manualmente desde la pestaña Actions
 
 jobs:
   build:

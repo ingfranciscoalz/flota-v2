@@ -1,0 +1,9 @@
+#!/bin/sh
+DIRNAME=$(dirname "$0")
+cd "$DIRNAME" >/dev/null
+APP_HOME=$(pwd -P)
+cd - >/dev/null
+exec "$JAVA_HOME/bin/java" \
+  -Xmx512m \
+  -classpath "$APP_HOME/gradle/wrapper/gradle-wrapper.jar" \
+  org.gradle.wrapper.GradleWrapperMain "$@"
