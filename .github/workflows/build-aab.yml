@@ -19,7 +19,7 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > twa/android-key.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > twa/android/android-key.keystore
 
       - name: Generate launcher icons
         run: |
