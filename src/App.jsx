@@ -395,6 +395,133 @@ function TutorialOverlay({ onDone }) {
 // ── VAPID PUBLIC KEY ──────────────────────────────────────────────────────────
 const VAPID_PUBLIC_KEY = 'BNfezjUZkM6Fl0ZuTM6gU25Atne4ezKvu06TYeSY7jNuZqcko7Kh2UGi7WUsiTdFBx2RSWT4-7_kH6eEc_YWBU8'
 
+// ── PLAY BILLING ──────────────────────────────────────────────────────────────
+const PLAY_PRODUCT_ID = 'flota_pro_mensual' // debe coincidir con el ID en Play Console
+
+function SubscriptionModal({ onClose, onPurchased }) {
+  const [price, setPrice] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [restoring, setRestoring] = useState(false)
+  const [err, setErr] = useState(null)
+  const inTWA = typeof window !== 'undefined' && 'getDigitalGoodsService' in window
+
+  useEffect(() => {
+    if (!inTWA) return
+    window.getDigitalGoodsService('https://play.google.com/billing')
+      .then(svc => svc.getDetails([PLAY_PRODUCT_ID]))
+      .then(details => {
+        const d = details?.[0]
+        if (d?.price) setPrice(`${d.price.currency} ${parseFloat(d.price.value).toLocaleString('es-AR')}`)
+      })
+      .catch(() => {})
+  }, [inTWA])
+
+  const verifyAndActivate = async (purchaseToken) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    const res = await fetch('/api/verify-purchase', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ purchaseToken, subscriptionId: PLAY_PRODUCT_ID, userId: user.id }),
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(body.error || 'Error al verificar la compra')
+    }
+    return res.json()
+  }
+
+  const handlePurchase = async () => {
+    setLoading(true); setErr(null)
+    try {
+      const svc = await window.getDigitalGoodsService('https://play.google.com/billing')
+      // purchase() devuelve PaymentResponse con purchaseToken
+      const payment = await new PaymentRequest(
+        [{ supportedMethods: 'https://play.google.com/billing', data: { sku: PLAY_PRODUCT_ID } }],
+        { total: { label: 'Flota Pro', amount: { currency: 'ARS', value: '0' } } }
+      ).show()
+      await payment.complete('success')
+      const purchaseToken = payment.details.purchaseToken
+      await verifyAndActivate(purchaseToken)
+      onPurchased()
+    } catch (e) {
+      if (e.name !== 'AbortError') setErr(e.message || 'Error al procesar el pago')
+    } finally { setLoading(false) }
+  }
+
+  const handleRestore = async () => {
+    setRestoring(true); setErr(null)
+    try {
+      const svc = await window.getDigitalGoodsService('https://play.google.com/billing')
+      const purchases = await svc.listPurchases()
+      const found = purchases?.find(p => p.itemId === PLAY_PRODUCT_ID)
+      if (!found) { setErr('No se encontró una suscripción activa para esta cuenta'); return }
+      await verifyAndActivate(found.purchaseToken)
+      onPurchased()
+    } catch (e) {
+      setErr(e.message || 'Error al restaurar')
+    } finally { setRestoring(false) }
+  }
+
+  const FEATURES = [
+    ['🚗', 'Autos ilimitados', 'Sin límite de autos en tu flota'],
+    ['📊', 'Stats completos', 'Gráficos de rendimiento por auto y período'],
+    ['🔔', 'Recordatorios push', 'Notificaciones de turnos pendientes 24hs después'],
+    ['🔧', 'Mantenimiento avanzado', 'Historial completo y alertas de service'],
+  ]
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet">
+        <div style={{ textAlign: 'center', marginBottom: 22 }}>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: 'var(--text)' }}>
+            Flota<span style={{ color: '#3F7DF5' }}>.</span><span style={{ color: '#F59E0B' }}> Pro</span>
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-sub)', marginTop: 6 }}>
+            {price ? `${price} / mes · Gestionado por Google Play` : inTWA ? 'Cargando precio...' : 'Disponible en la app de Android'}
+          </div>
+        </div>
+
+        {FEATURES.map(([icon, title, desc]) => (
+          <div key={title} style={{ display: 'flex', gap: 14, padding: '13px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 22, width: 28, flexShrink: 0, textAlign: 'center' }}>{icon}</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{desc}</div>
+            </div>
+          </div>
+        ))}
+
+        {err && <div style={{ color: '#EF4444', fontSize: 12, marginTop: 14, padding: '10px 14px', background: '#1A0808', borderRadius: 10, textAlign: 'center' }}>{err}</div>}
+
+        {inTWA ? (
+          <>
+            <button className="btn-primary" style={{ marginTop: 22, background: '#3F7DF5', color: '#fff' }}
+              onClick={handlePurchase} disabled={loading || restoring}>
+              {loading ? 'Procesando...' : '⭐ Suscribirse con Google Play'}
+            </button>
+            <button onClick={handleRestore} disabled={restoring || loading}
+              style={{ width: '100%', marginTop: 8, padding: '12px', background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer' }}>
+              {restoring ? 'Buscando...' : 'Restaurar compra anterior'}
+            </button>
+          </>
+        ) : (
+          <div style={{ marginTop: 20, padding: 16, background: 'var(--bg-inner)', borderRadius: 14, textAlign: 'center' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              Las suscripciones se gestionan desde la<br />
+              <strong style={{ color: 'var(--text)' }}>app de Android en Google Play.</strong>
+            </div>
+          </div>
+        )}
+
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
+          Cancelá cuando quieras desde Google Play → Suscripciones
+        </div>
+        <button className="modal-close" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
@@ -421,6 +548,8 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', saved)
     return saved
   })
+  // Upgrade modal
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   // Push notifications
   const [notifState, setNotifState] = useState('unknown') // unknown|granted|denied|unsupported
   const installPrompt = useRef(null)
@@ -505,9 +634,26 @@ export default function App() {
   }, [authState])
 
   const handleSession = useCallback(async () => {
-    // App gratuita — sin verificación de trial ni suscripción
     const prof = await getProfile()
     setProfile(prof || null)
+
+    // Auto-restore: si está en plan free dentro de la TWA, verificar si tiene compra activa
+    if (prof && (!prof.plan || prof.plan === 'free') && typeof window !== 'undefined' && 'getDigitalGoodsService' in window) {
+      try {
+        const svc = await window.getDigitalGoodsService('https://play.google.com/billing')
+        const purchases = await svc.listPurchases()
+        const found = purchases?.find(p => p.itemId === PLAY_PRODUCT_ID)
+        if (found) {
+          const res = await fetch('/api/verify-purchase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ purchaseToken: found.purchaseToken, subscriptionId: PLAY_PRODUCT_ID, userId: prof.id }),
+          })
+          if (res.ok) setProfile({ ...prof, plan: 'pro' })
+        }
+      } catch (_) { /* no estamos en TWA o no hay compra */ }
+    }
+
     const hasFleet = await checkFleet()
     if (!hasFleet) { setAuthState('onboarding'); return }
     setAuthState('app')
@@ -618,6 +764,8 @@ export default function App() {
     )
   }
 
+  const isPro = profile?.plan === 'pro' || profile?.is_admin || isDemoMode
+
   const navItems = [
     { id: 'resumen',    label: 'Resumen',    icon: <GridIcon /> },
     { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
@@ -671,6 +819,12 @@ export default function App() {
               </svg>
             </button>
           )}
+          {/* Plan badge */}
+          {!isDemoMode && (
+            isPro
+              ? <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', background: '#071F0F', border: '1px solid #10B98144', borderRadius: 100, color: '#10B981', letterSpacing: 0.5 }}>PRO</span>
+              : <button onClick={() => setShowUpgradeModal(true)} style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', background: 'var(--bg-inner)', border: '1px solid #3F7DF544', borderRadius: 100, color: '#3F7DF5', cursor: 'pointer', letterSpacing: 0.5 }}>FREE ↑</button>
+          )}
           {/* Theme toggle */}
           <button
             className="sync-btn"
@@ -689,8 +843,8 @@ export default function App() {
         {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
         {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) loadCal(calYear, calMonth) }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
         {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
-        {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
-        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
+        {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
+        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
 
@@ -704,6 +858,18 @@ export default function App() {
 
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       {showTutorial && <TutorialOverlay onDone={() => setShowTutorial(false)} />}
+      {showUpgradeModal && (
+        <SubscriptionModal
+          onClose={() => setShowUpgradeModal(false)}
+          onPurchased={async () => {
+            setShowUpgradeModal(false)
+            // Re-fetch profile para que isPro se actualice
+            const prof = await getProfile()
+            setProfile(prof)
+            showToast('⭐ ¡Bienvenido a Flota Pro!', 'success')
+          }}
+        />
+      )}
       </div>{/* end app-wrap */}
     </div>
   )
@@ -1884,7 +2050,7 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
 }
 
 // ── FLOTA PAGE ────────────────────────────────────────────────────────────────
-function FlotaPage({ resumen, showToast, onRefresh, isDemoMode }) {
+function FlotaPage({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade }) {
   const [tab, setTab] = useState('autos')
   return (
     <div className="page">
@@ -1893,7 +2059,7 @@ function FlotaPage({ resumen, showToast, onRefresh, isDemoMode }) {
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
         <button className={`tab ${tab === 'deudas' ? 'active' : ''}`} onClick={() => setTab('deudas')}>Deudas</button>
       </div>
-      {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={onUpgrade} />}
       {tab === 'mant'    && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
       {tab === 'deudas'  && <DeudasTab resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
     </div>
@@ -2084,7 +2250,7 @@ function DeudasTab({ resumen, showToast, isDemoMode }) {
   )
 }
 
-function AutosTab({ resumen, showToast, onRefresh, isDemoMode }) {
+function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade }) {
   const [showNewAuto, setShowNewAuto] = useState(false)
   const [newAutoNombre, setNewAutoNombre] = useState('')
   const [newAutoTurno, setNewAutoTurno] = useState('')
@@ -2119,6 +2285,9 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode }) {
 
   const handleCreateAuto = async () => {
     if (isDemoMode) return showToast('👁 Modo demo — los cambios no se guardan', 'info')
+    // Plan free: máximo 1 auto
+    const autosActuales = resumen?.config?.autos || []
+    if (!isPro && autosActuales.length >= 1) { onUpgrade?.(); return }
     if (!newAutoNombre.trim()) return showToast('Ingresá el nombre del auto', 'error')
     if (!newAutoTurno || parseInt(newAutoTurno) <= 0) return showToast('Ingresá el turno base', 'error')
     setSaving(true)
@@ -2317,9 +2486,17 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode }) {
           </div>
         </div>
       ) : (
-        <button className="action-btn" style={{ width: '100%', marginTop: 4 }} onClick={() => setShowNewAuto(true)}>
-          + Agregar auto a la flota
-        </button>
+        <>
+          <button className="action-btn" style={{ width: '100%', marginTop: 4 }}
+            onClick={() => { if (!isPro && (resumen?.config?.autos || []).length >= 1) { onUpgrade?.() } else { setShowNewAuto(true) } }}>
+            + Agregar auto a la flota
+          </button>
+          {!isPro && (resumen?.config?.autos || []).length >= 1 && (
+            <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+              Plan free: 1 auto. <button onClick={onUpgrade} style={{ background: 'none', border: 'none', color: '#3F7DF5', cursor: 'pointer', fontWeight: 700, fontSize: 12, padding: 0 }}>Pasate a Pro →</button>
+            </div>
+          )}
+        </>
       )}
     </>
   )
@@ -2730,7 +2907,7 @@ function AutosComparisonTab({ isDemoMode }) {
   )
 }
 
-function StatsPage({ resumen, showToast, isDemoMode }) {
+function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
   const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
   const [deuda, setDeuda] = useState(null)
@@ -2760,6 +2937,38 @@ function StatsPage({ resumen, showToast, isDemoMode }) {
   }, [isDemoMode])
 
   if (loading) return <div className="loading"><div className="spinner" /></div>
+
+  // ── Locked screen for free users ──────────────────────────────────────────
+  if (!isPro && !isDemoMode) {
+    return (
+      <div className="page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: 16 }}>
+        <div style={{ fontSize: 48 }}>📊</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px' }}>Estadísticas Pro</div>
+        <div style={{ fontSize: 14, color: 'var(--text-sub)', lineHeight: 1.6, maxWidth: 280 }}>
+          Accedé a rentabilidad mensual, historial de deuda y estadísticas por auto con el plan Pro.
+        </div>
+        <button
+          onClick={onUpgrade}
+          style={{
+            marginTop: 8,
+            padding: '14px 32px',
+            background: 'linear-gradient(135deg, #3F7DF5, #6C47FF)',
+            border: 'none',
+            borderRadius: 14,
+            color: '#fff',
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: 'pointer',
+            fontFamily: "'DM Sans',sans-serif",
+            boxShadow: '0 4px 20px #3F7DF540',
+          }}
+        >
+          Pasate a Pro
+        </button>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cancelá cuando quieras</div>
+      </div>
+    )
+  }
 
   const deudaEntries = deuda ? Object.entries(deuda) : []
   const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
