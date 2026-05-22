@@ -3,6 +3,8 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.flota.app",
-    "sha256_cert_fingerprints": ["D8:16:A6:99:25:B3:1F:82:7A:53:02:75:B2:A7:31:8E:54:6B:30:B9:00:08:96:94:DA:BB:9E:99:ED:B2:13:F6"]
+    "sha256_cert_fingerprints": [
+      "1F:28:0E:A3:2C:68:42:D6:0B:84:B5:D4:D4:11:2B:6F:D3:CB:9A:15:AC:E7:BE:93:CF:43:D2:62:36:CB:D4:2B"
+    ]
   }
 }]
