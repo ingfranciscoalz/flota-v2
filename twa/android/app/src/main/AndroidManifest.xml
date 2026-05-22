@@ -37,5 +37,9 @@
         <meta-data
             android:name="asset_statements"
             android:resource="@string/asset_statements"/>
+
+        <meta-data
+            android:name="android.support.customtabs.trusted.DEFAULT_URL"
+            android:value="${defaultUrl}"/>
     </application>
 </manifest>
