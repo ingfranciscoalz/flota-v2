@@ -1,4 +1,4 @@
-const CACHE = 'flota-v6'
+const CACHE = 'flota-v7'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', e => e.waitUntil(
@@ -7,15 +7,40 @@ self.addEventListener('activate', e => e.waitUntil(
   ).then(() => clients.claim())
 ))
 
-self.addEventListener('fetch', e => {
-  // Supabase API — siempre red
-  if (e.request.url.includes('supabase.co')) return
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting()
+})
 
+self.addEventListener('fetch', e => {
+  const req = e.request
+  if (req.method !== 'GET') return
+
+  const url = new URL(req.url)
+  // Supabase API — siempre red, nunca cache
+  if (url.hostname.includes('supabase.co')) return
+
+  // Navegación (HTML / index.html) — NETWORK-FIRST
+  // Así siempre cargás la versión más nueva apenas hay conexión
+  if (req.mode === 'navigate' || req.destination === 'document') {
+    e.respondWith(
+      fetch(req).then(res => {
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(CACHE).then(c => c.put(req, copy))
+        }
+        return res
+      }).catch(() => caches.match(req).then(r => r || caches.match('/index.html')))
+    )
+    return
+  }
+
+  // Resto (JS/CSS hasheados, imágenes) — cache-first con revalidación en background
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      const net = fetch(e.request).then(res => {
-        if (res.ok && e.request.method === 'GET') {
-          caches.open(CACHE).then(c => c.put(e.request, res.clone()))
+    caches.match(req).then(cached => {
+      const net = fetch(req).then(res => {
+        if (res.ok) {
+          const copy = res.clone()
+          caches.open(CACHE).then(c => c.put(req, copy))
         }
         return res
       }).catch(() => cached)
