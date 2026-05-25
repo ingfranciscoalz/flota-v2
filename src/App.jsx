@@ -2779,72 +2779,88 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
 const AUTO_COLORS = ['#3F7DF5', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444']
 
 function MultiLineChart({ data, metric }) {
+  const scrollRef = useRef(null)
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth
+  }, [data])
+
   if (!data || data.length === 0) return null
-  const W = 320, H = 190
+
+  const STEP = 52          // px por mes
+  const H = 190
   const PAD = { top: 14, right: 18, bottom: 26, left: 46 }
-  const cW = W - PAD.left - PAD.right
-  const cH = H - PAD.top - PAD.bottom
   const n = data[0].monthly.length
+  const cW = Math.max(n - 1, 1) * STEP
+  const W = PAD.left + cW + PAD.right
+  const cH = H - PAD.top - PAD.bottom
 
   const allVals = data.flatMap(a => a.monthly.map(m => m[metric]))
   const maxVal = Math.max(...allVals, 1)
-
-  // Nice round max for Y axis
   const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
   const niceMax = Math.ceil(maxVal / magnitude) * magnitude
 
-  const X = i => PAD.left + (n > 1 ? (i / (n - 1)) * cW : cW / 2)
+  const X = i => PAD.left + (n > 1 ? i * STEP : cW / 2)
   const Y = v => PAD.top + cH - (v / niceMax) * cH
-
   const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-      {/* Grid horizontales */}
-      {[0, 0.25, 0.5, 0.75, 1].map(p => (
-        <line key={p}
-          x1={PAD.left} x2={W - PAD.right}
-          y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
-          stroke={p === 0 ? '#222' : '#141414'} strokeWidth={p === 0 ? 1.5 : 1} />
-      ))}
+    <div style={{ position: 'relative' }}>
+      {/* Gráfico scrolleable */}
+      <div
+        ref={scrollRef}
+        style={{ overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+      >
+        <svg width={W} height={H} style={{ display: 'block', overflow: 'visible' }}>
+          {/* Grid horizontales */}
+          {[0, 0.25, 0.5, 0.75, 1].map(p => (
+            <line key={p}
+              x1={PAD.left} x2={W - PAD.right}
+              y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
+              stroke={p === 0 ? '#222' : '#141414'} strokeWidth={p === 0 ? 1.5 : 1} />
+          ))}
 
-      {/* Y labels */}
-      {[0, 0.5, 1].map(p => (
-        <text key={p} x={PAD.left - 6} y={PAD.top + cH * (1 - p) + 3}
-          textAnchor="end" fill="#333" fontSize="8" fontFamily="'DM Mono',monospace">
-          {fmtY(niceMax * p)}
-        </text>
-      ))}
-
-      {/* Líneas y áreas por auto */}
-      {data.map((auto, ai) => {
-        const color = AUTO_COLORS[ai % AUTO_COLORS.length]
-        const pts = auto.monthly.map((m, i) => [X(i), Y(m[metric])])
-        const polyPts = pts.map(p => p.join(',')).join(' ')
-        const areaPts = `${X(0)},${PAD.top + cH} ${polyPts} ${X(n - 1)},${PAD.top + cH}`
-        return (
-          <g key={auto.id}>
-            <polygon points={areaPts} fill={color} opacity="0.07" />
-            <polyline points={polyPts} fill="none" stroke={color} strokeWidth="2.5"
-              strokeLinecap="round" strokeLinejoin="round" />
-            {pts.map(([cx, cy], i) => (
-              <g key={i}>
-                <circle cx={cx} cy={cy} r="5" fill="#000" />
-                <circle cx={cx} cy={cy} r="3.5" fill={color} />
+          {/* Líneas y áreas por auto */}
+          {data.map((auto, ai) => {
+            const color = AUTO_COLORS[ai % AUTO_COLORS.length]
+            const pts = auto.monthly.map((m, i) => [X(i), Y(m[metric])])
+            const polyPts = pts.map(p => p.join(',')).join(' ')
+            const areaPts = `${X(0)},${PAD.top + cH} ${polyPts} ${X(n - 1)},${PAD.top + cH}`
+            return (
+              <g key={auto.id}>
+                <polygon points={areaPts} fill={color} opacity="0.07" />
+                <polyline points={polyPts} fill="none" stroke={color} strokeWidth="2.5"
+                  strokeLinecap="round" strokeLinejoin="round" />
+                {pts.map(([cx, cy], i) => (
+                  <g key={i}>
+                    <circle cx={cx} cy={cy} r="5" fill="#000" />
+                    <circle cx={cx} cy={cy} r="3.5" fill={color} />
+                  </g>
+                ))}
               </g>
-            ))}
-          </g>
-        )
-      })}
+            )
+          })}
 
-      {/* X labels */}
-      {data[0].monthly.map((m, i) => (
-        <text key={i} x={X(i)} y={H - 4} textAnchor="middle"
-          fill="#3a3a3a" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
-          {m.mes}
-        </text>
-      ))}
-    </svg>
+          {/* X labels */}
+          {data[0].monthly.map((m, i) => (
+            <text key={i} x={X(i)} y={H - 4} textAnchor="middle"
+              fill="#3a3a3a" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
+              {m.mes}
+            </text>
+          ))}
+        </svg>
+      </div>
+
+      {/* Eje Y fijo encima del scroll */}
+      <svg width={PAD.left} height={H}
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)' }}>
+        {[0, 0.5, 1].map(p => (
+          <text key={p} x={PAD.left - 4} y={PAD.top + cH * (1 - p) + 3}
+            textAnchor="end" fill="#333" fontSize="8" fontFamily="'DM Mono',monospace">
+            {fmtY(niceMax * p)}
+          </text>
+        ))}
+      </svg>
+    </div>
   )
 }
 
