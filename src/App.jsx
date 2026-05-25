@@ -3050,13 +3050,13 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const curGastos = curMonth?.gastos || 0
             const progress = dayElapsed / daysInMonth
             const francoWeekday = resumen?.config?.franco_weekday ?? -1
-            // Días laborales transcurridos y restantes (excluye francos)
+            // Días laborales: transcurridos (antes de hoy) y restantes (hoy inclusive)
             let workDaysElapsed = 0, workDaysRemaining = 0
             for (let d = 1; d <= daysInMonth; d++) {
               const dow = (new Date(now.getFullYear(), now.getMonth(), d).getDay() + 6) % 7
               if (dow === francoWeekday) continue
-              if (d <= dayElapsed) workDaysElapsed++
-              else workDaysRemaining++
+              if (d < dayElapsed) workDaysElapsed++
+              else workDaysRemaining++ // hoy + días futuros
             }
             // Promedio diario (solo para mostrar en tarjeta)
             const dailyAvgTurnos = workDaysElapsed > 0 ? curTurnos / workDaysElapsed : 0
