@@ -603,6 +603,7 @@ export default function App() {
   const [profile, setProfile] = useState(null)
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [page, setPage] = useState('resumen')
+  const [resumenTab, setResumenTab] = useState('resumen')
   const [resumen, setResumen] = useState(null)
   const [cal, setCal] = useState(null)
   const [calYear, setCalYear] = useState(new Date().getFullYear())
@@ -839,7 +840,6 @@ export default function App() {
     { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
     { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
     { id: 'flota',      label: 'Flota',      icon: <FleetIcon /> },
-    { id: 'stats',      label: 'Stats',      icon: <StatsIcon /> },
     ...(!isDemoMode && profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
 
@@ -908,11 +908,23 @@ export default function App() {
       </div>
 
       <div key={page} className="page-anim">
-        {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+        {page === 'resumen' && (
+          <>
+            {/* Tabs Resumen / Análisis */}
+            <div style={{ display: 'flex', gap: 6, padding: '12px 16px 0', background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 10 }}>
+              {[['resumen','Resumen'],['analisis','Análisis']].map(([id, label]) => (
+                <button key={id} onClick={() => setResumenTab(id)} style={{ flex: 1, padding: '9px', background: resumenTab === id ? 'var(--bg-card)' : 'transparent', border: resumenTab === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 9, color: resumenTab === id ? '#3F7DF5' : 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {resumenTab === 'resumen' && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+            {resumenTab === 'analisis' && <StatsPage resumen={resumen} cal={cal} calYear={calYear} calMonth={calMonth} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
+          </>
+        )}
         {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) { loadCal(calYear, calMonth); loadResumen() } }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
         {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
         {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
-        {page === 'stats'      && <StatsPage resumen={resumen} cal={cal} calYear={calYear} calMonth={calMonth} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
 
