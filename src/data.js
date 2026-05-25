@@ -442,7 +442,7 @@ export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, 
 // ── STATS ─────────────────────────────────────────────────────────────────────
 export async function getMonthlyStats() {
   const now = new Date()
-  const since = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+  const since = new Date(now.getFullYear(), now.getMonth() - 8, 1).toISOString().split('T')[0]
 
   const [turnosRes, gastosRes] = await Promise.all([
     supabase.from('turnos').select('fecha, monto').gte('fecha', since),
@@ -450,8 +450,8 @@ export async function getMonthlyStats() {
   ])
 
   const meses = {}
-  for (let i = 0; i <= 5; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+  for (let i = 0; i <= 8; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 8 + i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     meses[key] = { key, mes: d.getMonth() + 1, año: d.getFullYear(), turnos: 0, gastos: 0 }
   }
@@ -470,7 +470,7 @@ export async function getMonthlyStats() {
 
 export async function getMonthlyStatsByAuto() {
   const now = new Date()
-  const since = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString().split('T')[0]
+  const since = new Date(now.getFullYear(), now.getMonth() - 8, 1).toISOString().split('T')[0]
   const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
 
   const [turnosRes, gastosRes, autosRes, choferesRes] = await Promise.all([
@@ -484,8 +484,8 @@ export async function getMonthlyStatsByAuto() {
   for (const c of choferesRes.data || []) choferAutoMap[c.id] = c.auto_id
 
   const mesKeys = []
-  for (let i = 0; i <= 5; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1)
+  for (let i = 0; i <= 8; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - 8 + i, 1)
     mesKeys.push({ key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: MONTHS[d.getMonth()] })
   }
 

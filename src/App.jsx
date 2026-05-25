@@ -71,34 +71,38 @@ function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, on
 function BarChart({ data }) {
   if (!data || data.length === 0) return null
   const maxVal = Math.max(...data.flatMap(d => [d.turnos, d.gastos]), 1)
-  const H = 110, BW = 14, GAP = 3, SW = 52
+  const H = 110, BW = 9, GAP = 2, SW = 46
   return (
     <div style={{ marginTop: 8 }}>
       <svg viewBox={`0 0 ${data.length * SW} ${H + 30}`} style={{ width: '100%', overflow: 'visible' }}>
         {data.map((d, i) => {
-          const x = i * SW + SW / 2
+          const cx = i * SW + SW / 2
+          const neto = Math.max(d.turnos - d.gastos, 0)
           const hT = Math.max((d.turnos / maxVal) * H, 2)
           const hG = Math.max((d.gastos / maxVal) * H, 2)
+          const hN = neto > 0 ? Math.max((neto / maxVal) * H, 2) : 0
           const label = MESES[d.mes - 1].slice(0, 3)
           return (
             <g key={d.key}>
-              <rect x={x - BW - GAP} y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="3" />
-              <rect x={x + GAP} y={H - hG} width={BW} height={hG} fill="#EF4444" rx="3" opacity="0.85" />
-              <text x={x} y={H + 14} textAnchor="middle" fill="#555" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+              {/* Neto - verde */}
+              <rect x={cx - BW * 1.5 - GAP} y={H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
+              {/* Ingresos - azul */}
+              <rect x={cx - BW / 2} y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
+              {/* Gastos - rojo */}
+              <rect x={cx + BW / 2 + GAP} y={H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
+              <text x={cx} y={H + 14} textAnchor="middle" fill="#555" fontSize="8" fontFamily="DM Mono,monospace">{label}</text>
             </g>
           )
         })}
         <line x1="0" y1={H} x2={data.length * SW} y2={H} stroke="#23232E" strokeWidth="1" />
       </svg>
-      <div style={{ display: 'flex', gap: 16, marginTop: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#3F7DF5' }} />
-          <span style={{ fontSize: 10, color: '#555' }}>Ganancias</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{ width: 8, height: 8, borderRadius: 2, background: '#EF4444' }} />
-          <span style={{ fontSize: 10, color: '#555' }}>Gastos</span>
-        </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 2 }}>
+        {[['#10B981','Neto'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+            <span style={{ fontSize: 10, color: '#555' }}>{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -3056,21 +3060,23 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
 
           <div className="stitle">Rentabilidad mensual</div>
           <div className="card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <div>
-                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ganancias 6m</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 6m</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
+            {/* Neto — fila principal arriba */}
+            <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #23232E' }}>
+              <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 9 meses</div>
+              <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#10B981' : '#EF4444', marginTop: 2 }}>
+                {fmt(totalGan - totalGas)}
               </div>
             </div>
-            <div style={{ marginTop: 6, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto 6 meses</span>
-              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#3F7DF5' : '#EF4444' }}>
-                {fmt(totalGan - totalGas)}
-              </span>
+            {/* Ingresos / Gastos abajo */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div>
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ingresos 9m</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos 9m</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
+              </div>
             </div>
             <BarChart data={monthlyData} />
           </div>
