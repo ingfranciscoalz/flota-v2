@@ -3041,6 +3041,15 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                     </div>
                   ))}
                 </div>
+                {/* Falta cobrar */}
+                {curTurnos > 0 && projTurnos > curTurnos && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Falta cobrar este mes</span>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>
+                      {fmt(projTurnos - curTurnos)}
+                    </span>
+                  </div>
+                )}
               </div>
             )
           })()}
