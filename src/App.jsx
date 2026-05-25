@@ -1577,7 +1577,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
       {/* Botón PDF */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
         <button onClick={() => window.print()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #23232E', borderRadius: 10, color: '#888', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
           ↓ Exportar PDF
         </button>
       </div>
@@ -1598,13 +1598,13 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
         <div style={{ flex: 1 }}>
           <div className="total-label">Esta semana</div>
           <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
-          <div style={{ fontSize: 10, color: '#666', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
         </div>
-        <div style={{ width: 1, background: '#2E2E3B', alignSelf: 'stretch', margin: '0 18px' }} />
+        <div style={{ width: 1, background: 'var(--border-card)', alignSelf: 'stretch', margin: '0 18px' }} />
         <div style={{ flex: 1, textAlign: 'right' }}>
           <div className="total-label">Este mes</div>
           <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
-          <div style={{ fontSize: 10, color: '#666', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
         </div>
       </div>
 
@@ -1620,7 +1620,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
           <div key={aid} className="card" style={{ animationDelay: `${i * 70}ms` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span className="auto-tag tag-auto">{adata.nombre}</span>
-              <span style={{ fontSize: 11, color: '#888' }}>{choferes.join(' · ')}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{choferes.join(' · ')}</span>
             </div>
             <div className="gan-row">
               <div className="gan-cell"><div className="gan-label">Semana</div><div className="gan-value">{fmt(gan.semana)}</div></div>
@@ -1908,7 +1908,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
                     <div className="chofer-sec-name">{cnombre}</div>
                     <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
-                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
+                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
                   {estado === 'franco' ? (
                     <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
                       {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
@@ -2292,14 +2292,14 @@ function DeudasTab({ resumen, showToast, isDemoMode }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span className="auto-tag tag-auto" style={{ fontSize: 11 }}>{d.choferes?.nombre || '?'}</span>
-                  {d.choferes?.autos?.nombre && <span style={{ fontSize: 11, color: '#888' }}>{d.choferes.autos.nombre}</span>}
+                  {d.choferes?.autos?.nombre && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.choferes.autos.nombre}</span>}
                   {d.saldado && <span style={{ fontSize: 10, color: '#10B981', fontWeight: 700, letterSpacing: 0.5 }}>SALDADO</span>}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{d.descripcion}</div>
-                <div style={{ fontSize: 11, color: '#888' }}>{d.fecha}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.fecha}</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: d.saldado ? '#555' : '#EF4444', marginBottom: 8 }}>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: d.saldado ? 'var(--text-dim)' : '#EF4444', marginBottom: 8 }}>
                   {fmt(parseFloat(d.monto))}
                 </div>
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
@@ -2451,7 +2451,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
               <span className="auto-tag tag-auto">{auto.nombre}</span>
               <button
                 onClick={() => setDeleteConfirm({ id: auto.id, nombre: auto.nombre })}
-                style={{ background: 'none', border: 'none', color: '#888', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
                 title="Eliminar auto"
               >🗑</button>
             </div>
@@ -2474,14 +2474,14 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
             <div className="stitle">VTV y Seguro</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 10, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
                 <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.vtv ?? (auto.vtv_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], vtv: e.target.value } }))}
                 />
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
                 <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.seguro ?? (auto.seguro_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], seguro: e.target.value } }))}
@@ -2511,9 +2511,9 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
                   </button>
                 </div>
               ) : (
-                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: '#161616', borderRadius: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14, color: '#ccc' }}>{c.nombre}</span>
-                  <button className="gasto-del-btn" style={{ color: '#aaa', background: '#1F1F26', borderColor: '#2A2A35' }}
+                <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-inner)', borderRadius: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, color: 'var(--text)' }}>{c.nombre}</span>
+                  <button className="gasto-del-btn" style={{ color: 'var(--text-sub)', background: 'var(--bg-input)', borderColor: 'var(--border)' }}
                     onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
                     ✎
                   </button>
@@ -2536,7 +2536,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
               </div>
             ) : (
               <button onClick={() => setShowNewChofer(auto.id)}
-                style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
                 + Agregar chofer
               </button>
             )}
@@ -2661,13 +2661,13 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
               <span className="auto-tag tag-auto">{auto.nombre}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {hayCambiar && <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444' }}>⚠ ATENCIÓN</span>}
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888' }}>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)' }}>
                   {kmsAct.toLocaleString('es-AR')} km
                 </span>
               </div>
             </div>
             {mant.length === 0 ? (
-              <div style={{ fontSize: 12, color: '#666', textAlign: 'center', padding: '6px 0' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-faint)', textAlign: 'center', padding: '6px 0' }}>
                 Sin items de mantenimiento asignados
               </div>
             ) : (
@@ -2739,16 +2739,16 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888', marginTop: 3 }}>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                         Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
                         {' · '}
-                        <span style={{ color: item.auto_id ? '#3F7DF5' : '#666' }}>
+                        <span style={{ color: item.auto_id ? '#3F7DF5' : 'var(--text-faint)' }}>
                           {item.auto_id ? (autoNombre(item.auto_id) || 'Auto específico') : 'Todos los autos'}
                         </span>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button className="gasto-del-btn" style={{ color: '#aaa', background: '#161616', borderColor: '#2A2A35' }}
+                      <button className="gasto-del-btn" style={{ color: 'var(--text-sub)', background: 'var(--bg-input)', borderColor: 'var(--border)' }}
                         onClick={() => { setEditingId(item.id); setEditForm({ nombre: item.nombre, frecuencia: String(item.frecuencia_kms), autoId: item.auto_id || null }) }}>
                         ✎
                       </button>
@@ -2957,11 +2957,11 @@ function AutosComparisonTab({ isDemoMode }) {
             {data.map((auto, ai) => (
               <div key={auto.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <div style={{ width: 10, height: 10, borderRadius: 3, background: AUTO_COLORS[ai % AUTO_COLORS.length] }} />
-                <span style={{ fontSize: 11, color: '#aaa', fontWeight: 600 }}>{auto.nombre}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-sub)', fontWeight: 600 }}>{auto.nombre}</span>
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
+          <div style={{ fontSize: 11, color: 'var(--text-faint)', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
         </div>
 
         <MultiLineChart data={data} metric={metric} />
@@ -2976,22 +2976,22 @@ function AutosComparisonTab({ isDemoMode }) {
           const delta = prev && prev[metric] > 0 ? Math.round((last[metric] - prev[metric]) / prev[metric] * 100) : null
           const margen = last.ingresos > 0 ? Math.round(last.neto / last.ingresos * 100) : 0
           return (
-            <div key={auto.id} style={{ flex: 1, background: '#0e0e0e', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
+            <div key={auto.id} style={{ flex: 1, background: 'var(--bg-dark)', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-sub)', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{fmt(last[metric])}</div>
-              <div style={{ fontSize: 11, color: '#666', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
               {delta !== null && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#10B981' : '#EF4444', marginBottom: 6 }}>
                   {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs mes ant.
                 </div>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #1F1F26', paddingTop: 8, marginTop: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: 8, marginTop: 4 }}>
                 <div>
-                  <div style={{ fontSize: 8, color: '#666', letterSpacing: 1 }}>GASTOS</div>
+                  <div style={{ fontSize: 8, color: 'var(--text-faint)', letterSpacing: 1 }}>GASTOS</div>
                   <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{fmt(last.gastos)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 8, color: '#666', letterSpacing: 1 }}>MARGEN</div>
+                  <div style={{ fontSize: 8, color: 'var(--text-faint)', letterSpacing: 1 }}>MARGEN</div>
                   <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: margen >= 50 ? '#10B981' : margen >= 25 ? '#F59E0B' : '#EF4444', marginTop: 2 }}>{margen}%</div>
                 </div>
               </div>
@@ -3075,9 +3075,9 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
   return (
     <div className="page">
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 18, background: '#0e0e0e', borderRadius: 12, padding: 4 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 18, background: 'var(--bg-dark)', borderRadius: 12, padding: 4 }}>
         {[['general', 'General'], ['autos', 'Por auto']].map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px', background: tab === id ? '#1a1a2e' : 'transparent', border: tab === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 9, color: tab === id ? '#3F7DF5' : '#444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: '9px', background: tab === id ? 'var(--bg-card)' : 'transparent', border: tab === id ? '1px solid #3F7DF533' : '1px solid transparent', borderRadius: 9, color: tab === id ? '#3F7DF5' : 'var(--text-muted)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", transition: 'all 0.2s' }}>
             {label}
           </button>
         ))}
@@ -3242,7 +3242,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
-                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{d.autoNombre}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{d.autoNombre}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     {d.diasDebe > 0 ? (
@@ -3260,8 +3260,8 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                   </div>
                 </div>
                 {d.ganTotal > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#3F7DF5' }}>{fmt(d.ganTotal)}</span>
                   </div>
                 )}
