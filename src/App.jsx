@@ -3050,7 +3050,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const curGastos = curMonth?.gastos || 0
             const progress = dayElapsed / daysInMonth
             const francoWeekday = resumen?.config?.franco_weekday ?? -1
-            // Contar días laborales transcurridos y restantes (excluye francos)
+            // Días laborales transcurridos y restantes (excluye francos)
             let workDaysElapsed = 0, workDaysRemaining = 0
             for (let d = 1; d <= daysInMonth; d++) {
               const dow = (new Date(now.getFullYear(), now.getMonth(), d).getDay() + 6) % 7
@@ -3058,8 +3058,17 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
               if (d <= dayElapsed) workDaysElapsed++
               else workDaysRemaining++
             }
+            // Promedio diario (solo para mostrar en tarjeta)
             const dailyAvgTurnos = workDaysElapsed > 0 ? curTurnos / workDaysElapsed : 0
-            // Deuda del mes actual: días vencidos que aún no pagaron (sin contar francos)
+            // Bruto que falta cobrar: turno_base × choferes por auto × días laborales restantes
+            let faltaFutura = 0
+            if (resumen?.autos) {
+              for (const auto of Object.values(resumen.autos)) {
+                const numChoferes = Object.keys(auto.deudas || {}).length
+                faltaFutura += numChoferes * (auto.turno_base || 0) * workDaysRemaining
+              }
+            }
+            // Deuda del mes: días vencidos sin pagar, sin contar francos
             const curMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
             let deudaMes = 0
             if (resumen?.autos) {
@@ -3076,7 +3085,6 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                 }
               }
             }
-            const faltaFutura = Math.round(dailyAvgTurnos * workDaysRemaining)
             const projTurnos = curTurnos + faltaFutura + deudaMes
             const projNeto = projTurnos - curGastos
             const mesActual = MESES[now.getMonth()]
