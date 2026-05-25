@@ -92,7 +92,7 @@ function BarChart({ data }) {
       <svg width={PAD_LEFT} height={totalH} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)', zIndex: 1 }}>
         {ticks.map(p => (
           <text key={p} x={PAD_LEFT - 5} y={PT + H - H * p + 4}
-            textAnchor="end" fill="#aaa" fontSize="10" fontWeight="600" fontFamily="'DM Mono',monospace">
+            textAnchor="end" style={{ fill: 'var(--text-sub)' }} fontSize="10" fontWeight="600" fontFamily="'DM Mono',monospace">
             {fmtY(niceMax * p)}
           </text>
         ))}
@@ -107,7 +107,7 @@ function BarChart({ data }) {
             {/* Grid horizontales */}
             {ticks.filter(p => p > 0).map(p => (
               <line key={p} x1="0" y1={PT + H - H * p} x2={totalW} y2={PT + H - H * p}
-                stroke={p === 1 ? '#23232E' : '#141414'} strokeWidth="1" />
+                style={{ stroke: p === 1 ? 'var(--border)' : 'var(--bg-inner)' }} strokeWidth="1" />
             ))}
             {(() => {
               // Puntos de los picos de neto para la curva suavizada
@@ -142,7 +142,7 @@ function BarChart({ data }) {
                         <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
                         <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
                         <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                        <text x={cx} y={PT + H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                        <text x={cx} y={PT + H + 16} textAnchor="middle" style={{ fill: 'var(--text-muted)' }} fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
                       </g>
                     )
                   })}
@@ -164,7 +164,7 @@ function BarChart({ data }) {
         {[['#10B981','Ganancias'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
-            <span style={{ fontSize: 10, color: '#888' }}>{label}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -387,12 +387,12 @@ function IllustDeudas() {
 // ── TUTORIAL OVERLAY ──────────────────────────────────────────────────────────
 const TUTORIAL_STEPS = [
   { color: '#3F7DF5', subtitle: 'Bienvenido a', title: 'Flota.', body: 'Todo lo que necesitás para gestionar tu flota de remises. Rápido, claro y desde el celular.', Illust: IllustWelcome },
-  { color: '#3F7DF5', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'De un vistazo: ganancias de la semana, neto del mes, qué autos están en turno y alertas de mantenimiento.', Illust: IllustResumen },
+  { color: '#3F7DF5', subtitle: 'Pestaña Resumen', title: 'El pulso de\ntu flota', body: 'De un vistazo: ganancias de la semana, neto del mes, qué autos están en turno y alertas de mantenimiento. Y en Análisis, proyecciones y gráficos de rentabilidad.', Illust: IllustResumen },
   { color: '#60AFFF', subtitle: 'Pestaña Calendario', title: 'Turnos\ndía a día', body: 'Tocás un día y registrás turno completo, parcial o franco. Todo queda guardado por auto y por chofer.', Illust: IllustCalendario },
-  { color: '#F59E0B', subtitle: 'Pestaña Gastos', title: 'Control de\ncostos real', body: 'Cargá combustible, seguros, multas y lo que sea. El neto del mes se calcula solo restando los gastos.', Illust: IllustGastos },
-  { color: '#10B981', subtitle: 'Pestaña Stats', title: 'Rentabilidad\na la vista', body: 'Analizá los últimos 6 meses de ingresos vs gastos, detectá tendencias y medí el margen real de tu negocio.', Illust: IllustStats },
+  { color: '#F59E0B', subtitle: 'Pestaña Flota', title: 'Control de\ncostos real', body: 'En Gastos cargás combustible, seguros, multas y mantenimiento. Marca y kms al día, todo en un solo lugar.', Illust: IllustGastos },
+  { color: '#10B981', subtitle: 'Análisis dentro de Resumen', title: 'Rentabilidad\na la vista', body: 'Analizá meses históricos de ingresos vs gastos, proyectá fin de mes y medí el margen real de tu negocio.', Illust: IllustStats },
   { color: '#8B5CF6', subtitle: 'Autos & Choferes', title: 'Tu flota\norganizada', body: 'Registrá cada auto con su historial de km y mantenimiento. Asigná choferes y controlá el estado de cada uno.', Illust: IllustAutos },
-  { color: '#EF4444', subtitle: 'Pestaña Deudas', title: 'Deudas de\nchoferes', body: 'Registrá adelantos, multas o gastos a cargo del chofer. Marcalos como saldados cuando te devuelvan el dinero.', Illust: IllustDeudas },
+  { color: '#EF4444', subtitle: 'Sección Deudas', title: 'Deudas de\nchoferes', body: 'En Flota → Deudas registrás adelantos, multas o gastos a cargo del chofer. Marcalos como saldados cuando te devuelvan el dinero.', Illust: IllustDeudas },
 ]
 
 function TutorialOverlay({ onDone }) {
@@ -2883,7 +2883,7 @@ function MultiLineChart({ data, metric }) {
             <line key={p}
               x1={PAD.left} x2={W - PAD.right}
               y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
-              stroke={p === 0 ? '#222' : '#141414'} strokeWidth={p === 0 ? 1.5 : 1} />
+              style={{ stroke: p === 0 ? 'var(--border)' : 'var(--bg-inner)' }} strokeWidth={p === 0 ? 1.5 : 1} />
           ))}
 
           {/* Líneas y áreas por auto */}
@@ -2899,7 +2899,7 @@ function MultiLineChart({ data, metric }) {
                   strokeLinecap="round" strokeLinejoin="round" />
                 {pts.map(([cx, cy], i) => (
                   <g key={i}>
-                    <circle cx={cx} cy={cy} r="5" fill="#000" />
+                    <circle cx={cx} cy={cy} r="5" style={{ fill: 'var(--bg-card)' }} />
                     <circle cx={cx} cy={cy} r="3.5" fill={color} />
                   </g>
                 ))}
@@ -2910,7 +2910,7 @@ function MultiLineChart({ data, metric }) {
           {/* X labels */}
           {data[0].monthly.map((m, i) => (
             <text key={i} x={X(i)} y={H - 4} textAnchor="middle"
-              fill="#777" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
+              style={{ fill: 'var(--text-muted)' }} fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
               {m.mes}
             </text>
           ))}
@@ -2922,7 +2922,7 @@ function MultiLineChart({ data, metric }) {
         style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)' }}>
         {[0, 0.5, 1].map(p => (
           <text key={p} x={PAD.left - 4} y={PAD.top + cH * (1 - p) + 3}
-            textAnchor="end" fill="#aaa" fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
+            textAnchor="end" style={{ fill: 'var(--text-sub)' }} fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
             {fmtY(niceMax * p)}
           </text>
         ))}
@@ -3153,18 +3153,18 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
               <div className="card" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Proyección {mesActual}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Proyección {mesActual}</div>
                     <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: projNeto >= 0 ? '#3F7DF5' : '#EF4444', marginTop: 3 }}>
                       {curTurnos > 0 ? fmt(projNeto) : '—'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Día {dayElapsed} / {daysInMonth}</div>
-                    <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{Math.round(progress * 100)}% del mes</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Día {dayElapsed} / {daysInMonth}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{Math.round(progress * 100)}% del mes</div>
                   </div>
                 </div>
                 {/* Barra de progreso */}
-                <div style={{ height: 4, background: '#1a1a2e', borderRadius: 2, marginBottom: 12, overflow: 'hidden' }}>
+                <div style={{ height: 4, background: 'var(--bg-inner)', borderRadius: 2, marginBottom: 12, overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: 'linear-gradient(90deg, #3F7DF5, #6C47FF)', borderRadius: 2 }} />
                 </div>
                 {/* Desglose 3 columnas */}
@@ -3175,12 +3175,12 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                     { label: 'Prom/día', actual: Math.round(dailyAvgTurnos), proy: null, color: '#10B981' },
                   ].map(({ label, actual, proy, color }) => (
                     <div key={label} style={{ background: 'var(--bg-dark)', borderRadius: 8, padding: '8px 10px' }}>
-                      <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
                       <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color, fontWeight: 600 }}>
                         {actual > 0 ? fmt(actual) : '—'}
                       </div>
                       {proy !== null && (
-                        <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 3 }}>
                           {actual > 0 ? `→ ${fmt(proy)}` : '—'}
                         </div>
                       )}
@@ -3189,8 +3189,8 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                 </div>
                 {/* Falta cobrar */}
                 {curTurnos > 0 && projTurnos > curTurnos && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Falta cobrar este mes</span>
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Falta cobrar este mes</span>
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>
                       {fmt(projTurnos - curTurnos)}
                     </span>
@@ -3203,8 +3203,8 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
           <div className="stitle">Rentabilidad mensual</div>
           <div className="card">
             {/* Neto total */}
-            <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #23232E' }}>
-              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ganancia total</div>
+            <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ganancia total</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#10B981' : '#EF4444', marginTop: 2 }}>
                 {fmt(totalGan - totalGas)}
               </div>
@@ -3212,19 +3212,19 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
             {/* Ingresos totales + Gastos totales */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. ganancias/mes</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. ganancias/mes</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#10B981' }}>
                   {monthlyData?.length ? fmt(Math.round((totalGan - totalGas) / monthlyData.length)) : '—'}
                 </div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Ingresos totales</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Ingresos totales</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. gastos/mes</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. gastos/mes</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>
                   {monthlyData?.length ? fmt(Math.round(totalGas / monthlyData.length)) : '—'}
                 </div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Gastos totales</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Gastos totales</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
             </div>

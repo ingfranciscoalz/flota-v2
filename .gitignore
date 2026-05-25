@@ -3,3 +3,10 @@ dist
 .env
 .env.local
 .env.*.local
+
+# Local-only directories (backups, APKs, credentials, scripts)
+OTROS/
+APK/
+.claude/
+twa/android-key.keystore
+public/icons/*.bak
