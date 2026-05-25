@@ -3200,20 +3200,20 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
             {/* Ingresos totales + Gastos totales */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ingresos totales</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Prom. neto/mes</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#10B981' }}>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. neto/mes</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#10B981' }}>
                   {monthlyData?.length ? fmt(Math.round((totalGan - totalGas) / monthlyData.length)) : '—'}
                 </div>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Ingresos totales</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Gastos totales</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Prom. gastos/mes</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#EF4444' }}>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. gastos/mes</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>
                   {monthlyData?.length ? fmt(Math.round(totalGas / monthlyData.length)) : '—'}
                 </div>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Gastos totales</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
             </div>
             <BarChart data={monthlyData} />
