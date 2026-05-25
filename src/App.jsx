@@ -109,22 +109,54 @@ function BarChart({ data }) {
               <line key={p} x1="0" y1={PT + H - H * p} x2={totalW} y2={PT + H - H * p}
                 stroke={p === 1 ? '#23232E' : '#141414'} strokeWidth="1" />
             ))}
-            {data.map((d, i) => {
-              const cx = i * SW + SW / 2
-              const neto = Math.max(d.turnos - d.gastos, 0)
-              const hT = Math.max((d.turnos / niceMax) * H, 2)
-              const hG = Math.max((d.gastos / niceMax) * H, 2)
-              const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
-              const label = MESES[d.mes - 1].slice(0, 3)
+            {(() => {
+              // Puntos de los picos de neto para la curva suavizada
+              const pts = data.map((d, i) => {
+                const cx = i * SW + SW / 2
+                const neto = Math.max(d.turnos - d.gastos, 0)
+                const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
+                return [cx, PT + H - hN]
+              })
+              // Genera path bezier cúbico suavizado
+              let smoothPath = ''
+              if (pts.length > 1) {
+                smoothPath = `M ${pts[0][0]} ${pts[0][1]}`
+                for (let i = 1; i < pts.length; i++) {
+                  const [x0, y0] = pts[i - 1]
+                  const [x1, y1] = pts[i]
+                  const cpX = (x0 + x1) / 2
+                  smoothPath += ` C ${cpX} ${y0} ${cpX} ${y1} ${x1} ${y1}`
+                }
+              }
               return (
-                <g key={d.key}>
-                  <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
-                  <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
-                  <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                  <text x={cx} y={PT + H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
-                </g>
+                <>
+                  {data.map((d, i) => {
+                    const cx = i * SW + SW / 2
+                    const neto = Math.max(d.turnos - d.gastos, 0)
+                    const hT = Math.max((d.turnos / niceMax) * H, 2)
+                    const hG = Math.max((d.gastos / niceMax) * H, 2)
+                    const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
+                    const label = MESES[d.mes - 1].slice(0, 3)
+                    return (
+                      <g key={d.key}>
+                        <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
+                        <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
+                        <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
+                        <text x={cx} y={PT + H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                      </g>
+                    )
+                  })}
+                  {/* Curva suavizada sobre picos de neto */}
+                  {smoothPath && (
+                    <path d={smoothPath} fill="none" stroke="#10B981" strokeWidth="1.5" strokeOpacity="0.6" strokeDasharray="4 2" />
+                  )}
+                  {/* Puntos en los picos */}
+                  {pts.map(([x, y], i) => (
+                    <circle key={i} cx={x} cy={y} r="2.5" fill="#10B981" opacity="0.8" />
+                  ))}
+                </>
               )
-            })}
+            })()}
           </svg>
         </div>
       </div>
@@ -3165,11 +3197,17 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                 {fmt(totalGan - totalGas)}
               </div>
             </div>
-            {/* Ingresos / Gastos abajo */}
+            {/* Ingresos / Gastos / Prom neto */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ingresos</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. neto/mes</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#10B981' }}>
+                  {monthlyData?.length ? fmt(Math.round((totalGan - totalGas) / monthlyData.length)) : '—'}
+                </div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Gastos</div>
