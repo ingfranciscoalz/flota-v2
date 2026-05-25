@@ -78,34 +78,55 @@ function BarChart({ data }) {
   const maxVal = Math.max(...data.flatMap(d => [d.turnos, d.gastos]), 1)
   const H = 110, BW = 10, GAP = 2, SW = 54
   const totalW = data.length * SW
+  const PAD_LEFT = 40
+
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
+  const niceMax = Math.ceil(maxVal / magnitude) * magnitude
+  const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
 
   return (
-    <div style={{ marginTop: 8 }}>
-      <div
-        ref={scrollRef}
-        style={{ overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-      >
-        <svg width={totalW} height={H + 28} style={{ display: 'block', overflow: 'visible' }}>
-          {data.map((d, i) => {
-            const cx = i * SW + SW / 2
-            const neto = Math.max(d.turnos - d.gastos, 0)
-            const hT = Math.max((d.turnos / maxVal) * H, 2)
-            const hG = Math.max((d.gastos / maxVal) * H, 2)
-            const hN = neto > 0 ? Math.max((neto / maxVal) * H, 2) : 0
-            const label = MESES[d.mes - 1].slice(0, 3)
-            return (
-              <g key={d.key}>
-                <rect x={cx - BW * 1.5 - GAP} y={H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
-                <rect x={cx - BW / 2}          y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
-                <rect x={cx + BW / 2 + GAP}    y={H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                <text x={cx} y={H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
-              </g>
-            )
-          })}
-          <line x1="0" y1={H} x2={totalW} y2={H} stroke="#23232E" strokeWidth="1" />
-        </svg>
+    <div style={{ marginTop: 8, position: 'relative' }}>
+      {/* Eje Y — overlay fijo */}
+      <svg width={PAD_LEFT} height={H + 28} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)', zIndex: 1 }}>
+        {[0, 0.5, 1].map(p => (
+          <text key={p} x={PAD_LEFT - 5} y={H - H * p + 4}
+            textAnchor="end" fill="#aaa" fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
+            {fmtY(niceMax * p)}
+          </text>
+        ))}
+      </svg>
+      {/* Gráfico scrolleable */}
+      <div style={{ paddingLeft: PAD_LEFT }}>
+        <div
+          ref={scrollRef}
+          style={{ overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
+        >
+          <svg width={totalW} height={H + 28} style={{ display: 'block', overflow: 'visible' }}>
+            {/* Grid horizontales */}
+            {[0.5, 1].map(p => (
+              <line key={p} x1="0" y1={H - H * p} x2={totalW} y2={H - H * p} stroke="#141414" strokeWidth="1" />
+            ))}
+            {data.map((d, i) => {
+              const cx = i * SW + SW / 2
+              const neto = Math.max(d.turnos - d.gastos, 0)
+              const hT = Math.max((d.turnos / niceMax) * H, 2)
+              const hG = Math.max((d.gastos / niceMax) * H, 2)
+              const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
+              const label = MESES[d.mes - 1].slice(0, 3)
+              return (
+                <g key={d.key}>
+                  <rect x={cx - BW * 1.5 - GAP} y={H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
+                  <rect x={cx - BW / 2}          y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
+                  <rect x={cx + BW / 2 + GAP}    y={H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
+                  <text x={cx} y={H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                </g>
+              )
+            })}
+            <line x1="0" y1={H} x2={totalW} y2={H} stroke="#23232E" strokeWidth="1" />
+          </svg>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: 14, marginTop: 4 }}>
+      <div style={{ paddingLeft: PAD_LEFT, display: 'flex', gap: 14, marginTop: 4 }}>
         {[['#10B981','Neto'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
@@ -3028,7 +3049,20 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const progress = dayElapsed / daysInMonth
             const dailyAvgTurnos = dayElapsed > 0 ? curTurnos / dayElapsed : 0
             const daysRemaining = daysInMonth - dayElapsed
-            const projTurnos = Math.round(curTurnos + dailyAvgTurnos * daysRemaining)
+            // Deuda del mes actual: días vencidos que aún no pagaron
+            const curMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+            let deudaMes = 0
+            if (resumen?.autos) {
+              for (const auto of Object.values(resumen.autos)) {
+                const tb = auto.turno_base || 0
+                for (const chofer of Object.values(auto.deudas || {})) {
+                  const diasMes = (chofer.dias || []).filter(d => d.startsWith(curMonthStr))
+                  deudaMes += diasMes.length * tb
+                }
+              }
+            }
+            const faltaFutura = Math.round(dailyAvgTurnos * daysRemaining)
+            const projTurnos = curTurnos + faltaFutura + deudaMes
             const projNeto = projTurnos - curGastos
             const mesActual = MESES[now.getMonth()]
             return (
