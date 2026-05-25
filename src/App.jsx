@@ -2855,7 +2855,7 @@ function MultiLineChart({ data, metric }) {
         style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)' }}>
         {[0, 0.5, 1].map(p => (
           <text key={p} x={PAD.left - 4} y={PAD.top + cH * (1 - p) + 3}
-            textAnchor="end" fill="#333" fontSize="8" fontFamily="'DM Mono',monospace">
+            textAnchor="end" fill="#aaa" fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
             {fmtY(niceMax * p)}
           </text>
         ))}
@@ -3027,10 +3027,9 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const curGastos = curMonth?.gastos || 0
             const progress = dayElapsed / daysInMonth
             const dailyAvgTurnos = dayElapsed > 0 ? curTurnos / dayElapsed : 0
-            const dailyAvgGastos = dayElapsed > 0 ? curGastos / dayElapsed : 0
-            const projTurnos = Math.round(dailyAvgTurnos * daysInMonth)
-            const projGastos = Math.round(dailyAvgGastos * daysInMonth)
-            const projNeto = projTurnos - projGastos
+            const daysRemaining = daysInMonth - dayElapsed
+            const projTurnos = Math.round(curTurnos + dailyAvgTurnos * daysRemaining)
+            const projNeto = projTurnos - curGastos
             const mesActual = MESES[now.getMonth()]
             return (
               <div className="card" style={{ marginBottom: 12 }}>
@@ -3054,7 +3053,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                   {[
                     { label: 'Recaudado', actual: curTurnos, proy: projTurnos, color: '#3F7DF5' },
-                    { label: 'Gastos', actual: curGastos, proy: projGastos, color: '#EF4444' },
+                    { label: 'Gastos', actual: curGastos, proy: null, color: '#EF4444' },
                     { label: 'Prom/día', actual: Math.round(dailyAvgTurnos), proy: null, color: '#10B981' },
                   ].map(({ label, actual, proy, color }) => (
                     <div key={label} style={{ background: 'var(--bg-dark)', borderRadius: 8, padding: '8px 10px' }}>
