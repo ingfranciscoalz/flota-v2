@@ -76,21 +76,23 @@ function BarChart({ data }) {
 
   if (!data || data.length === 0) return null
   const maxVal = Math.max(...data.flatMap(d => [d.turnos, d.gastos]), 1)
-  const H = 110, BW = 10, GAP = 2, SW = 54
+  const H = 140, PT = 16, BW = 10, GAP = 2, SW = 54
+  const totalH = PT + H + 28
   const totalW = data.length * SW
-  const PAD_LEFT = 40
+  const PAD_LEFT = 44
 
   const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
   const niceMax = Math.ceil(maxVal / magnitude) * magnitude
   const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
+  const ticks = [0, 0.25, 0.5, 0.75, 1]
 
   return (
     <div style={{ marginTop: 8, position: 'relative' }}>
       {/* Eje Y — overlay fijo */}
-      <svg width={PAD_LEFT} height={H + 28} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)', zIndex: 1 }}>
-        {[0, 0.5, 1].map(p => (
-          <text key={p} x={PAD_LEFT - 5} y={H - H * p + 4}
-            textAnchor="end" fill="#aaa" fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
+      <svg width={PAD_LEFT} height={totalH} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)', zIndex: 1 }}>
+        {ticks.map(p => (
+          <text key={p} x={PAD_LEFT - 5} y={PT + H - H * p + 4}
+            textAnchor="end" fill="#aaa" fontSize="10" fontWeight="600" fontFamily="'DM Mono',monospace">
             {fmtY(niceMax * p)}
           </text>
         ))}
@@ -101,10 +103,11 @@ function BarChart({ data }) {
           ref={scrollRef}
           style={{ overflowX: 'auto', overflowY: 'hidden', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none', scrollbarWidth: 'none' }}
         >
-          <svg width={totalW} height={H + 28} style={{ display: 'block', overflow: 'visible' }}>
+          <svg width={totalW} height={totalH} style={{ display: 'block', overflow: 'visible' }}>
             {/* Grid horizontales */}
-            {[0.5, 1].map(p => (
-              <line key={p} x1="0" y1={H - H * p} x2={totalW} y2={H - H * p} stroke="#141414" strokeWidth="1" />
+            {ticks.filter(p => p > 0).map(p => (
+              <line key={p} x1="0" y1={PT + H - H * p} x2={totalW} y2={PT + H - H * p}
+                stroke={p === 1 ? '#23232E' : '#141414'} strokeWidth="1" />
             ))}
             {data.map((d, i) => {
               const cx = i * SW + SW / 2
@@ -115,14 +118,13 @@ function BarChart({ data }) {
               const label = MESES[d.mes - 1].slice(0, 3)
               return (
                 <g key={d.key}>
-                  <rect x={cx - BW * 1.5 - GAP} y={H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
-                  <rect x={cx - BW / 2}          y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
-                  <rect x={cx + BW / 2 + GAP}    y={H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                  <text x={cx} y={H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                  <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
+                  <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
+                  <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
+                  <text x={cx} y={PT + H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
                 </g>
               )
             })}
-            <line x1="0" y1={H} x2={totalW} y2={H} stroke="#23232E" strokeWidth="1" />
           </svg>
         </div>
       </div>
@@ -3047,21 +3049,34 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const curTurnos = curMonth?.turnos || 0
             const curGastos = curMonth?.gastos || 0
             const progress = dayElapsed / daysInMonth
-            const dailyAvgTurnos = dayElapsed > 0 ? curTurnos / dayElapsed : 0
-            const daysRemaining = daysInMonth - dayElapsed
-            // Deuda del mes actual: días vencidos que aún no pagaron
+            const francoWeekday = resumen?.config?.franco_weekday ?? -1
+            // Contar días laborales transcurridos y restantes (excluye francos)
+            let workDaysElapsed = 0, workDaysRemaining = 0
+            for (let d = 1; d <= daysInMonth; d++) {
+              const dow = (new Date(now.getFullYear(), now.getMonth(), d).getDay() + 6) % 7
+              if (dow === francoWeekday) continue
+              if (d <= dayElapsed) workDaysElapsed++
+              else workDaysRemaining++
+            }
+            const dailyAvgTurnos = workDaysElapsed > 0 ? curTurnos / workDaysElapsed : 0
+            // Deuda del mes actual: días vencidos que aún no pagaron (sin contar francos)
             const curMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
             let deudaMes = 0
             if (resumen?.autos) {
               for (const auto of Object.values(resumen.autos)) {
                 const tb = auto.turno_base || 0
                 for (const chofer of Object.values(auto.deudas || {})) {
-                  const diasMes = (chofer.dias || []).filter(d => d.startsWith(curMonthStr))
+                  const diasMes = (chofer.dias || []).filter(ds => {
+                    if (!ds.startsWith(curMonthStr)) return false
+                    const day = parseInt(ds.split('-')[2], 10)
+                    const dow = (new Date(now.getFullYear(), now.getMonth(), day).getDay() + 6) % 7
+                    return dow !== francoWeekday
+                  })
                   deudaMes += diasMes.length * tb
                 }
               }
             }
-            const faltaFutura = Math.round(dailyAvgTurnos * daysRemaining)
+            const faltaFutura = Math.round(dailyAvgTurnos * workDaysRemaining)
             const projTurnos = curTurnos + faltaFutura + deudaMes
             const projNeto = projTurnos - curGastos
             const mesActual = MESES[now.getMonth()]
