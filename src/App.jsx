@@ -161,7 +161,7 @@ function BarChart({ data }) {
         </div>
       </div>
       <div style={{ paddingLeft: PAD_LEFT, display: 'flex', gap: 14, marginTop: 4 }}>
-        {[['#10B981','Neto'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
+        {[['#10B981','Ganancias'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
             <span style={{ fontSize: 10, color: '#888' }}>{label}</span>
@@ -3192,7 +3192,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
           <div className="card">
             {/* Neto total */}
             <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #23232E' }}>
-              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Neto total</div>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ganancia total</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#10B981' : '#EF4444', marginTop: 2 }}>
                 {fmt(totalGan - totalGas)}
               </div>
@@ -3200,7 +3200,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
             {/* Ingresos totales + Gastos totales */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. neto/mes</div>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. ganancias/mes</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#10B981' }}>
                   {monthlyData?.length ? fmt(Math.round((totalGan - totalGas) / monthlyData.length)) : '—'}
                 </div>
