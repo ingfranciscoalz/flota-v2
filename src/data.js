@@ -198,10 +198,11 @@ export async function getResumen(cfg = null) {
   const ayerStr = ayer.toISOString().split('T')[0]
   const lunesStr = getLunes(hoy)
 
-  const [cfgData, turnosRes, gastosRes, mantRes, kmsRes, francosRes] = await Promise.all([
+  const [cfgData, turnosRes, gastosRes, gastosHistRes, mantRes, kmsRes, francosRes] = await Promise.all([
     cfg ? Promise.resolve(cfg) : getConfig(),
     supabase.from('turnos').select('*, choferes(auto_id)').gte('fecha', inicioMes),
     supabase.from('gastos').select('*').gte('fecha', inicioMes),
+    supabase.from('gastos').select('auto_id, monto'),   // todos los gastos históricos
     supabase.from('mantenimiento').select('*'),
     supabase.from('kms').select('*'),
     supabase.from('francos').select('*').gte('fecha', inicioMes),
@@ -210,7 +211,14 @@ export async function getResumen(cfg = null) {
   const resolvedCfg = cfg ? cfgData : cfgData
   const turnos = turnosRes.data || []
   const gastos = gastosRes.data || []
+  const gastosHist = gastosHistRes.data || []
   const mantRealizados = mantRes.data || []
+
+  // Total histórico de gastos por auto
+  const gastosTotalMap = {}
+  for (const g of gastosHist) {
+    gastosTotalMap[g.auto_id] = (gastosTotalMap[g.auto_id] || 0) + parseFloat(g.monto)
+  }
   const kmsData = kmsRes.data || []
   const francosManuales = francosRes.data || []
 
@@ -278,6 +286,7 @@ export async function getResumen(cfg = null) {
       turno_base: autoTurnoBase,
       kms_actuales: kmsAct,
       kms_iniciales: kmsIni,
+      gastos_total: gastosTotalMap[auto.id] || 0,
       ganancias: {
         semana: ganSemana, mes: ganMes,
         gastos_semana: gastosSemana, gastos_mes: gastosMes,
