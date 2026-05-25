@@ -838,7 +838,6 @@ export default function App() {
   const navItems = [
     { id: 'resumen',    label: 'Resumen',    icon: <GridIcon /> },
     { id: 'calendario', label: 'Calendario', icon: <CalIcon /> },
-    { id: 'gastos',     label: 'Gastos',     icon: <MoneyIcon /> },
     { id: 'flota',      label: 'Flota',      icon: <FleetIcon /> },
     ...(!isDemoMode && profile?.is_admin ? [{ id: 'admin', label: 'Admin', icon: <AdminIcon /> }] : []),
   ]
@@ -923,7 +922,6 @@ export default function App() {
           </>
         )}
         {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) { loadCal(calYear, calMonth); loadResumen() } }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
-        {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
         {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
@@ -1968,7 +1966,7 @@ const GASTO_CATS = {
 }
 
 // ── GASTOS PAGE ───────────────────────────────────────────────────────────────
-function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
+function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
   const [tab, setTab] = useState('lista')
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
@@ -2015,7 +2013,7 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode }) {
   }
 
   return (
-    <div className="page">
+    <div className={embedded ? '' : 'page'}>
       <div className="tabs">
         <button className={`tab ${tab === 'lista' ? 'active' : ''}`} onClick={() => setTab('lista')}>Ver gastos</button>
         <button className={`tab ${tab === 'nuevo' ? 'active' : ''}`} onClick={() => setTab('nuevo')}>+ Agregar</button>
@@ -2136,10 +2134,12 @@ function FlotaPage({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade
     <div className="page">
       <div className="tabs">
         <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
+        <button className={`tab ${tab === 'gastos' ? 'active' : ''}`} onClick={() => setTab('gastos')}>Gastos</button>
         <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
         <button className={`tab ${tab === 'deudas' ? 'active' : ''}`} onClick={() => setTab('deudas')}>Deudas</button>
       </div>
       {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={onUpgrade} />}
+      {tab === 'gastos'  && <GastosPage resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} embedded />}
       {tab === 'mant'    && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
       {tab === 'deudas'  && <DeudasTab resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
     </div>
