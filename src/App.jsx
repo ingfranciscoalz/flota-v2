@@ -1720,7 +1720,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
         <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
       </div>
       <div className="cal-legend">
-        {[['#0A1A10','Completo'],['#2b2000','Parcial'],['#2b0d0d','Debe'],['#0d1a2b','Franco']].map(([bg,lbl]) => (
+        {[['#10B981','Completo'],['#F59E0B','Parcial'],['#EF4444','Debe'],['#60A5FA','Franco']].map(([bg,lbl]) => (
           <div key={lbl} className="leg-item"><div className="leg-dot" style={{ background: bg }} />{lbl}</div>
         ))}
       </div>
@@ -2027,7 +2027,7 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
           return (
             <div key={g.id} className="gasto-item">
               {/* Icono de categoría */}
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: cat.bg, border: `1px solid ${cat.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12, color: cat.color }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cat.color}22`, border: `1px solid ${cat.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12, color: cat.color }}>
                 <div style={{ width: 18, height: 18 }}>{cat.icon}</div>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -2074,7 +2074,7 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
               const sel = form.categoria === c
               return (
                 <button key={c} type="button" onClick={() => setForm(f => ({ ...f, categoria: c }))}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 8px', borderRadius: 12, border: `1px solid ${sel ? cat.color : 'var(--border)'}`, background: sel ? cat.bg : 'var(--bg-dark)', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 8px', borderRadius: 12, border: `1px solid ${sel ? cat.color : 'var(--border)'}`, background: sel ? `${cat.color}22` : 'var(--bg-dark)', cursor: 'pointer', transition: 'all 0.15s' }}>
                   <div style={{ width: 22, height: 22, color: cat.color }}>{cat.icon}</div>
                   <span style={{ fontSize: 10, fontWeight: 700, color: sel ? cat.color : 'var(--text-muted)', letterSpacing: 0.3 }}>{c.charAt(0).toUpperCase() + c.slice(1)}</span>
                 </button>
@@ -2083,7 +2083,7 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
           </div>
           <div className="stitle">Fecha</div>
           <div className="form-group">
-            <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} style={{ colorScheme: 'dark' }} />
+            <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
           </div>
           <button className="btn-primary" onClick={async () => {
             if (!form.auto_id) return showToast('Seleccioná un auto', 'error')
@@ -3532,6 +3532,34 @@ const globalStyles = `
     .modal-overlay{justify-content:center;align-items:flex-end}
     .modal-sheet{max-width:520px;width:100%;border-radius:20px 20px 0 0;border-left:1px solid var(--border);border-right:1px solid var(--border)}
   }
+
+  /* ── Light-mode overrides for hardcoded dark colors ─────────────────── */
+  [data-theme="light"] .tag-auto{background:#DBEAFE;color:#1E40AF;border-color:#93C5FD}
+  [data-theme="light"] .alert-banner{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+  [data-theme="light"] .alert-warn{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+  [data-theme="light"] .alert-danger{background:#FEF2F2;border-color:#FECACA;color:#991B1B}
+  [data-theme="light"] .total-value{color:#1D4ED8}
+  [data-theme="light"] .gan-value{color:#1D4ED8}
+  [data-theme="light"] .neto-row{background:#EFF6FF;border-color:#BFDBFE}
+  [data-theme="light"] .neto-label{color:#1E40AF}
+  [data-theme="light"] .neto-value{color:#1D4ED8}
+  [data-theme="light"] .ab-danger{background:#FEF2F2;color:#DC2626;border-color:#FECACA}
+  [data-theme="light"] .mbadge-ok{background:#DBEAFE;color:#1E40AF}
+  [data-theme="light"] .mbadge-cambiar{background:#FEE2E2;color:#991B1B}
+  [data-theme="light"] .day-cell.has-debe{border-color:#FCA5A5}
+  [data-theme="light"] .day-cell.all-franco{background:#EFF6FF;border-color:#BFDBFE}
+  [data-theme="light"] .pill-completo{background:#D1FAE5;color:#065F46}
+  [data-theme="light"] .pill-parcial{background:#FEF3C7;color:#92400E}
+  [data-theme="light"] .pill-debe{background:#FEE2E2;color:#991B1B}
+  [data-theme="light"] .pill-franco{background:#DBEAFE;color:#1E40AF}
+  [data-theme="light"] .eb-completo{background:#D1FAE5;color:#065F46}
+  [data-theme="light"] .eb-parcial{background:#FEF3C7;color:#92400E}
+  [data-theme="light"] .eb-debe{background:#FEE2E2;color:#991B1B}
+  [data-theme="light"] .eb-franco{background:#DBEAFE;color:#1E40AF}
+  [data-theme="light"] .ab-franco{background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE}
+  [data-theme="light"] .ab-quitar{background:#FFF7ED;color:#C2410C;border-color:#FED7AA}
+  [data-theme="light"] .gasto-del-btn{background:#FEF2F2;border-color:#FECACA;color:#EF4444}
+  [data-theme="light"] .radio-opt.sel{background:#EFF6FF;border-color:#3F7DF5}
 
   @media print {
     .no-print,.header,.bottom-nav,.toast,.kms-row,.sync-btn,.stitle,.tabs,.action-btn,.gasto-del-btn,.modal-overlay{display:none!important}
