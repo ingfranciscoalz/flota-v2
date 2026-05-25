@@ -2988,6 +2988,63 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
 
       {tab === 'general' && (
         <>
+          {/* ── Proyección fin de mes ── */}
+          {(() => {
+            const now = new Date()
+            const dayElapsed = now.getDate()
+            const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+            const curMonth = monthlyData?.[monthlyData.length - 1]
+            const curTurnos = curMonth?.turnos || 0
+            const curGastos = curMonth?.gastos || 0
+            const progress = dayElapsed / daysInMonth
+            const dailyAvgTurnos = dayElapsed > 0 ? curTurnos / dayElapsed : 0
+            const dailyAvgGastos = dayElapsed > 0 ? curGastos / dayElapsed : 0
+            const projTurnos = Math.round(dailyAvgTurnos * daysInMonth)
+            const projGastos = Math.round(dailyAvgGastos * daysInMonth)
+            const projNeto = projTurnos - projGastos
+            const mesActual = MESES[now.getMonth()]
+            return (
+              <div className="card" style={{ marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Proyección {mesActual}</div>
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: projNeto >= 0 ? '#3F7DF5' : '#EF4444', marginTop: 3 }}>
+                      {curTurnos > 0 ? fmt(projNeto) : '—'}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Día {dayElapsed} / {daysInMonth}</div>
+                    <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{Math.round(progress * 100)}% del mes</div>
+                  </div>
+                </div>
+                {/* Barra de progreso */}
+                <div style={{ height: 4, background: '#1a1a2e', borderRadius: 2, marginBottom: 12, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.round(progress * 100)}%`, background: 'linear-gradient(90deg, #3F7DF5, #6C47FF)', borderRadius: 2 }} />
+                </div>
+                {/* Desglose 3 columnas */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  {[
+                    { label: 'Recaudado', actual: curTurnos, proy: projTurnos, color: '#3F7DF5' },
+                    { label: 'Gastos', actual: curGastos, proy: projGastos, color: '#EF4444' },
+                    { label: 'Prom/día', actual: Math.round(dailyAvgTurnos), proy: null, color: '#10B981' },
+                  ].map(({ label, actual, proy, color }) => (
+                    <div key={label} style={{ background: 'var(--bg-dark)', borderRadius: 8, padding: '8px 10px' }}>
+                      <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color, fontWeight: 600 }}>
+                        {actual > 0 ? fmt(actual) : '—'}
+                      </div>
+                      {proy !== null && (
+                        <div style={{ fontSize: 9, color: '#444', marginTop: 3 }}>
+                          {actual > 0 ? `→ ${fmt(proy)}` : '—'}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+
           <div className="stitle">Rentabilidad mensual</div>
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
