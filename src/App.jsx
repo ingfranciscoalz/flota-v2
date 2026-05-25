@@ -877,10 +877,10 @@ export default function App() {
 
       <div key={page} className="page-anim">
         {page === 'resumen'    && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
-        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) loadCal(calYear, calMonth) }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
+        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) { loadCal(calYear, calMonth); loadResumen() } }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
         {page === 'gastos'     && <GastosPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} />}
         {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
-        {page === 'stats'      && <StatsPage resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
+        {page === 'stats'      && <StatsPage resumen={resumen} cal={cal} calYear={calYear} calMonth={calMonth} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
 
@@ -2959,7 +2959,7 @@ function AutosComparisonTab({ isDemoMode }) {
   )
 }
 
-function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
+function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isPro, onUpgrade }) {
   const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
   const [deuda, setDeuda] = useState(null)
@@ -2986,7 +2986,8 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
       }
     }
     load()
-  }, [isDemoMode])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoMode, resumen])
 
   if (loading) return <div className="loading"><div className="spinner" /></div>
 
@@ -3049,42 +3050,58 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             const curTurnos = curMonth?.turnos || 0
             const curGastos = curMonth?.gastos || 0
             const progress = dayElapsed / daysInMonth
+            const nowYear = now.getFullYear()
+            const nowMonth = now.getMonth() + 1
+            const curMonthStr = `${nowYear}-${String(nowMonth).padStart(2, '0')}`
             const francoWeekday = resumen?.config?.franco_weekday ?? -1
-            // Días laborales: transcurridos (antes de hoy) y restantes (hoy inclusive)
-            let workDaysElapsed = 0, workDaysRemaining = 0
-            for (let d = 1; d <= daysInMonth; d++) {
-              const dow = (new Date(now.getFullYear(), now.getMonth(), d).getDay() + 6) % 7
-              if (dow === francoWeekday) continue
-              if (d < dayElapsed) workDaysElapsed++
-              else workDaysRemaining++ // hoy + días futuros
-            }
-            // Promedio diario (solo para mostrar en tarjeta)
-            const dailyAvgTurnos = workDaysElapsed > 0 ? curTurnos / workDaysElapsed : 0
-            // Bruto que falta cobrar: turno_base × choferes por auto × días laborales restantes
-            let faltaFutura = 0
-            if (resumen?.autos) {
-              for (const auto of Object.values(resumen.autos)) {
-                const numChoferes = Object.keys(auto.deudas || {}).length
-                faltaFutura += numChoferes * (auto.turno_base || 0) * workDaysRemaining
+            const calIsCurrentMonth = cal && calYear === nowYear && calMonth === nowMonth
+
+            let faltaFutura = 0, deudaMes = 0
+
+            if (calIsCurrentMonth && resumen?.autos) {
+              // Usa cal: estado exacto por chofer/día (pago parcial, franco manual, hoy)
+              for (const [autoId, autoData] of Object.entries(resumen.autos)) {
+                const tb = autoData.turno_base || 0
+                const calAuto = cal[autoId]
+                if (!calAuto) continue
+                for (const [ds, dayInfo] of Object.entries(calAuto.dias || {})) {
+                  if (!ds.startsWith(curMonthStr)) continue
+                  const dayNum = parseInt(ds.split('-')[2], 10)
+                  for (const choferInfo of Object.values(dayInfo)) {
+                    if (choferInfo.estado === 'futuro' && dayNum >= dayElapsed) {
+                      faltaFutura += tb   // hoy sin cobrar + días futuros no franco
+                    } else if (choferInfo.estado === 'debe') {
+                      deudaMes += tb      // días pasados sin pagar
+                    }
+                  }
+                }
               }
-            }
-            // Deuda del mes: días vencidos sin pagar, sin contar francos
-            const curMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-            let deudaMes = 0
-            if (resumen?.autos) {
-              for (const auto of Object.values(resumen.autos)) {
-                const tb = auto.turno_base || 0
-                for (const chofer of Object.values(auto.deudas || {})) {
-                  const diasMes = (chofer.dias || []).filter(ds => {
-                    if (!ds.startsWith(curMonthStr)) return false
-                    const day = parseInt(ds.split('-')[2], 10)
-                    const dow = (new Date(now.getFullYear(), now.getMonth(), day).getDay() + 6) % 7
-                    return dow !== francoWeekday
-                  })
-                  deudaMes += diasMes.length * tb
+            } else {
+              // Fallback bruto: turno_base × choferes × días laborales restantes (sin francos semanales)
+              let workDaysElapsed = 0, workDaysRemaining = 0
+              for (let d = 1; d <= daysInMonth; d++) {
+                const dow = (new Date(nowYear, nowMonth - 1, d).getDay() + 6) % 7
+                if (dow === francoWeekday) continue
+                if (d < dayElapsed) workDaysElapsed++
+                else workDaysRemaining++
+              }
+              if (resumen?.autos) {
+                for (const auto of Object.values(resumen.autos)) {
+                  faltaFutura += Object.keys(auto.deudas || {}).length * (auto.turno_base || 0) * workDaysRemaining
+                  for (const chofer of Object.values(auto.deudas || {})) {
+                    deudaMes += (chofer.dias || []).filter(ds => ds.startsWith(curMonthStr)).length * (auto.turno_base || 0)
+                  }
                 }
               }
             }
+
+            // Promedio diario basado en días laborales pasados (para mostrar en tarjeta)
+            let workDaysElapsedForAvg = 0
+            for (let d = 1; d < dayElapsed; d++) {
+              const dow = (new Date(nowYear, nowMonth - 1, d).getDay() + 6) % 7
+              if (dow !== francoWeekday) workDaysElapsedForAvg++
+            }
+            const dailyAvgTurnos = workDaysElapsedForAvg > 0 ? curTurnos / workDaysElapsedForAvg : 0
             const projTurnos = curTurnos + faltaFutura + deudaMes
             const projNeto = projTurnos - curGastos
             const mesActual = MESES[now.getMonth()]
