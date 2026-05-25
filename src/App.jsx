@@ -98,7 +98,7 @@ function BarChart({ data }) {
                 <rect x={cx - BW * 1.5 - GAP} y={H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
                 <rect x={cx - BW / 2}          y={H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
                 <rect x={cx + BW / 2 + GAP}    y={H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                <text x={cx} y={H + 16} textAnchor="middle" fill="#555" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                <text x={cx} y={H + 16} textAnchor="middle" fill="#888" fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
               </g>
             )
           })}
@@ -109,7 +109,7 @@ function BarChart({ data }) {
         {[['#10B981','Neto'], ['#3F7DF5','Ingresos'], ['#EF4444','Gastos']].map(([color, label]) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
-            <span style={{ fontSize: 10, color: '#555' }}>{label}</span>
+            <span style={{ fontSize: 10, color: '#888' }}>{label}</span>
           </div>
         ))}
       </div>
@@ -124,10 +124,10 @@ function IllustWelcome() {
       <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 58, fontWeight: 800, letterSpacing: -3, color: '#fff', lineHeight: 1 }}>
         Flota<span style={{ color: '#3F7DF5' }}>.</span>
       </div>
-      <div style={{ color: '#333', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE REMISES</div>
+      <div style={{ color: '#666', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE REMISES</div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 28 }}>
         {['$312k', '6 autos', '4 choferes'].map((t, i) => (
-          <div key={i} style={{ background: '#15151B', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#555', fontWeight: 700 }}>{t}</div>
+          <div key={i} style={{ background: '#15151B', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#888', fontWeight: 700 }}>{t}</div>
         ))}
       </div>
     </div>
@@ -139,21 +139,21 @@ function IllustResumen() {
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', gap: 8 }}>
         <div style={{ flex: 1, background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
-          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTA SEMANA</div>
+          <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTA SEMANA</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$84.500</div>
           <div style={{ fontSize: 11, color: '#10B981', marginTop: 4, fontWeight: 600 }}>▲ 12% vs semana anterior</div>
         </div>
         <div style={{ flex: 1, background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
-          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTE MES</div>
+          <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>ESTE MES</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>$312k</div>
           <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 4, fontWeight: 600 }}>neto $218.400</div>
         </div>
       </div>
       <div style={{ background: '#15151B', borderRadius: 14, padding: '12px 14px', border: '1px solid #1e1e2e' }}>
-        <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, marginBottom: 8 }}>AUTOS EN TURNO HOY</div>
+        <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, marginBottom: 8 }}>AUTOS EN TURNO HOY</div>
         <div style={{ display: 'flex', gap: 6 }}>
           {['Corolla','Gol','Logan','Sandero'].map((a, i) => (
-            <div key={i} style={{ flex: 1, background: i < 3 ? '#3F7DF518' : '#1F1F26', borderRadius: 8, padding: '6px 4px', textAlign: 'center', fontSize: 9, color: i < 3 ? '#3F7DF5' : '#333', fontWeight: 700, border: `1px solid ${i < 3 ? '#3F7DF533' : '#222'}` }}>{a}</div>
+            <div key={i} style={{ flex: 1, background: i < 3 ? '#3F7DF518' : '#1F1F26', borderRadius: 8, padding: '6px 4px', textAlign: 'center', fontSize: 11, color: i < 3 ? '#3F7DF5' : '#333', fontWeight: 700, border: `1px solid ${i < 3 ? '#3F7DF533' : '#222'}` }}>{a}</div>
           ))}
         </div>
       </div>
@@ -161,7 +161,7 @@ function IllustResumen() {
         <div style={{ fontSize: 20 }}>🔧</div>
         <div>
           <div style={{ fontSize: 11, color: '#F59E0B', fontWeight: 700 }}>SERVICE PRÓXIMO</div>
-          <div style={{ fontSize: 11, color: '#555', marginTop: 1 }}>Toyota Corolla · faltan 500 km</div>
+          <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Toyota Corolla · faltan 500 km</div>
         </div>
       </div>
     </div>
@@ -181,15 +181,15 @@ function IllustCalendario() {
     <div style={{ width: 260 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: '#fff' }}>Mayo 2025</div>
-        <div style={{ display: 'flex', gap: 16, fontSize: 16, color: '#444' }}><span>‹</span><span style={{ color: '#fff' }}>›</span></div>
+        <div style={{ display: 'flex', gap: 16, fontSize: 16, color: '#666' }}><span>‹</span><span style={{ color: '#fff' }}>›</span></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 4 }}>
-        {days.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 9, color: '#333', fontWeight: 700, paddingBottom: 4 }}>{d}</div>)}
+        {days.map((d, i) => <div key={i} style={{ textAlign: 'center', fontSize: 11, color: '#666', fontWeight: 700, paddingBottom: 4 }}>{d}</div>)}
       </div>
       {grid.map((row, ri) => (
         <div key={ri} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 3, marginBottom: 3 }}>
           {row.map((color, ci) => (
-            <div key={ci} style={{ aspectRatio: '1', borderRadius: 7, background: color || '#0e0e0e', border: `1px solid ${color ? color + '44' : '#181818'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: color ? '#fff' : '#2A2A35', fontWeight: 600 }}>
+            <div key={ci} style={{ aspectRatio: '1', borderRadius: 7, background: color || '#0e0e0e', border: `1px solid ${color ? color + '44' : '#181818'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: color ? '#fff' : '#2A2A35', fontWeight: 600 }}>
               {labels[ri][ci] || ''}
             </div>
           ))}
@@ -197,7 +197,7 @@ function IllustCalendario() {
       ))}
       <div style={{ display: 'flex', gap: 16, marginTop: 10, justifyContent: 'center' }}>
         {[['#3F7DF5','Turno completo'],['#10B981','Franco']].map(([c,l]) => (
-          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#555' }}>
+          <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#888' }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: c }} />{l}
           </div>
         ))}
@@ -219,15 +219,15 @@ function IllustGastos() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: item.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{item.icon}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{item.label}</div>
-            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{item.sub}</div>
+            <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{item.sub}</div>
           </div>
           <div style={{ fontSize: 13, fontWeight: 700, color: item.color, flexShrink: 0 }}>{item.amount}</div>
         </div>
       ))}
       <div style={{ background: '#0D1F0D', border: '1px solid #10B98133', borderRadius: 12, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 9, color: '#10B981', fontWeight: 700, letterSpacing: 1.5 }}>NETO DEL MES</div>
-          <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>ingresos $312k − gastos $93.6k</div>
+          <div style={{ fontSize: 11, color: '#10B981', fontWeight: 700, letterSpacing: 1.2 }}>NETO DEL MES</div>
+          <div style={{ fontSize: 10, color: '#888', marginTop: 2 }}>ingresos $312k − gastos $93.6k</div>
         </div>
         <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>$218.400</div>
       </div>
@@ -241,10 +241,10 @@ function IllustStats() {
   return (
     <div style={{ width: 270 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1.5 }}>ÚLTIMOS 6 MESES</div>
+        <div style={{ fontSize: 11, color: '#666', fontWeight: 700, letterSpacing: 1.2 }}>ÚLTIMOS 6 MESES</div>
         <div style={{ display: 'flex', gap: 10 }}>
           {[['#3F7DF5','Ingresos'],['#F59E0B','Gastos']].map(([c,l]) => (
-            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#555' }}>
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#888' }}>
               <div style={{ width: 7, height: 7, borderRadius: 2, background: c }} />{l}
             </div>
           ))}
@@ -263,11 +263,11 @@ function IllustStats() {
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         <div style={{ flex: 1, background: '#15151B', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
-          <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>TOTAL INGRESOS</div>
+          <div style={{ fontSize: 11, color: '#666', fontWeight: 700, letterSpacing: 1 }}>TOTAL INGRESOS</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: '#3F7DF5', marginTop: 4 }}>$487k</div>
         </div>
         <div style={{ flex: 1, background: '#15151B', borderRadius: 12, padding: '10px 12px', border: '1px solid #1e1e1e' }}>
-          <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1 }}>MARGEN NETO</div>
+          <div style={{ fontSize: 11, color: '#666', fontWeight: 700, letterSpacing: 1 }}>MARGEN NETO</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: '#10B981', marginTop: 4 }}>35.4%</div>
         </div>
       </div>
@@ -279,7 +279,7 @@ function IllustAutos() {
   const autos = [
     { nombre: 'Toyota Corolla', patente: 'AB 123 CD', chofer: 'Juan Pérez', color: '#3F7DF5', km: '87.420 km', ok: true },
     { nombre: 'VW Gol', patente: 'EF 456 GH', chofer: 'Carlos López', color: '#10B981', km: '124.800 km', ok: true },
-    { nombre: 'Renault Logan', patente: 'IJ 789 KL', chofer: 'Sin asignar', color: '#333', km: '203.100 km', ok: false },
+    { nombre: 'Renault Logan', patente: 'IJ 789 KL', chofer: 'Sin asignar', color: '#666', km: '203.100 km', ok: false },
   ]
   return (
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
@@ -288,11 +288,11 @@ function IllustAutos() {
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#ddd' }}>{a.nombre}</div>
-              {!a.ok && <div style={{ fontSize: 9, background: '#F59E0B22', color: '#F59E0B', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>SERVICE</div>}
+              {!a.ok && <div style={{ fontSize: 11, background: '#F59E0B22', color: '#F59E0B', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>SERVICE</div>}
             </div>
-            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{a.patente} · {a.chofer}</div>
+            <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{a.patente} · {a.chofer}</div>
           </div>
-          <div style={{ fontSize: 10, color: '#333', fontWeight: 600 }}>{a.km}</div>
+          <div style={{ fontSize: 10, color: '#666', fontWeight: 600 }}>{a.km}</div>
         </div>
       ))}
     </div>
@@ -308,19 +308,19 @@ function IllustDeudas() {
   return (
     <div style={{ width: 270, display: 'flex', flexDirection: 'column', gap: 7 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <div style={{ fontSize: 9, color: '#444', fontWeight: 700, letterSpacing: 1.5 }}>DEUDAS DE CHOFERES</div>
-        <div style={{ fontSize: 9, background: '#EF444422', color: '#EF4444', borderRadius: 6, padding: '3px 8px', fontWeight: 700 }}>TOTAL $23.500</div>
+        <div style={{ fontSize: 11, color: '#666', fontWeight: 700, letterSpacing: 1.2 }}>DEUDAS DE CHOFERES</div>
+        <div style={{ fontSize: 11, background: '#EF444422', color: '#EF4444', borderRadius: 6, padding: '3px 8px', fontWeight: 700 }}>TOTAL $23.500</div>
       </div>
       {deudas.map((d, i) => (
         <div key={i} style={{ background: '#15151B', borderRadius: 12, padding: '11px 13px', display: 'flex', alignItems: 'center', gap: 11, border: '1px solid #1e1e1e', opacity: d.pending ? 1 : 0.45 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#ddd' }}>{d.chofer}</div>
-              <div style={{ fontSize: 9, background: d.pending ? '#EF444422' : '#10B98122', color: d.pending ? '#EF4444' : '#10B981', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>
+              <div style={{ fontSize: 11, background: d.pending ? '#EF444422' : '#10B98122', color: d.pending ? '#EF4444' : '#10B981', borderRadius: 5, padding: '2px 6px', fontWeight: 700 }}>
                 {d.pending ? 'PENDIENTE' : 'SALDADO'}
               </div>
             </div>
-            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>{d.desc}</div>
+            <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>{d.desc}</div>
           </div>
           <div style={{ fontSize: 14, fontWeight: 800, color: d.pending ? '#EF4444' : '#444' }}>{d.monto}</div>
         </div>
@@ -386,7 +386,7 @@ function TutorialOverlay({ onDone }) {
         <div key={animKey + 'txt'} className={dir >= 0 ? 'tsr' : 'tsl'}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2.5, textTransform: 'uppercase', color: s.color, marginBottom: 6 }}>{s.subtitle}</div>
           <div style={{ fontSize: 26, fontWeight: 800, fontFamily: "'Syne',sans-serif", letterSpacing: -0.8, lineHeight: 1.2, marginBottom: 9, whiteSpace: 'pre-line' }}>{s.title}</div>
-          <div style={{ fontSize: 14, color: '#555', lineHeight: 1.65, marginBottom: 20 }}>{s.body}</div>
+          <div style={{ fontSize: 14, color: '#888', lineHeight: 1.65, marginBottom: 20 }}>{s.body}</div>
         </div>
 
         <button
@@ -835,8 +835,8 @@ export default function App() {
           {/* Plan badge */}
           {!isDemoMode && (
             isPro
-              ? <span style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', background: '#071F0F', border: '1px solid #10B98144', borderRadius: 100, color: '#10B981', letterSpacing: 0.5 }}>PRO</span>
-              : <button onClick={() => setShowUpgradeModal(true)} style={{ fontSize: 9, fontWeight: 800, padding: '3px 8px', background: 'var(--bg-inner)', border: '1px solid #3F7DF544', borderRadius: 100, color: '#3F7DF5', cursor: 'pointer', letterSpacing: 0.5 }}>FREE ↑</button>
+              ? <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 8px', background: '#071F0F', border: '1px solid #10B98144', borderRadius: 100, color: '#10B981', letterSpacing: 0.5 }}>PRO</span>
+              : <button onClick={() => setShowUpgradeModal(true)} style={{ fontSize: 11, fontWeight: 800, padding: '3px 8px', background: 'var(--bg-inner)', border: '1px solid #3F7DF544', borderRadius: 100, color: '#3F7DF5', cursor: 'pointer', letterSpacing: 0.5 }}>FREE ↑</button>
           )}
           {/* Theme toggle */}
           <button
@@ -984,11 +984,11 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
         </div>
 
         <div style={{ background: '#111', border: '1px solid #1F1F26', borderRadius: 16, padding: '24px 28px', width: '100%', marginBottom: 28 }}>
-          <div style={{ fontSize: 12, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Plan mensual</div>
+          <div style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 8 }}>Plan mensual</div>
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 38, fontWeight: 800, color: '#F4F4F8', marginBottom: 4 }}>
             $5.000
           </div>
-          <div style={{ fontSize: 13, color: '#555' }}>ARS / mes</div>
+          <div style={{ fontSize: 13, color: '#888' }}>ARS / mes</div>
         </div>
 
         <button
@@ -1002,7 +1002,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
 
         <button
           onClick={onSubscribed}
-          style={{ background: 'none', border: 'none', color: '#444', fontSize: 12, cursor: 'pointer', marginBottom: 8, padding: '4px 8px' }}
+          style={{ background: 'none', border: 'none', color: '#666', fontSize: 12, cursor: 'pointer', marginBottom: 8, padding: '4px 8px' }}
         >
           Ya pagué — verificar acceso
         </button>
@@ -1010,7 +1010,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
 
       <button
         onClick={onSignOut}
-        style={{ background: 'none', border: 'none', color: '#444', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', marginTop: 'auto', paddingTop: 24 }}
+        style={{ background: 'none', border: 'none', color: '#666', fontSize: 12, cursor: 'pointer', textDecoration: 'underline', marginTop: 'auto', paddingTop: 24 }}
       >
         Cerrar sesión
       </button>
@@ -1077,7 +1077,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
           </div>
         </div>
       )}
-      <p style={{ color: '#555', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
+      <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
 
       <div className="tabs" style={{ marginBottom: 20 }}>
         <button className={`tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setSuccess('') }}>Ingresar</button>
@@ -1104,7 +1104,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
       {/* Separador */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
         <div style={{ flex: 1, height: 1, background: '#1F1F26' }} />
-        <span style={{ fontSize: 11, color: '#444', textTransform: 'uppercase', letterSpacing: 1.5 }}>o</span>
+        <span style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1.2 }}>o</span>
         <div style={{ flex: 1, height: 1, background: '#1F1F26' }} />
       </div>
 
@@ -1123,14 +1123,14 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
       </button>
 
       <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1F1F26' }}>
-        <div style={{ fontSize: 11, color: '#444', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.5 }}>¿Querés ver cómo funciona?</div>
+        <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 }}>¿Querés ver cómo funciona?</div>
         <button
           style={{ width: '100%', padding: '14px', background: '#0B1A3A', color: '#3F7DF5', border: '1px solid #1A2B5C', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
           onClick={onEnterDemo}
         >
           PROBAR DEMO
         </button>
-        <div style={{ fontSize: 11, color: '#333', textAlign: 'center', marginTop: 8 }}>
+        <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 8 }}>
           Sin registro. Solo para explorar la app.
         </div>
       </div>
@@ -1148,7 +1148,7 @@ function InactiveScreen({ reason, onRefresh, onSignOut }) {
       <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, marginBottom: 10 }}>
         {expired ? 'Pago pendiente' : 'Cuenta pendiente'}
       </div>
-      <div style={{ color: '#555', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
+      <div style={{ color: '#888', fontSize: 14, lineHeight: 1.6, marginBottom: 36 }}>
         {expired
           ? <>Tu suscripción venció.<br />Realizá el pago para continuar usando la app.</>
           : <>Tu cuenta está esperando activación.<br />Contactá al administrador para habilitarla.</>
@@ -1231,14 +1231,14 @@ function OnboardingScreen({ showToast, onComplete }) {
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
               Configurá tu flota
             </h2>
-            <p style={{ color: '#555', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
+            <p style={{ color: '#888', fontSize: 14, marginBottom: 28, lineHeight: 1.6 }}>
               Estos son los valores por defecto para registrar turnos. Podés cambiarlos después.
             </p>
             <div className="form-label">Valor del turno base ($)</div>
             <div className="form-group">
               <input className="form-input" type="number" inputMode="numeric" placeholder="Ej: 50000"
                 value={turnoBase} onChange={e => setTurnoBase(e.target.value)} autoFocus />
-              <div style={{ fontSize: 11, color: '#444', marginTop: 6, paddingLeft: 4 }}>El monto que cobra un chofer en un turno completo</div>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 6, paddingLeft: 4 }}>El monto que cobra un chofer en un turno completo</div>
             </div>
             <div className="form-label" style={{ marginTop: 20 }}>Día de franco semanal</div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -1259,7 +1259,7 @@ function OnboardingScreen({ showToast, onComplete }) {
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
               ¿Qué autos tenés?
             </h2>
-            <p style={{ color: '#555', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: '#888', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
               Podés agregar más autos después. Poné un nombre que los identifique fácil.
             </p>
             {autos.map((auto, ai) => (
@@ -1284,7 +1284,7 @@ function OnboardingScreen({ showToast, onComplete }) {
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 6 }}>
               ¿Quiénes manejan?
             </h2>
-            <p style={{ color: '#555', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ color: '#888', fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
               Asigná los choferes a cada auto. Un auto puede tener varios.
             </p>
             {autos.map((auto, ai) => (
@@ -1316,7 +1316,7 @@ function OnboardingScreen({ showToast, onComplete }) {
             <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, marginBottom: 10 }}>
               Todo listo
             </h2>
-            <p style={{ color: '#555', fontSize: 14, lineHeight: 1.7, maxWidth: 300, marginBottom: 32 }}>
+            <p style={{ color: '#888', fontSize: 14, lineHeight: 1.7, maxWidth: 300, marginBottom: 32 }}>
               Tu flota está configurada con <strong style={{ color: '#F4F4F8' }}>{autos.filter(a => a.nombre.trim()).length} auto{autos.filter(a => a.nombre.trim()).length !== 1 ? 's' : ''}</strong> y sus choferes.
               Podés empezar a registrar turnos desde hoy.
             </p>
@@ -1326,7 +1326,7 @@ function OnboardingScreen({ showToast, onComplete }) {
                   <span style={{ fontSize: 14 }}>🚗</span>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{a.nombre}</div>
-                    <div style={{ fontSize: 11, color: '#555', marginTop: 1 }}>{a.choferes.filter(c => c.trim()).join(' · ')}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 1 }}>{a.choferes.filter(c => c.trim()).join(' · ')}</div>
                   </div>
                 </div>
               ))}
@@ -1398,19 +1398,19 @@ function AdminScreen({ showToast }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-all' }}>{u.nombre}</div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 11, color: '#555' }}>
+                    <span style={{ fontSize: 11, color: '#888' }}>
                       Registro: {new Date(u.created_at).toLocaleDateString('es-AR')}
                     </span>
                     {u.is_admin && <span style={{ fontSize: 10, background: '#1a1a00', color: '#e8ff47', border: '1px solid #3a3a00', borderRadius: 4, padding: '1px 6px' }}>Admin</span>}
                   </div>
                   {dias !== null && (
                     <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: '#555' }}>Vence:</span>
+                      <span style={{ fontSize: 11, color: '#888' }}>Vence:</span>
                       <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: diasColor }}>
                         {expirado ? 'VENCIDO' : `${dias} día${dias !== 1 ? 's' : ''}`}
                       </span>
                       {u.activo_hasta && (
-                        <span style={{ fontSize: 10, color: '#555' }}>
+                        <span style={{ fontSize: 10, color: '#888' }}>
                           ({new Date(u.activo_hasta).toLocaleDateString('es-AR')})
                         </span>
                       )}
@@ -1512,7 +1512,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
       {/* Botón PDF */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
         <button onClick={() => window.print()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #23232E', borderRadius: 10, color: '#555', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#111', border: '1px solid #23232E', borderRadius: 10, color: '#888', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
           ↓ Exportar PDF
         </button>
       </div>
@@ -1533,13 +1533,13 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
         <div style={{ flex: 1 }}>
           <div className="total-label">Esta semana</div>
           <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
-          <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
+          <div style={{ fontSize: 10, color: '#666', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
         </div>
         <div style={{ width: 1, background: '#2E2E3B', alignSelf: 'stretch', margin: '0 18px' }} />
         <div style={{ flex: 1, textAlign: 'right' }}>
           <div className="total-label">Este mes</div>
           <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
-          <div style={{ fontSize: 10, color: '#444', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
+          <div style={{ fontSize: 10, color: '#666', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
         </div>
       </div>
 
@@ -1555,7 +1555,7 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
           <div key={aid} className="card" style={{ animationDelay: `${i * 70}ms` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span className="auto-tag tag-auto">{adata.nombre}</span>
-              <span style={{ fontSize: 11, color: '#555' }}>{choferes.join(' · ')}</span>
+              <span style={{ fontSize: 11, color: '#888' }}>{choferes.join(' · ')}</span>
             </div>
             <div className="gan-row">
               <div className="gan-cell"><div className="gan-label">Semana</div><div className="gan-value">{fmt(gan.semana)}</div></div>
@@ -1843,7 +1843,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
                     <div className="chofer-sec-name">{cnombre}</div>
                     <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
-                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
+                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
                   {estado === 'franco' ? (
                     <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
                       {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
@@ -2225,11 +2225,11 @@ function DeudasTab({ resumen, showToast, isDemoMode }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
                   <span className="auto-tag tag-auto" style={{ fontSize: 11 }}>{d.choferes?.nombre || '?'}</span>
-                  {d.choferes?.autos?.nombre && <span style={{ fontSize: 11, color: '#555' }}>{d.choferes.autos.nombre}</span>}
+                  {d.choferes?.autos?.nombre && <span style={{ fontSize: 11, color: '#888' }}>{d.choferes.autos.nombre}</span>}
                   {d.saldado && <span style={{ fontSize: 10, color: '#10B981', fontWeight: 700, letterSpacing: 0.5 }}>SALDADO</span>}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{d.descripcion}</div>
-                <div style={{ fontSize: 11, color: '#555' }}>{d.fecha}</div>
+                <div style={{ fontSize: 11, color: '#888' }}>{d.fecha}</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 700, color: d.saldado ? '#555' : '#EF4444', marginBottom: 8 }}>
@@ -2384,7 +2384,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
               <span className="auto-tag tag-auto">{auto.nombre}</span>
               <button
                 onClick={() => setDeleteConfirm({ id: auto.id, nombre: auto.nombre })}
-                style={{ background: 'none', border: 'none', color: '#555', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
+                style={{ background: 'none', border: 'none', color: '#888', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
                 title="Eliminar auto"
               >🗑</button>
             </div>
@@ -2407,14 +2407,14 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
             <div className="stitle">VTV y Seguro</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 10, color: '#555', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
+                <div style={{ fontSize: 10, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
                 <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.vtv ?? (auto.vtv_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], vtv: e.target.value } }))}
                 />
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#555', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
+                <div style={{ fontSize: 10, color: '#888', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
                 <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.seguro ?? (auto.seguro_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], seguro: e.target.value } }))}
@@ -2469,7 +2469,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
               </div>
             ) : (
               <button onClick={() => setShowNewChofer(auto.id)}
-                style={{ background: 'none', border: 'none', color: '#555', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
+                style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', padding: '6px 0', marginTop: 2 }}>
                 + Agregar chofer
               </button>
             )}
@@ -2594,13 +2594,13 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
               <span className="auto-tag tag-auto">{auto.nombre}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {hayCambiar && <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444' }}>⚠ ATENCIÓN</span>}
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555' }}>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888' }}>
                   {kmsAct.toLocaleString('es-AR')} km
                 </span>
               </div>
             </div>
             {mant.length === 0 ? (
-              <div style={{ fontSize: 12, color: '#444', textAlign: 'center', padding: '6px 0' }}>
+              <div style={{ fontSize: 12, color: '#666', textAlign: 'center', padding: '6px 0' }}>
                 Sin items de mantenimiento asignados
               </div>
             ) : (
@@ -2672,7 +2672,7 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600 }}>{item.nombre}</div>
-                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#555', marginTop: 3 }}>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#888', marginTop: 3 }}>
                         Cada {item.frecuencia_kms.toLocaleString('es-AR')} km
                         {' · '}
                         <span style={{ color: item.auto_id ? '#3F7DF5' : '#666' }}>
@@ -2843,7 +2843,7 @@ function MultiLineChart({ data, metric }) {
           {/* X labels */}
           {data[0].monthly.map((m, i) => (
             <text key={i} x={X(i)} y={H - 4} textAnchor="middle"
-              fill="#3a3a3a" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
+              fill="#777" fontSize="9" fontFamily="'DM Sans',sans-serif" fontWeight="700">
               {m.mes}
             </text>
           ))}
@@ -2894,7 +2894,7 @@ function AutosComparisonTab({ isDemoMode }) {
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 9, color: '#444', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
+          <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
         </div>
 
         <MultiLineChart data={data} metric={metric} />
@@ -2912,7 +2912,7 @@ function AutosComparisonTab({ isDemoMode }) {
             <div key={auto.id} style={{ flex: 1, background: '#0e0e0e', borderRadius: 14, padding: '14px 12px', borderTop: `3px solid ${color}` }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#aaa', marginBottom: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{auto.nombre}</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 19, fontWeight: 800, color, lineHeight: 1 }}>{fmt(last[metric])}</div>
-              <div style={{ fontSize: 9, color: '#444', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 3, marginBottom: 10 }}>neto este mes</div>
               {delta !== null && (
                 <div style={{ fontSize: 11, fontWeight: 700, color: delta >= 0 ? '#10B981' : '#EF4444', marginBottom: 6 }}>
                   {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}% vs mes ant.
@@ -2920,11 +2920,11 @@ function AutosComparisonTab({ isDemoMode }) {
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #1F1F26', paddingTop: 8, marginTop: 4 }}>
                 <div>
-                  <div style={{ fontSize: 8, color: '#333', letterSpacing: 1 }}>GASTOS</div>
+                  <div style={{ fontSize: 8, color: '#666', letterSpacing: 1 }}>GASTOS</div>
                   <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{fmt(last.gastos)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 8, color: '#333', letterSpacing: 1 }}>MARGEN</div>
+                  <div style={{ fontSize: 8, color: '#666', letterSpacing: 1 }}>MARGEN</div>
                   <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: margen >= 50 ? '#10B981' : margen >= 25 ? '#F59E0B' : '#EF4444', marginTop: 2 }}>{margen}%</div>
                 </div>
               </div>
@@ -3036,13 +3036,13 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
               <div className="card" style={{ marginBottom: 12 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Proyección {mesActual}</div>
+                    <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Proyección {mesActual}</div>
                     <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: projNeto >= 0 ? '#3F7DF5' : '#EF4444', marginTop: 3 }}>
                       {curTurnos > 0 ? fmt(projNeto) : '—'}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Día {dayElapsed} / {daysInMonth}</div>
+                    <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Día {dayElapsed} / {daysInMonth}</div>
                     <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{Math.round(progress * 100)}% del mes</div>
                   </div>
                 </div>
@@ -3058,12 +3058,12 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                     { label: 'Prom/día', actual: Math.round(dailyAvgTurnos), proy: null, color: '#10B981' },
                   ].map(({ label, actual, proy, color }) => (
                     <div key={label} style={{ background: 'var(--bg-dark)', borderRadius: 8, padding: '8px 10px' }}>
-                      <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+                      <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
                       <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color, fontWeight: 600 }}>
                         {actual > 0 ? fmt(actual) : '—'}
                       </div>
                       {proy !== null && (
-                        <div style={{ fontSize: 9, color: '#444', marginTop: 3 }}>
+                        <div style={{ fontSize: 11, color: '#666', marginTop: 3 }}>
                           {actual > 0 ? `→ ${fmt(proy)}` : '—'}
                         </div>
                       )}
@@ -3073,7 +3073,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                 {/* Falta cobrar */}
                 {curTurnos > 0 && projTurnos > curTurnos && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Falta cobrar este mes</span>
+                    <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Falta cobrar este mes</span>
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 700, color: '#F59E0B' }}>
                       {fmt(projTurnos - curTurnos)}
                     </span>
@@ -3087,7 +3087,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
           <div className="card">
             {/* Neto — fila principal arriba */}
             <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #23232E' }}>
-              <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Neto total</div>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Neto total</div>
               <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: totalGan - totalGas >= 0 ? '#10B981' : '#EF4444', marginTop: 2 }}>
                 {fmt(totalGan - totalGas)}
               </div>
@@ -3095,11 +3095,11 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
             {/* Ingresos / Gastos abajo */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Ingresos</div>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ingresos</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 9, color: '#555', textTransform: 'uppercase', letterSpacing: 1.5 }}>Gastos</div>
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1.2 }}>Gastos</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
             </div>
@@ -3117,7 +3117,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
-                    <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{d.autoNombre}</div>
+                    <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{d.autoNombre}</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     {d.diasDebe > 0 ? (
@@ -3136,7 +3136,7 @@ function StatsPage({ resumen, showToast, isDemoMode, isPro, onUpgrade }) {
                 </div>
                 {d.ganTotal > 0 && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #23232E', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: '#555', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
+                    <span style={{ fontSize: 10, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#3F7DF5' }}>{fmt(d.ganTotal)}</span>
                   </div>
                 )}
@@ -3191,14 +3191,14 @@ const globalStyles = `
     --bg:#08080A;--bg-card:#15151B;--bg-input:#111;--bg-inner:#1D1D26;
     --bg-modal:#0F0F14;--bg-elem:#161616;--bg-dark:#0e0e0e;
     --border:#23232E;--border-card:#2E2E3B;--border-nav:#1F1F26;
-    --text:#F4F4F8;--text-sub:#888;--text-muted:#555;--text-faint:#444;--text-dim:#333;
+    --text:#F4F4F8;--text-sub:#aaa;--text-muted:#888;--text-faint:#666;--text-dim:#555;
     --header-bg:rgba(0,0,0,0.92);--nav-bg:rgba(0,0,0,0.95);
   }
   [data-theme="light"]{
     --bg:#F0F2F8;--bg-card:#FFFFFF;--bg-input:#F4F5FA;--bg-inner:#EEF0F7;
     --bg-modal:#FFFFFF;--bg-elem:#F8F9FD;--bg-dark:#E8EAF2;
     --border:#E2E4EE;--border-card:#D8DAE8;--border-nav:#E0E2EE;
-    --text:#0F0F1A;--text-sub:#6B7080;--text-muted:#8890A8;--text-faint:#9AA0B8;--text-dim:#B0B8D0;
+    --text:#0F0F1A;--text-sub:#4A5060;--text-muted:#6B7080;--text-faint:#7A8090;--text-dim:#9098B0;
     --header-bg:rgba(240,242,248,0.95);--nav-bg:rgba(240,242,248,0.97);
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -3217,7 +3217,7 @@ const globalStyles = `
   .spinner{width:28px;height:28px;border:2px solid var(--bg-inner);border-top-color:#3F7DF5;border-radius:50%;animation:spin 0.75s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .stitle{font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-sub);margin:24px 0 10px}
+  .stitle{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--text-sub);margin:24px 0 10px}
   .card{background:var(--bg-card);border:1px solid var(--border-card);border-radius:20px;padding:20px;margin-bottom:16px}
   .auto-tag{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;border-radius:100px;display:inline-block}
   .tag-auto{background:#1A2B5C;color:#A6CBFF;border:1px solid #2D4F9C}
@@ -3226,23 +3226,23 @@ const globalStyles = `
   .alert-banner{background:#1A0A00;border:1px solid #3A1800;border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;gap:10px;align-items:center;font-size:13px}
 
   .total-banner{background:var(--bg-card);border:1px solid var(--border-card);border-radius:20px;padding:18px 20px;display:flex;align-items:stretch;margin-bottom:16px;overflow:hidden}
-  .total-label{font-size:10px;color:var(--text-sub);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+  .total-label{font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
   .total-value{font-family:'DM Mono',monospace;font-size:min(22px,5.5vw);font-weight:500;color:#7EB1FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
   .gan-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}
   .gan-cell{background:var(--bg-inner);border:1px solid var(--border-card);border-radius:12px;padding:12px 14px}
-  .gan-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);margin-bottom:5px}
+  .gan-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-faint);margin-bottom:5px}
   .gan-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:#7EB1FF}
 
   .neto-row{background:#0B1A3A;border:1px solid #1E3A6A;border-radius:12px;padding:14px 16px;margin-top:8px;display:flex;justify-content:space-between;align-items:center}
-  .neto-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#4A7AB5}
+  .neto-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#6A9AD5}
   .neto-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;color:#7EB1FF}
 
   .ab-danger{background:#1A0808;color:#EF4444;border:1px solid #3A1010}
 
   .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
   .metric{background:var(--bg-inner);border:1px solid var(--border-card);border-radius:12px;padding:12px 14px}
-  .metric-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);margin-bottom:5px}
+  .metric-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-faint);margin-bottom:5px}
   .metric-value{font-family:'DM Mono',monospace;font-size:15px;font-weight:500}
 
   .kms-row{display:flex;gap:8px;align-items:center;margin-top:12px}
@@ -3254,15 +3254,15 @@ const globalStyles = `
   .mant-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg-inner);border-radius:14px;cursor:pointer;border:1px solid var(--border-card);transition:border-color 0.15s}
   .mant-item:active{border-color:var(--text-faint)}
   .mant-nombre{font-size:13px;font-weight:600;color:var(--text)}
-  .mant-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px}
-  .mbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
+  .mant-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:3px}
+  .mbadge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
   .mbadge-ok{background:#0B1A3A;color:#7EB1FF}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:var(--bg-inner);border:none;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
   .cal-month-label{font-size:17px;font-weight:700;letter-spacing:-0.3px;color:var(--text)}
   .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-  .leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted)}
+  .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sub)}
   .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
   .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
@@ -3271,12 +3271,12 @@ const globalStyles = `
   .fchip-active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
   .cal-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:2px}
-  .cal-th{font-family:'DM Mono',monospace;font-size:10px;color:var(--text-faint);text-align:center;padding:4px 1px;font-weight:500}
+  .cal-th{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);text-align:center;padding:4px 1px;font-weight:600}
   .cal-td{padding:1px;vertical-align:top;cursor:pointer;width:calc(100%/7);min-width:0}.cal-td.empty{cursor:default}
   .day-cell{border-radius:8px;background:var(--bg-dark);border:1px solid transparent;padding:4px 2px 3px;min-height:60px;display:flex;flex-direction:column;align-items:center;gap:2px;overflow:hidden;width:100%;box-sizing:border-box}
   .day-cell-empty{min-height:60px}
   .day-cell.today{border-color:var(--text)}.day-cell.has-debe{border-color:#3A1515}.day-cell.all-franco{background:#080D14;border-color:#0F2040}.day-cell.future{opacity:0.25}
-  .day-num{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;color:var(--text-faint);line-height:1}
+  .day-num{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--text-muted);line-height:1}
   .day-cell.today .day-num{color:var(--text);font-weight:700}
   .day-choferes{display:flex;flex-direction:column;gap:2px;width:100%;min-width:0}
   .chofer-pill{border-radius:3px;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;padding:2px 2px;text-align:center;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;display:block;box-sizing:border-box}
@@ -3284,7 +3284,7 @@ const globalStyles = `
 
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:500;display:flex;align-items:flex-end}
   .modal-sheet{background:var(--bg-modal);border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid var(--border)}
-  .modal-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+  .modal-date{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-sub);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
   .modal-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-0.3px;color:var(--text)}
   .modal-back{background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:0;margin-bottom:4px}
   .modal-close{width:100%;padding:14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:14px;font-size:14px;cursor:pointer;margin-top:12px}
@@ -3295,7 +3295,7 @@ const globalStyles = `
   .chofer-section{margin-bottom:10px;background:var(--bg-elem);border-radius:14px;padding:16px}
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .chofer-sec-name{font-size:16px;font-weight:600;color:var(--text)}
-  .eb{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
+  .eb{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
   .eb-completo{background:#0A1A10;color:#10B981}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:var(--bg-inner);color:var(--text-muted)}
 
   .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
@@ -3312,16 +3312,16 @@ const globalStyles = `
   .monto-btn:active{background:var(--text);color:var(--bg)}.monto-btn:disabled{opacity:0.4}
 
   .tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--bg-modal);padding:4px;border-radius:14px;border:1px solid var(--border)}
-  .tab{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
+  .tab{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text-sub);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
   .tab.active{background:var(--text);color:var(--bg);font-weight:700}
 
   .gasto-item{display:flex;align-items:center;padding:14px 16px;background:var(--bg-modal);border:1px solid var(--border);border-radius:14px;margin-bottom:8px}
-  .gasto-desc{font-size:14px;font-weight:600;color:var(--text)}.gasto-auto{font-size:11px;color:var(--text-muted);margin-top:2px}
+  .gasto-desc{font-size:14px;font-weight:600;color:var(--text)}.gasto-auto{font-size:12px;color:var(--text-sub);margin-top:2px}
   .gasto-monto{font-family:'DM Mono',monospace;font-size:14px;color:#EF4444;font-weight:500;white-space:nowrap}
   .gasto-del-btn{width:30px;height:30px;border-radius:10px;border:1px solid #2A1010;background:#1A0808;color:#EF4444;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
   .gasto-del-btn:disabled{opacity:0.4;cursor:not-allowed}
 
-  .form-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);display:block;margin-bottom:8px}
+  .form-label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-sub);display:block;margin-bottom:8px}
   .form-input{width:100%;padding:14px 16px;background:var(--bg-dark);border:1px solid var(--border);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;-webkit-appearance:none;transition:border-color 0.2s}
   .form-input:focus{border-color:#3F7DF5}.form-input::placeholder{color:var(--text-dim)}
   .form-group{margin-bottom:14px}
