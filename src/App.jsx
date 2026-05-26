@@ -1791,8 +1791,6 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
   const handleExport = async (action) => {
     setExporting(true)
     setExportMenu(false)
-    // Abrir ventana ANTES del await para no perder el gesto del usuario (evita bloqueo de popups)
-    const waWin = action === 'whatsapp' ? window.open('', '_blank') : null
     try {
       // Dynamic import — jsPDF y dependencias solo se descargan al exportar
       const reportsMod = await import('./reports')
@@ -1804,7 +1802,8 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
       if (action === 'whatsapp') {
         const text = buildWhatsAppSummary({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
         const encoded = encodeURIComponent(text)
-        if (waWin) { waWin.location.href = `https://wa.me/?text=${encoded}` }
+        // window.location.href funciona en PWA: en móvil el SO intercepta wa.me y abre WhatsApp sin salir de la app
+        window.location.href = `https://wa.me/?text=${encoded}`
         showToast('✓ Abriendo WhatsApp', 'success')
       } else {
         const doc = generateMonthlyPDF({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
