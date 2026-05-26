@@ -8,7 +8,7 @@ import {
   insertGasto, deleteGasto, getGastos, updateKms, insertMantenimiento,
   signIn, signUp, signOut, signInWithGoogle, getProfile, checkFleet, createFleet,
   getAdminUsers, setUserActivo, addPayment,
-  createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer,
+  createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer, deleteChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
   getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto,
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
@@ -3149,6 +3149,8 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
   const [savingVenc, setSavingVenc] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, nombre }
   const [deletingAuto, setDeletingAuto] = useState(false)
+  const [deleteChoferConfirm, setDeleteChoferConfirm] = useState(null) // { id, nombre, vinculado }
+  const [deletingChofer, setDeletingChofer] = useState(false)
 
   const autos = resumen?.config?.autos || []
   const choferes = resumen?.config?.choferes || []
@@ -3232,6 +3234,18 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
     onRefresh()
   }
 
+  const handleDeleteChoferConfirmed = async () => {
+    if (isDemoMode) { setDeleteChoferConfirm(null); return showToast('👁 Modo demo', 'info') }
+    if (!deleteChoferConfirm) return
+    setDeletingChofer(true)
+    const { error } = await deleteChofer(deleteChoferConfirm.id)
+    setDeletingChofer(false)
+    setDeleteChoferConfirm(null)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    showToast('✓ Chofer eliminado', 'success')
+    onRefresh()
+  }
+
   return (
     <>
       {deleteConfirm && (
@@ -3241,6 +3255,17 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
           onConfirm={handleDeleteAutoConfirmed}
           onCancel={() => setDeleteConfirm(null)}
           loading={deletingAuto}
+        />
+      )}
+      {deleteChoferConfirm && (
+        <ConfirmModal
+          title={`Eliminar a ${deleteChoferConfirm.nombre}`}
+          message={deleteChoferConfirm.vinculado
+            ? 'Este chofer tiene una cuenta vinculada. Se eliminará el chofer y se desvinculará su acceso. Sus turnos históricos quedarán registrados.'
+            : 'Se eliminará el chofer. Sus turnos históricos quedarán registrados. Esta acción no se puede deshacer.'}
+          onConfirm={handleDeleteChoferConfirmed}
+          onCancel={() => setDeleteChoferConfirm(null)}
+          loading={deletingChofer}
         />
       )}
       {linkModal && (
@@ -3340,6 +3365,11 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
                     <button className="gasto-del-btn" style={{ color: 'var(--text-sub)', background: 'var(--bg-input)', borderColor: 'var(--border)' }}
                       onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
                       ✎
+                    </button>
+                    <button className="gasto-del-btn"
+                      title="Eliminar chofer"
+                      onClick={() => setDeleteChoferConfirm({ id: c.id, nombre: c.nombre, vinculado: !!c.chofer_user_id })}>
+                      🗑
                     </button>
                   </div>
                 </div>

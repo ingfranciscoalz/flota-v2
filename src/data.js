@@ -142,6 +142,9 @@ export async function updateAutoVencimientos(autoId, vtv_vence, seguro_vence) {
 export async function updateChofer(id, nombre) {
   return supabase.from('choferes').update({ nombre }).eq('id', id)
 }
+export async function deleteChofer(id) {
+  return supabase.from('choferes').delete().eq('id', id)
+}
 
 export async function getUserMantItems() {
   return supabase.from('user_mant_items').select('*').order('nombre')
