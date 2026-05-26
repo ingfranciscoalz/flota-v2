@@ -1102,12 +1102,6 @@ export default function App() {
               style={{ fontSize: 14 }}
             >📋</button>
           )}
-          {/* Plan badge */}
-          {!isDemoMode && (
-            isPro
-              ? <span style={{ fontSize: 11, fontWeight: 800, padding: '3px 8px', background: '#071F0F', border: '1px solid #10B98144', borderRadius: 100, color: '#10B981', letterSpacing: 0.5 }}>PRO</span>
-              : <button onClick={() => setShowUpgradeModal(true)} style={{ fontSize: 11, fontWeight: 800, padding: '3px 8px', background: 'var(--bg-inner)', border: '1px solid #3F7DF544', borderRadius: 100, color: '#3F7DF5', cursor: 'pointer', letterSpacing: 0.5 }}>FREE ↑</button>
-          )}
           {/* Theme toggle */}
           <button
             className="sync-btn"
