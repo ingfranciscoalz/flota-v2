@@ -1992,6 +1992,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   const [montoInput, setMontoInput] = useState('') // monto editable (puede venir del OCR)
   const [ocrProgress, setOcrProgress] = useState(null) // null | 0-100
   const [ocrDetected, setOcrDetected] = useState(false) // si el OCR encontró monto
+  const [ocrSuspect, setOcrSuspect] = useState(false)  // monto detectado parece incorrecto
 
   const hoy = today()
   const curMonthStr = `${calYear}-${String(calMonth).padStart(2, '0')}`
@@ -2018,6 +2019,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     if (pagarModal) {
       setMontoInput(String(choferData?.turno_base || 50000))
       setOcrDetected(false)
+      setOcrSuspect(false)
       setOcrProgress(null)
       setCompImg(null)
     }
@@ -2028,6 +2030,8 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     if (!compImg) { setOcrProgress(null); return }
     setOcrProgress(0)
     setOcrDetected(false)
+    setOcrSuspect(false)
+    const turnoBase = choferData?.turno_base || 50000
     import('./ocr').then(({ scanReceipt }) => {
       scanReceipt(compImg, p => setOcrProgress(p))
         .then(res => {
@@ -2035,6 +2039,8 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
           if (res.monto && res.monto > 100) {
             setMontoInput(String(Math.round(res.monto)))
             setOcrDetected(true)
+            // Sospechoso si es menos del 30% del turno base
+            setOcrSuspect(res.monto < turnoBase * 0.3)
           }
         })
         .catch(() => setOcrProgress(null))
@@ -2045,7 +2051,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     if (!compImg) return showToast('Adjuntá el comprobante', 'error')
     setSaving(true)
     const { url, error: upErr } = await uploadComprobante(choferData.chofer_id, pagarModal, compImg)
-    if (upErr) { setSaving(false); return showToast('⚠ Error al subir comprobante', 'error') }
+    if (upErr) { setSaving(false); return showToast('⚠ ' + (upErr.message || 'Error al subir comprobante'), 'error') }
     const monto = parseInt(montoInput, 10) || choferData?.turno_base || 50000
     const { data, error: tErr } = await choferMarcarTurno(pagarModal, monto, url)
     setSaving(false)
@@ -2238,16 +2244,21 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
             {/* Monto — editable, pre-llenado por OCR si lo detectó */}
             <div className="stitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Monto</span>
-              {!ocrDetected && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>Verificá que coincida con el comprobante</span>}
+              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>Verificá antes de confirmar</span>
             </div>
+            {ocrSuspect && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: '#2D1500', border: '1px solid #F59E0B55', borderRadius: 10, marginBottom: 8, fontSize: 12, color: '#F59E0B' }}>
+                ⚠ El OCR leyó un monto bajo — revisá que sea correcto
+              </div>
+            )}
             <div style={{ position: 'relative', marginBottom: 14 }}>
               <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, fontWeight: 700, color: 'var(--text-muted)', pointerEvents: 'none' }}>$</span>
               <input
                 type="number"
                 inputMode="numeric"
                 value={montoInput}
-                onChange={e => { setMontoInput(e.target.value); setOcrDetected(false) }}
-                style={{ width: '100%', padding: '12px 14px 12px 28px', background: 'var(--bg-inner)', border: `1px solid ${ocrDetected ? '#10B98166' : 'var(--border-card)'}`, borderRadius: 12, fontSize: 20, fontWeight: 700, color: 'var(--text)', fontFamily: "'DM Mono',monospace", boxSizing: 'border-box' }}
+                onChange={e => { setMontoInput(e.target.value); setOcrDetected(false); setOcrSuspect(false) }}
+                style={{ width: '100%', padding: '12px 14px 12px 28px', background: 'var(--bg-inner)', border: `1px solid ${ocrSuspect ? '#F59E0B88' : ocrDetected ? '#10B98166' : 'var(--border-card)'}`, borderRadius: 12, fontSize: 20, fontWeight: 700, color: 'var(--text)', fontFamily: "'DM Mono',monospace", boxSizing: 'border-box' }}
               />
             </div>
 

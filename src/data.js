@@ -718,14 +718,20 @@ export async function choferMarcarTurno(fecha, monto, comprobante_url) {
 
 // Sube el comprobante al bucket "comprobantes" de Supabase Storage
 export async function uploadComprobante(chofer_id, fecha, imageFile) {
-  const ext = imageFile.name?.split('.').pop()?.toLowerCase() || 'jpg'
+  // Normalizar extensión y content type
+  const rawExt = imageFile.name?.split('.').pop()?.toLowerCase() || ''
+  const ext = ['jpg','jpeg','png','webp','heic','heif'].includes(rawExt) ? rawExt : 'jpg'
+  const contentType = imageFile.type || (ext === 'png' ? 'image/png' : 'image/jpeg')
   const path = `${chofer_id}/${fecha}_${Date.now()}.${ext}`
 
   const { data, error } = await supabase.storage
     .from('comprobantes')
-    .upload(path, imageFile, { cacheControl: '3600', upsert: true })
+    .upload(path, imageFile, { cacheControl: '3600', upsert: true, contentType })
 
-  if (error) return { error }
+  if (error) {
+    console.error('uploadComprobante error:', error)
+    return { error }
+  }
 
   const { data: urlData } = supabase.storage
     .from('comprobantes')
