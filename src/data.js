@@ -726,7 +726,7 @@ export async function uploadComprobante(chofer_id, fecha, imageFile) {
 
   const { data, error } = await supabase.storage
     .from('comprobantes')
-    .upload(path, imageFile, { cacheControl: '3600', upsert: true, contentType })
+    .upload(path, imageFile, { cacheControl: '3600', upsert: false, contentType })
 
   if (error) {
     console.error('uploadComprobante error:', error)
