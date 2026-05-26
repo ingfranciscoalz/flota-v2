@@ -6,10 +6,10 @@ const DEMO_AUTOS_LIST = [
   { id: 'da2', nombre: 'Gol Negro',    turno_base: 48000, kms_actuales: 143200, vtv_vence: '2026-05-19', seguro_vence: '2026-08-10' },
 ]
 const DEMO_CHOFERES_LIST = [
-  { id: 'dc1', auto_id: 'da1', nombre: 'Carlos M.'  },
-  { id: 'dc2', auto_id: 'da1', nombre: 'Roberto P.' },
-  { id: 'dc3', auto_id: 'da2', nombre: 'Miguel A.'  },
-  { id: 'dc4', auto_id: 'da2', nombre: 'Diego F.'   },
+  { id: 'dc1', auto_id: 'da1', nombre: 'Carlos M.',  chofer_user_id: 'demo-uid-1' },
+  { id: 'dc2', auto_id: 'da1', nombre: 'Roberto P.', chofer_user_id: null },
+  { id: 'dc3', auto_id: 'da2', nombre: 'Miguel A.',  chofer_user_id: 'demo-uid-3' },
+  { id: 'dc4', auto_id: 'da2', nombre: 'Diego F.',   chofer_user_id: null },
 ]
 const DEMO_MANT_ITEMS = [
   { id: 'dm1', nombre: 'Aceite y filtros', frecuencia_kms: 10000 },

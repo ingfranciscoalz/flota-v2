@@ -13,6 +13,8 @@ import {
   getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto,
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
   savePushSubscription, deletePushSubscription,
+  generateChoferLink, desvincularChofer, vincularChofer,
+  getMyChoferData, getMisTurnos, getMisFrancos, choferMarcarTurno, uploadComprobante,
 } from './data'
 // reports.js se importa dinámicamente al exportar (evita cargar jsPDF en el bundle inicial)
 
@@ -600,9 +602,10 @@ function urlBase64ToUint8Array(base64String) {
 
 // ── APP ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [authState, setAuthState] = useState('loading') // loading|auth|onboarding|app|demo
+  const [authState, setAuthState] = useState('loading') // loading|auth|auth_chofer|onboarding|app|demo|chofer
   const [profile, setProfile] = useState(null)
   const [isDemoMode, setIsDemoMode] = useState(false)
+  const [myChoferData, setMyChoferData] = useState(null) // solo si el usuario es un chofer vinculado
   const [page, setPage] = useState('resumen')
   const [resumenTab, setResumenTab] = useState('resumen')
   const [resumen, setResumen] = useState(null)
@@ -703,7 +706,35 @@ export default function App() {
     }
   }, [authState])
 
+  // Detectar parámetros del QR de vinculación en la URL al cargar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get('vincular')
+    const cid   = params.get('c')
+    if (token && cid) {
+      sessionStorage.setItem('vincular_token', token)
+      sessionStorage.setItem('vincular_chofer_id', cid)
+      // Limpiar la URL sin recargar
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
+
   const handleSession = useCallback(async () => {
+    // Procesar token de vinculación pendiente (el chofer acaba de hacer login con Google)
+    const vincularToken = sessionStorage.getItem('vincular_token')
+    const vincularCid   = sessionStorage.getItem('vincular_chofer_id')
+    if (vincularToken && vincularCid) {
+      sessionStorage.removeItem('vincular_token')
+      sessionStorage.removeItem('vincular_chofer_id')
+      const { data } = await vincularChofer(vincularToken, vincularCid)
+      if (data?.ok) {
+        // Vinculación exitosa: continuar como chofer
+      } else if (data?.error) {
+        // Error: puede que el token expiró o ya estaba vinculado — continuar igual
+        console.warn('Vincular error:', data.error)
+      }
+    }
+
     const prof = await getProfile()
     setProfile(prof || null)
 
@@ -722,6 +753,14 @@ export default function App() {
           if (res.ok) setProfile({ ...prof, plan: 'pro' })
         }
       } catch (_) { /* no estamos en TWA o no hay compra */ }
+    }
+
+    // ¿El usuario logueado es un chofer vinculado (no dueño)?
+    const choferData = await getMyChoferData()
+    if (choferData) {
+      setMyChoferData(choferData)
+      setAuthState('chofer')
+      return
     }
 
     const hasFleet = await checkFleet()
@@ -811,11 +850,33 @@ export default function App() {
     )
   }
 
-  if (authState === 'auth') {
+  if (authState === 'auth' || authState === 'auth_chofer') {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100dvh' }}>
         <style>{globalStyles}</style>
-        <AuthScreen onEnterDemo={enterDemoMode} showInstall={showInstall} onInstall={handleInstall} showIosInstall={showIosInstall} />
+        <AuthScreen
+          onEnterDemo={authState === 'auth_chofer' ? null : enterDemoMode}
+          showInstall={showInstall}
+          onInstall={handleInstall}
+          showIosInstall={showIosInstall}
+          choferMode={authState === 'auth_chofer'}
+        />
+        {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
+      </div>
+    )
+  }
+
+  if (authState === 'chofer') {
+    return (
+      <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'var(--bg)', color: 'var(--text)', minHeight: '100dvh' }}>
+        <style>{globalStyles}</style>
+        <ChoferApp
+          choferData={myChoferData}
+          showToast={showToast}
+          onSignOut={async () => { await signOut(); setAuthState('auth'); setMyChoferData(null) }}
+          theme={theme}
+          toggleTheme={toggleTheme}
+        />
         {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
       </div>
     )
@@ -1084,7 +1145,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
   )
 }
 
-function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
+function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall, choferMode = false }) {
   const [tab, setTab] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -1143,29 +1204,35 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
           </div>
         </div>
       )}
-      <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
+      {choferMode
+        ? <p style={{ color: '#7EB1FF', fontSize: 14, fontWeight: 600, marginBottom: 36, background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 12, padding: '12px 16px' }}>
+            🚗 Vas a vincular tu cuenta como <strong>chofer</strong>. Iniciá sesión con la misma cuenta de Google que usás habitualmente.
+          </p>
+        : <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
+      }
 
-      <div className="tabs" style={{ marginBottom: 20 }}>
-        <button className={`tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setSuccess('') }}>Ingresar</button>
-        <button className={`tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setSuccess('') }}>Registrarse</button>
-      </div>
-
-      <div className="form-group">
-        <input className="form-input" type="email" placeholder="Email" value={email}
-          onChange={e => setEmail(e.target.value)} autoComplete="email" />
-      </div>
-      <div className="form-group">
-        <input className="form-input" type="password" placeholder="Contraseña (mínimo 6 caracteres)" value={password}
-          onChange={e => setPassword(e.target.value)} autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
-          onKeyDown={e => e.key === 'Enter' && submit()} />
-      </div>
-
-      {error   && <div style={{ color: '#ff4545', fontSize: 13, marginBottom: 12 }}>{error}</div>}
-      {success && <div style={{ color: '#3F7DF5', fontSize: 13, marginBottom: 12 }}>{success}</div>}
-
-      <button className="btn-primary" disabled={loading} onClick={submit}>
-        {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
-      </button>
+      {!choferMode && (
+        <>
+          <div className="tabs" style={{ marginBottom: 20 }}>
+            <button className={`tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); setSuccess('') }}>Ingresar</button>
+            <button className={`tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); setSuccess('') }}>Registrarse</button>
+          </div>
+          <div className="form-group">
+            <input className="form-input" type="email" placeholder="Email" value={email}
+              onChange={e => setEmail(e.target.value)} autoComplete="email" />
+          </div>
+          <div className="form-group">
+            <input className="form-input" type="password" placeholder="Contraseña (mínimo 6 caracteres)" value={password}
+              onChange={e => setPassword(e.target.value)} autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+              onKeyDown={e => e.key === 'Enter' && submit()} />
+          </div>
+          {error   && <div style={{ color: '#ff4545', fontSize: 13, marginBottom: 12 }}>{error}</div>}
+          {success && <div style={{ color: '#3F7DF5', fontSize: 13, marginBottom: 12 }}>{success}</div>}
+          <button className="btn-primary" disabled={loading} onClick={submit}>
+            {loading ? 'Cargando...' : tab === 'login' ? 'INGRESAR' : 'CREAR CUENTA'}
+          </button>
+        </>
+      )}
 
       {/* Separador */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
@@ -1179,7 +1246,6 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
         disabled={googleLoading}
         onClick={handleGoogle}
         style={{ width: '100%', padding: '13px 16px', background: '#fff', border: '1px solid #2E2E3B', borderRadius: 14, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", color: '#111', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: googleLoading ? 0.6 : 1 }}>
-        {/* Ícono Google SVG */}
         <svg width="18" height="18" viewBox="0 0 48 48">
           <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.2l6.7-6.7C35.7 2.5 30.2 0 24 0 14.8 0 6.9 5.4 3 13.3l7.8 6C12.7 13.1 17.9 9.5 24 9.5z"/>
           <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 6.9-10 6.9-17z" /><path fill="#FBBC05" d="M10.8 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7L2.5 13.3A23.9 23.9 0 0 0 0 24c0 3.8.9 7.4 2.5 10.6l8.3-5.9z"/>
@@ -1188,18 +1254,20 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall }) {
         {googleLoading ? 'Redirigiendo...' : 'Continuar con Google'}
       </button>
 
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1F1F26' }}>
-        <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 }}>¿Querés ver cómo funciona?</div>
-        <button
-          style={{ width: '100%', padding: '14px', background: '#0B1A3A', color: '#3F7DF5', border: '1px solid #1A2B5C', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
-          onClick={onEnterDemo}
-        >
-          PROBAR DEMO
-        </button>
-        <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 8 }}>
-          Sin registro. Solo para explorar la app.
+      {!choferMode && onEnterDemo && (
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid #1F1F26' }}>
+          <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 }}>¿Querés ver cómo funciona?</div>
+          <button
+            style={{ width: '100%', padding: '14px', background: '#0B1A3A', color: '#3F7DF5', border: '1px solid #1A2B5C', borderRadius: 14, fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
+            onClick={onEnterDemo}
+          >
+            PROBAR DEMO
+          </button>
+          <div style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 8 }}>
+            Sin registro. Solo para explorar la app.
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -1748,6 +1816,342 @@ function MantModal({ autoNombre, item, kmsAct, onClose, onConfirm }) {
   )
 }
 
+// ── CHOFER APP ────────────────────────────────────────────────────────────────
+function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
+  const [calYear, setCalYear] = useState(new Date().getFullYear())
+  const [calMonth, setCalMonth] = useState(new Date().getMonth() + 1)
+  const [turnos, setTurnos] = useState({}) // fecha → { monto, estado, comprobante_url }
+  const [francos, setFrancos] = useState(new Set())
+  const [loading, setLoading] = useState(true)
+  const [pagarModal, setPagarModal] = useState(null) // fecha seleccionada
+  const [compImg, setCompImg] = useState(null)  // File seleccionado para comprobante
+  const [saving, setSaving] = useState(false)
+  const compInputRef = useRef(null)
+  const [visorUrl, setVisorUrl] = useState(null) // URL del comprobante a ver
+
+  const hoy = today()
+  const curMonthStr = `${calYear}-${String(calMonth).padStart(2, '0')}`
+  const francoWeekday = choferData?.franco_weekday ?? 1
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const [turnosRes, francosRes] = await Promise.all([
+      getMisTurnos(calYear, calMonth),
+      getMisFrancos(calYear, calMonth),
+    ])
+    const tMap = {}
+    for (const t of turnosRes.data || []) tMap[t.fecha] = t
+    setTurnos(tMap)
+    const fSet = new Set((francosRes.data || []).map(f => f.fecha))
+    setFrancos(fSet)
+    setLoading(false)
+  }, [calYear, calMonth])
+
+  useEffect(() => { loadData() }, [loadData])
+
+  const handlePagar = async () => {
+    if (!compImg) return showToast('Adjuntá el comprobante', 'error')
+    setSaving(true)
+    const { url, error: upErr } = await uploadComprobante(choferData.chofer_id, pagarModal, compImg)
+    if (upErr) { setSaving(false); return showToast('⚠ Error al subir comprobante', 'error') }
+    const turnoBase = choferData.turno_base || 50000
+    const { data, error: tErr } = await choferMarcarTurno(pagarModal, turnoBase, url)
+    setSaving(false)
+    if (tErr || data?.error) return showToast('⚠ ' + (data?.error || tErr?.message), 'error')
+    showToast('✓ Turno registrado', 'success')
+    setCompImg(null)
+    setPagarModal(null)
+    loadData()
+  }
+
+  const changeMonth = (delta) => {
+    let m = calMonth + delta, y = calYear
+    if (m > 12) { m = 1; y++ }
+    if (m < 1)  { m = 12; y-- }
+    setCalMonth(m); setCalYear(y)
+  }
+
+  const daysInMonth = new Date(calYear, calMonth, 0).getDate()
+  let firstDow = new Date(calYear, calMonth - 1, 1).getDay()
+  firstDow = (firstDow + 6) % 7
+  const cells = []
+  for (let i = 0; i < firstDow; i++) cells.push(null)
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
+
+  // Totales del mes
+  let brutoMes = 0, diasPendientes = 0
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+    if (ds > hoy) continue
+    const dowLunes = (new Date(calYear, calMonth - 1, d).getDay() + 6) % 7
+    if (dowLunes === francoWeekday || francos.has(ds)) continue
+    const t = turnos[ds]
+    if (t?.monto) brutoMes += parseFloat(t.monto)
+    else diasPendientes++
+  }
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', sans-serif", minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text)' }}>
+      {/* Header */}
+      <div className="header">
+        <div>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
+            Flota<span style={{ color: '#3F7DF5' }}>.</span>
+          </h1>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+            {choferData?.nombre} · {choferData?.auto_nombre}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="sync-btn" onClick={toggleTheme} title="Cambiar tema">{theme === 'dark' ? '☀' : '🌙'}</button>
+          <button className="sync-btn" onClick={onSignOut} title="Cerrar sesión" style={{ fontSize: 12 }}>↩</button>
+        </div>
+      </div>
+
+      <div className="page-cal">
+        {/* Banner resumen del mes */}
+        <div className="total-banner" style={{ marginTop: 16 }}>
+          <div style={{ flex: 1 }}>
+            <div className="total-label">Cobrado este mes</div>
+            <div className="total-value">{fmt(brutoMes)}</div>
+          </div>
+          <div style={{ width: 1, background: 'var(--border-card)', alignSelf: 'stretch', margin: '0 18px' }} />
+          <div style={{ flex: 1, textAlign: 'right' }}>
+            <div className="total-label" style={{ color: diasPendientes > 0 ? '#EF4444' : 'var(--text-sub)' }}>Sin comprobante</div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 18, fontWeight: 600, color: diasPendientes > 0 ? '#EF4444' : '#10B981' }}>
+              {diasPendientes > 0 ? `${diasPendientes} días` : '✓ Al día'}
+            </div>
+          </div>
+        </div>
+
+        {/* Navegación de mes */}
+        <div className="cal-nav">
+          <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
+          <span className="cal-month-label">{MESES[calMonth - 1]} {calYear}</span>
+          <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
+        </div>
+
+        {/* Leyenda */}
+        <div className="cal-legend">
+          {[['#10B981','Pagado'],['#EF4444','Pendiente'],['#60A5FA','Franco']].map(([c,l]) => (
+            <div key={l} className="leg-item"><div className="leg-dot" style={{ background: c }} />{l}</div>
+          ))}
+        </div>
+
+        {loading
+          ? <div className="loading"><div className="spinner" /></div>
+          : (
+          <table className="cal-table">
+            <thead><tr>{DIAS_CORTOS.map(d => <th key={d} className="cal-th">{d}</th>)}</tr></thead>
+            <tbody>
+              {chunk(cells, 7).map((week, wi) => (
+                <tr key={wi}>
+                  {week.map((day, di) => {
+                    if (!day) return <td key={di} className="cal-td empty"><div className="day-cell-empty" /></td>
+                    const ds = `${calYear}-${padZ(calMonth)}-${padZ(day)}`
+                    const dowLunes = (new Date(calYear, calMonth - 1, day).getDay() + 6) % 7
+                    const esFranco = dowLunes === francoWeekday || francos.has(ds)
+                    const esFuturo = ds > hoy
+                    const t = turnos[ds]
+                    const esPagado = t?.estado === 'completo' || t?.estado === 'parcial'
+                    const tieneComp = !!t?.comprobante_url
+
+                    let bgColor, textColor
+                    if (esFranco)      { bgColor = '#08111F'; textColor = '#60A5FA' }
+                    else if (esFuturo) { bgColor = 'var(--bg-dark)'; textColor = 'var(--text-dim)' }
+                    else if (esPagado) { bgColor = '#0A1A10'; textColor = '#10B981' }
+                    else               { bgColor = '#1A0808'; textColor = '#EF4444' }
+
+                    const clickable = !esFranco && !esFuturo && !esPagado
+                    const verComp = tieneComp
+
+                    return (
+                      <td key={di} className="cal-td" onClick={() => {
+                        if (verComp) setVisorUrl(t.comprobante_url)
+                        else if (clickable) setPagarModal(ds)
+                      }}>
+                        <div style={{ borderRadius: 8, background: bgColor, border: `1px solid ${esFuturo ? 'transparent' : (esPagado ? '#0F3020' : esFranco ? '#0F2040' : '#3A1515')}`, padding: '4px 2px 3px', minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, opacity: esFuturo ? 0.3 : 1, cursor: clickable || verComp ? 'pointer' : 'default' }}>
+                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 600, color: textColor, lineHeight: 1 }}>{day}</span>
+                          <span style={{ fontSize: 8, fontWeight: 700, color: textColor, textAlign: 'center', lineHeight: 1.3 }}>
+                            {esFranco ? 'F' : esFuturo ? '' : esPagado ? (tieneComp ? '📎✓' : '✓') : '!'}
+                          </span>
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Instrucción */}
+        {!loading && diasPendientes > 0 && (
+          <div className="alert-banner alert-warn" style={{ marginTop: 16 }}>
+            <span>📎</span>
+            <span>Tocá un día en rojo para subir el comprobante de pago</span>
+          </div>
+        )}
+      </div>
+
+      {/* Modal para pagar un turno */}
+      {pagarModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setPagarModal(null)}>
+          <div className="modal-sheet">
+            <div className="modal-date">REGISTRAR PAGO</div>
+            <div className="modal-title">{pagarModal.split('-').reverse().join('/')}</div>
+            <div className="stitle" style={{ marginTop: 0 }}>Monto</div>
+            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
+              {fmt(choferData?.turno_base || 50000)}
+            </div>
+            <div className="stitle">Comprobante de transferencia</div>
+            <input
+              ref={compInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              style={{ display: 'none' }}
+              onChange={e => setCompImg(e.target.files?.[0] || null)}
+            />
+            {compImg ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 12, border: '1px solid #10B981' }}>
+                <span style={{ fontSize: 20 }}>📎</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>Comprobante listo</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compImg.name}</div>
+                </div>
+                <button onClick={() => setCompImg(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => compInputRef.current?.click()}
+                style={{ width: '100%', padding: '14px', background: 'var(--bg-inner)', border: '2px dashed var(--border-card)', borderRadius: 12, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', marginBottom: 12, fontFamily: "'DM Sans',sans-serif" }}
+              >
+                📷 Adjuntar foto del comprobante
+              </button>
+            )}
+            <button className="btn-primary" disabled={saving || !compImg} onClick={handlePagar} style={{ marginTop: 4 }}>
+              {saving ? 'Enviando...' : '✓ CONFIRMAR PAGO'}
+            </button>
+            <button className="modal-close" onClick={() => { setPagarModal(null); setCompImg(null) }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Visor de comprobante */}
+      {visorUrl && (
+        <div className="modal-overlay" onClick={() => setVisorUrl(null)}>
+          <div className="modal-sheet" style={{ textAlign: 'center' }}>
+            <div className="modal-title">Comprobante</div>
+            <img src={visorUrl} alt="Comprobante" style={{ width: '100%', borderRadius: 12, marginBottom: 16, maxHeight: '60vh', objectFit: 'contain' }} />
+            <button className="modal-close" onClick={() => setVisorUrl(null)}>Cerrar</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── CHOFER LINK MODAL (para el dueño — genera QR de vinculación) ──────────────
+function ChoferLinkModal({ chofer, isDemoMode, showToast, onClose }) {
+  const [linkUrl, setLinkUrl] = useState(null)
+  const [qrDataUrl, setQrDataUrl] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [vinculado, setVinculado] = useState(!!chofer.chofer_user_id)
+
+  const generateLink = async () => {
+    if (isDemoMode) return showToast('👁 No disponible en demo', '')
+    setLoading(true)
+    const { url, error } = await generateChoferLink(chofer.id)
+    setLoading(false)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    setLinkUrl(url)
+    // Generar QR dinámicamente
+    try {
+      const QRCode = (await import('qrcode')).default
+      const dataUrl = await QRCode.toDataURL(url, { width: 220, margin: 2, color: { dark: '#0F0F14', light: '#FFFFFF' } })
+      setQrDataUrl(dataUrl)
+    } catch (e) {
+      console.error('QR gen error', e)
+    }
+  }
+
+  const handleShare = () => {
+    const text = `Hola ${chofer.nombre} 👋\nVinculá tu cuenta a Flota para registrar tus turnos:\n${linkUrl}`
+    const encoded = encodeURIComponent(text)
+    window.open(`https://wa.me/?text=${encoded}`, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleCopy = () => {
+    if (!linkUrl) return
+    navigator.clipboard.writeText(linkUrl).then(() => showToast('✓ Link copiado', 'success'))
+  }
+
+  const handleDesvincular = async () => {
+    if (isDemoMode) return showToast('👁 No disponible en demo', '')
+    const { error } = await desvincularChofer(chofer.id)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    setVinculado(false)
+    showToast('✓ Chofer desvinculado', 'success')
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet">
+        <div className="modal-date">ACCESO CHOFER</div>
+        <div className="modal-title">{chofer.nombre}</div>
+
+        {vinculado ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px', background: '#0A1A10', border: '1px solid #0F3020', borderRadius: 14, marginBottom: 16 }}>
+              <span style={{ fontSize: 20 }}>✅</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#10B981' }}>Cuenta vinculada</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Este chofer puede subir sus comprobantes</div>
+              </div>
+            </div>
+            <button className="action-btn ab-quitar" style={{ width: '100%' }} onClick={handleDesvincular}>
+              Desvincular cuenta
+            </button>
+          </>
+        ) : linkUrl ? (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              {qrDataUrl
+                ? <img src={qrDataUrl} alt="QR" style={{ width: 220, height: 220, borderRadius: 12, border: '1px solid var(--border-card)' }} />
+                : <div style={{ width: 220, height: 220, background: 'var(--bg-inner)', borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: 13 }}>Generando QR...</div>
+              }
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 16, wordBreak: 'break-all' }}>
+              Expira en 48 horas
+            </div>
+            <button
+              onClick={handleShare}
+              style={{ width: '100%', padding: '14px', background: '#075E54', color: '#fff', border: 'none', borderRadius: 14, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+              💬 Enviar por WhatsApp
+            </button>
+            <button className="action-btn" style={{ width: '100%', marginBottom: 8 }} onClick={handleCopy}>
+              📋 Copiar link
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 14, color: 'var(--text-sub)', marginBottom: 20, lineHeight: 1.6 }}>
+              Generá un link único para que {chofer.nombre} lo abra en su celular e inicie sesión con su cuenta de Google.
+            </div>
+            <button className="btn-primary" disabled={loading} onClick={generateLink}>
+              {loading ? 'Generando...' : '🔗 Generar link de vinculación'}
+            </button>
+          </>
+        )}
+
+        <button className="modal-close" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 // ── CALENDARIO PAGE ───────────────────────────────────────────────────────────
 function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode, onDemoUpdateDay }) {
   const [dayModal, setDayModal] = useState(null)
@@ -1966,7 +2370,13 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
                     <div className="chofer-sec-name">{cnombre}</div>
                     <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
-                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>Pagó: {fmt(monto)}</div> : null}
+                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Pagó: {fmt(monto)}{info.marcado_por === 'chofer' ? ' (por el chofer)' : ''}</div> : null}
+                  {info.comprobante_url ? (
+                    <a href={info.comprobante_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#3F7DF5', fontWeight: 600, marginBottom: 10, textDecoration: 'none' }}>
+                      📎 Ver comprobante
+                    </a>
+                  ) : null}
                   {estado === 'franco' ? (
                     <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
                       {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
@@ -2462,6 +2872,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
   const [editingChoferId, setEditingChoferId] = useState(null)
   const [editChoferNombre, setEditChoferNombre] = useState('')
   const [savingChoferEdit, setSavingChoferEdit] = useState(false)
+  const [linkModal, setLinkModal] = useState(null) // chofer completo para modal de vinculación
   const [vencimientos, setVencimientos] = useState({}) // autoId -> {vtv, seguro}
   const [savingVenc, setSavingVenc] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, nombre }
@@ -2560,6 +2971,14 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
           loading={deletingAuto}
         />
       )}
+      {linkModal && (
+        <ChoferLinkModal
+          chofer={linkModal}
+          isDemoMode={isDemoMode}
+          showToast={showToast}
+          onClose={() => setLinkModal(null)}
+        />
+      )}
       {autos.map(auto => {
         const autoChoferes = choferes.filter(c => c.auto_id === auto.id)
         const turnoActual = auto.turno_base || globalTurnoBase
@@ -2631,11 +3050,26 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
                 </div>
               ) : (
                 <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-inner)', borderRadius: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 14, color: 'var(--text)' }}>{c.nombre}</span>
-                  <button className="gasto-del-btn" style={{ color: 'var(--text-sub)', background: 'var(--bg-input)', borderColor: 'var(--border)' }}
-                    onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
-                    ✎
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, color: 'var(--text)' }}>{c.nombre}</span>
+                    {c.chofer_user_id
+                      ? <span title="Cuenta vinculada" style={{ fontSize: 10, background: '#0A1A10', color: '#10B981', border: '1px solid #0F3020', borderRadius: 100, padding: '2px 6px', fontWeight: 700, whiteSpace: 'nowrap' }}>✓ vinculado</span>
+                      : null
+                    }
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button
+                      title={c.chofer_user_id ? 'Gestionar acceso' : 'Vincular chofer'}
+                      style={{ width: 30, height: 30, border: `1px solid ${c.chofer_user_id ? '#0F3020' : 'var(--border)'}`, background: c.chofer_user_id ? '#0A1A10' : 'var(--bg-input)', color: c.chofer_user_id ? '#10B981' : 'var(--text-sub)', borderRadius: 8, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => setLinkModal(c)}
+                    >
+                      🔗
+                    </button>
+                    <button className="gasto-del-btn" style={{ color: 'var(--text-sub)', background: 'var(--bg-input)', borderColor: 'var(--border)' }}
+                      onClick={() => { setEditingChoferId(c.id); setEditChoferNombre(c.nombre) }}>
+                      ✎
+                    </button>
+                  </div>
                 </div>
               )
             ))}

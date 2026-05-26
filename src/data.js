@@ -637,3 +637,84 @@ export async function deletePushSubscription() {
   const userId = await uid()
   await supabase.from('push_subscriptions').delete().eq('user_id', userId)
 }
+
+// ── CHOFERES — VINCULACIÓN (QR / TOKEN) ──────────────────────────────────────
+
+// Dueño genera un link de vinculación para un chofer (expira en 48hs)
+export async function generateChoferLink(chofer_id) {
+  const user_id = await uid()
+  const token = crypto.randomUUID()
+  const expires = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+
+  const { error } = await supabase
+    .from('choferes')
+    .update({ link_token: token, link_token_expires_at: expires })
+    .eq('id', chofer_id)
+    .eq('user_id', user_id) // seguridad: solo el dueño puede generar el link
+
+  if (error) return { error }
+
+  const url = `${window.location.origin}/?vincular=${token}&c=${chofer_id}`
+  return { url, token, expires }
+}
+
+// Dueño puede "desvincular" a un chofer (borrar su chofer_user_id)
+export async function desvincularChofer(chofer_id) {
+  const user_id = await uid()
+  return supabase
+    .from('choferes')
+    .update({ chofer_user_id: null, link_token: null, link_token_expires_at: null })
+    .eq('id', chofer_id)
+    .eq('user_id', user_id)
+}
+
+// Chofer vincula su cuenta con el token del QR
+export async function vincularChofer(token, chofer_id) {
+  return supabase.rpc('vincular_chofer', { p_token: token, p_chofer_id: chofer_id })
+}
+
+// ── CHOFER — VISTA PROPIA ─────────────────────────────────────────────────────
+
+// Obtiene los datos del chofer autenticado (si existe vinculación)
+export async function getMyChoferData() {
+  const { data, error } = await supabase.rpc('get_mi_chofer_data')
+  if (error || !data || data.length === 0) return null
+  return data[0]
+}
+
+// Obtiene los turnos del mes del chofer autenticado
+export async function getMisTurnos(year, month) {
+  return supabase.rpc('get_mis_turnos', { p_year: year, p_month: month })
+}
+
+// Obtiene los francos del mes del chofer autenticado
+export async function getMisFrancos(year, month) {
+  return supabase.rpc('get_mis_francos', { p_year: year, p_month: month })
+}
+
+// Chofer sube su comprobante y marca el turno como pagado
+export async function choferMarcarTurno(fecha, monto, comprobante_url) {
+  return supabase.rpc('chofer_marcar_turno', {
+    p_fecha: fecha,
+    p_monto: monto,
+    p_comprobante_url: comprobante_url,
+  })
+}
+
+// Sube el comprobante al bucket "comprobantes" de Supabase Storage
+export async function uploadComprobante(chofer_id, fecha, imageFile) {
+  const ext = imageFile.name?.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${chofer_id}/${fecha}_${Date.now()}.${ext}`
+
+  const { data, error } = await supabase.storage
+    .from('comprobantes')
+    .upload(path, imageFile, { cacheControl: '3600', upsert: true })
+
+  if (error) return { error }
+
+  const { data: urlData } = supabase.storage
+    .from('comprobantes')
+    .getPublicUrl(data.path)
+
+  return { url: urlData.publicUrl }
+}
