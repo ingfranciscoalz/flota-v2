@@ -2479,6 +2479,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
+  const [compVisor, setCompVisor] = useState(null) // URL del comprobante a ver en fullscreen
 
   const [y, m, d] = ds.split('-').map(Number)
   const dow = (new Date(y, m - 1, d).getDay() + 6) % 7
@@ -2590,12 +2591,31 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
                     <div className="chofer-sec-name">{cnombre}</div>
                     <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
-                  {monto ? <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>Pagó: {fmt(monto)}{info.marcado_por === 'chofer' ? ' (por el chofer)' : ''}</div> : null}
+                  {monto ? (
+                    <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                      Pagó: {fmt(monto)}{info.marcado_por === 'chofer' ? <span style={{ marginLeft: 6, fontSize: 10, background: '#3F7DF511', border: '1px solid #3F7DF533', borderRadius: 5, padding: '1px 5px', color: '#3F7DF5' }}>chofer</span> : null}
+                    </div>
+                  ) : null}
                   {info.comprobante_url ? (
-                    <a href={info.comprobante_url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#3F7DF5', fontWeight: 600, marginBottom: 10, textDecoration: 'none' }}>
-                      📎 Ver comprobante
-                    </a>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 5 }}>Comprobante</div>
+                      <div
+                        onClick={() => setCompVisor(info.comprobante_url)}
+                        style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', display: 'inline-block', position: 'relative' }}
+                      >
+                        <img
+                          src={info.comprobante_url}
+                          alt="comprobante"
+                          style={{ width: '100%', maxHeight: 140, objectFit: 'cover', display: 'block' }}
+                        />
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
+                          onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                          onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                        >
+                          <span style={{ color: '#fff', fontSize: 22 }}>🔍</span>
+                        </div>
+                      </div>
+                    </div>
                   ) : null}
                   {estado === 'franco' ? (
                     <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
@@ -2639,6 +2659,38 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
 
         <button className="modal-close" onClick={onClose}>Cerrar</button>
       </div>
+
+      {/* Visor fullscreen del comprobante */}
+      {compVisor && (
+        <div
+          onClick={() => setCompVisor(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 10000, background: 'rgba(0,0,0,0.92)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+        >
+          <img
+            src={compVisor}
+            alt="Comprobante"
+            style={{ maxWidth: '100%', maxHeight: '80vh', borderRadius: 12, objectFit: 'contain', boxShadow: '0 8px 40px #000a' }}
+            onClick={e => e.stopPropagation()}
+          />
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <a
+              href={compVisor}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ padding: '10px 20px', background: '#3F7DF5', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
+            >
+              ↗ Abrir original
+            </a>
+            <button
+              onClick={() => setCompVisor(null)}
+              style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

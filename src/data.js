@@ -344,7 +344,11 @@ export async function getCalendario(year, month, cfg = null) {
   const turnosMap = {}
   for (const t of turnos) {
     if (!turnosMap[t.chofer_id]) turnosMap[t.chofer_id] = {}
-    turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
+    turnosMap[t.chofer_id][t.fecha] = {
+      monto: parseFloat(t.monto),
+      comprobante_url: t.comprobante_url || null,
+      marcado_por: t.marcado_por || 'dueno',
+    }
   }
 
   const francosMap = {}
@@ -366,14 +370,22 @@ export async function getCalendario(year, month, cfg = null) {
 
       for (const chofer of choferesAuto) {
         const franco = isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap)
-        const monto = turnosMap[chofer.id]?.[ds] ?? null
+        const turnoData = turnosMap[chofer.id]?.[ds] ?? null
+        const monto = turnoData?.monto ?? null
         let estado
         if (franco) estado = 'franco'
         else if (monto !== null && monto >= autoTurnoBase) estado = 'completo'
         else if (monto !== null && monto > 0) estado = 'parcial'
         else if (ds < hoy) estado = 'debe'
         else estado = 'futuro'
-        diaInfo[chofer.id] = { nombre: chofer.nombre, estado, monto, franco_manual: francosMap[chofer.id]?.has(ds) }
+        diaInfo[chofer.id] = {
+          nombre: chofer.nombre,
+          estado,
+          monto,
+          comprobante_url: turnoData?.comprobante_url || null,
+          marcado_por: turnoData?.marcado_por || null,
+          franco_manual: francosMap[chofer.id]?.has(ds),
+        }
       }
       dias[ds] = diaInfo
     }
