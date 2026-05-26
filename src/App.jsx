@@ -2424,8 +2424,6 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   for (let i = 0; i < firstDow; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
-  const btnExportStyle = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }
-
   return (
     <div className="page page-cal">
       <div className="cal-nav">
@@ -2435,27 +2433,51 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
         {/* Export dropdown */}
         <div style={{ position: 'relative', marginLeft: 'auto' }}>
           <button
-            className="cal-nav-btn"
             onClick={() => setExportMenu(v => !v)}
             disabled={exporting}
-            title="Exportar mes"
-            style={{ fontSize: 13, padding: '6px 10px', opacity: exporting ? 0.6 : 1 }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px',
+              background: exportMenu ? 'var(--bg-card)' : 'var(--bg-inner)',
+              border: '1px solid var(--border-card)',
+              borderRadius: 20,
+              color: 'var(--text-sub)',
+              fontSize: 12, fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: "'DM Sans',sans-serif",
+              opacity: exporting ? 0.5 : 1,
+              transition: 'background 0.15s',
+              letterSpacing: 0.2,
+            }}
           >
-            {exporting ? '⏳' : '↓ PDF'}
+            {exporting
+              ? <><span style={{ fontSize: 11 }}>⏳</span> Generando…</>
+              : <><span style={{ fontSize: 13 }}>↗</span> Exportar</>}
           </button>
           {exportMenu && (
             <>
               <div onClick={() => setExportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-              <div style={{ position: 'absolute', top: '110%', right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 12, padding: 6, minWidth: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 20 }}>
-                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('download', calYear, calMonth) }}>
-                  <span style={{ fontSize: 16 }}>📄</span> Descargar PDF
-                </button>
-                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('share', calYear, calMonth) }}>
-                  <span style={{ fontSize: 16 }}>📤</span> Compartir PDF
-                </button>
-                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('whatsapp', calYear, calMonth) }}>
-                  <span style={{ fontSize: 16 }}>💬</span> Resumen por WhatsApp
-                </button>
+              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 14, padding: '6px 4px', minWidth: 220, boxShadow: '0 12px 32px rgba(0,0,0,0.3)', zIndex: 20 }}>
+                {/* header del menú */}
+                <div style={{ padding: '6px 12px 8px', fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 1, textTransform: 'uppercase' }}>
+                  {MESES[calMonth - 1]} {calYear}
+                </div>
+                {[
+                  { action: 'download', icon: '📄', label: 'Descargar PDF' },
+                  { action: 'share',    icon: '📤', label: 'Compartir PDF' },
+                  { action: 'whatsapp', icon: '💬', label: 'Enviar por WhatsApp' },
+                ].map(({ action, icon, label }) => (
+                  <button
+                    key={action}
+                    onClick={() => { setExportMenu(false); onExport(action, calYear, calMonth) }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 10, color: 'var(--text)', fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-inner)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontSize: 17, lineHeight: 1 }}>{icon}</span>
+                    <span>{label}</span>
+                  </button>
+                ))}
               </div>
             </>
           )}
