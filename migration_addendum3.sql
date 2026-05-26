@@ -56,10 +56,11 @@ $$;
 
 -- 4. Función: obtener los turnos del mes para el chofer ──────
 -- estado se calcula desde monto vs turno_base (no existe columna estado en turnos)
+-- NOTA: monto es NUMERIC en turnos, se castea para evitar "structure mismatch"
 CREATE OR REPLACE FUNCTION get_mis_turnos(p_year INTEGER, p_month INTEGER)
 RETURNS TABLE(
   fecha           DATE,
-  monto           INTEGER,
+  monto           NUMERIC,
   estado          TEXT,
   comprobante_url TEXT,
   marcado_por     TEXT
@@ -70,9 +71,9 @@ AS $$
 DECLARE
   v_chofer_id  UUID;
   v_dueno_id   UUID;
-  v_turno_base INTEGER;
+  v_turno_base NUMERIC;
 BEGIN
-  SELECT c.id, c.user_id, COALESCE(a.turno_base, 50000)
+  SELECT c.id, c.user_id, COALESCE(a.turno_base::NUMERIC, 50000)
     INTO v_chofer_id, v_dueno_id, v_turno_base
   FROM choferes c
   JOIN autos a ON a.id = c.auto_id
@@ -86,14 +87,14 @@ BEGIN
   RETURN QUERY
   SELECT
     t.fecha,
-    t.monto,
+    t.monto::NUMERIC,
     CASE
-      WHEN t.monto >= v_turno_base THEN 'completo'
-      WHEN t.monto  > 0            THEN 'parcial'
-      ELSE 'debe'
+      WHEN t.monto::NUMERIC >= v_turno_base THEN 'completo'::TEXT
+      WHEN t.monto::NUMERIC  > 0            THEN 'parcial'::TEXT
+      ELSE 'debe'::TEXT
     END AS estado,
-    t.comprobante_url,
-    t.marcado_por
+    t.comprobante_url::TEXT,
+    COALESCE(t.marcado_por, 'dueno')::TEXT
   FROM turnos t
   WHERE t.chofer_id = v_chofer_id
     AND t.user_id   = v_dueno_id
