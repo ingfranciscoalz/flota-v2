@@ -1984,6 +1984,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   const [turnos, setTurnos] = useState({}) // fecha → { monto, estado, comprobante_url }
   const [francos, setFrancos] = useState(new Set())
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(null) // mensaje de error del RPC
   const [pagarModal, setPagarModal] = useState(null) // fecha seleccionada
   const [compImg, setCompImg] = useState(null)  // File seleccionado para comprobante
   const [saving, setSaving] = useState(false)
@@ -2000,12 +2001,16 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
 
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
+    setLoadError(null)
     const [turnosRes, francosRes] = await Promise.all([
       getMisTurnos(calYear, calMonth),
       getMisFrancos(calYear, calMonth),
     ])
-    // Solo pisa el estado si la respuesta es válida — así el update optimista sobrevive errores de red
-    if (!turnosRes.error && turnosRes.data) {
+    if (turnosRes.error) {
+      // Mostrar el error real para poder diagnosticar (ej: columna faltante, migración pendiente)
+      setLoadError(turnosRes.error.message || 'Error al cargar turnos')
+      console.error('get_mis_turnos error:', turnosRes.error)
+    } else if (turnosRes.data) {
       const tMap = {}
       for (const t of turnosRes.data) tMap[t.fecha] = t
       setTurnos(tMap)
@@ -2016,7 +2021,17 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     setLoading(false)
   }, [calYear, calMonth])
 
+  // Carga inicial
   useEffect(() => { loadData() }, [loadData])
+
+  // Auto-refresh cuando la app vuelve al primer plano (el dueño puede haber marcado días)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadData(true)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [loadData])
 
   // Resetear monto al abrir el modal
   useEffect(() => {
@@ -2147,6 +2162,21 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
             <div key={l} className="leg-item"><div className="leg-dot" style={{ background: c }} />{l}</div>
           ))}
         </div>
+
+        {/* Error banner — muestra el mensaje real del RPC si falla */}
+        {!loading && loadError && (
+          <div className="alert-banner alert-error" style={{ marginBottom: 10 }}>
+            <span>⚠</span>
+            <div>
+              <div style={{ fontWeight: 600 }}>No se pudieron cargar los turnos</div>
+              <div style={{ fontSize: 11, opacity: 0.85 }}>{loadError}</div>
+            </div>
+            <button
+              onClick={() => loadData()}
+              style={{ marginLeft: 'auto', background: 'none', border: '1px solid #EF4444', borderRadius: 6, color: '#EF4444', padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}
+            >Reintentar</button>
+          </div>
+        )}
 
         {loading
           ? <div className="loading"><div className="spinner" /></div>
