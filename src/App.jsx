@@ -2426,12 +2426,13 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
 
   return (
     <div className="page page-cal">
-      <div className="cal-nav">
+      {/* position:relative + paddingRight fija el botón export a la derecha sin moverse */}
+      <div className="cal-nav" style={{ position: 'relative', paddingRight: 108 }}>
         <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
         <span className="cal-month-label">{MESES[calMonth - 1]} {calYear}</span>
         <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
-        {/* Export dropdown */}
-        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+        {/* Export dropdown — absolutamente posicionado, no participa en el flex */}
+        <div style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)' }}>
           <button
             onClick={() => setExportMenu(v => !v)}
             disabled={exporting}
