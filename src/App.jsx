@@ -14,6 +14,7 @@ import {
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
   savePushSubscription, deletePushSubscription,
 } from './data'
+// reports.js se importa dinámicamente al exportar (evita cargar jsPDF en el bundle inicial)
 
 // ── CONSTANTES ────────────────────────────────────────────────────────────────
 const TURNO_BASE_DEFAULT = 50000
@@ -917,7 +918,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {resumenTab === 'resumen' && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} />}
+            {resumenTab === 'resumen' && <ResumenPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} profile={profile} />}
             {resumenTab === 'analisis' && <StatsPage resumen={resumen} cal={cal} calYear={calYear} calMonth={calMonth} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
           </>
         )}
@@ -1552,10 +1553,51 @@ function diasParaVencer(fecha) {
   return Math.ceil((new Date(fecha) - new Date()) / 86400000)
 }
 
-function ResumenPage({ resumen, showToast, onRefresh }) {
+function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
   const [kmsInputs, setKmsInputs] = useState({})
   const [kmsLoading, setKmsLoading] = useState({})
+  const [exportMenu, setExportMenu] = useState(false)
+  const [exporting, setExporting] = useState(false)
   if (!resumen) return <SkeletonResumen />
+
+  const nombreFlota = profile?.nombre_flota || profile?.nombre || 'Flota'
+  const now = new Date()
+  const curYear = now.getFullYear()
+  const curMonth = now.getMonth() + 1
+
+  const handleExport = async (action) => {
+    setExporting(true)
+    setExportMenu(false)
+    try {
+      // Dynamic import — jsPDF y dependencias solo se descargan al exportar
+      const reportsMod = await import('./reports')
+      const { generateMonthlyPDF, downloadPDF, sharePDF, buildWhatsAppSummary, shareWhatsApp } = reportsMod
+
+      // Cargar gastos (demo o real)
+      const gastos = isDemoMode ? getDemoGastos() : ((await getGastos()).data || [])
+
+      if (action === 'whatsapp') {
+        const text = buildWhatsAppSummary({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
+        shareWhatsApp(text)
+        showToast('✓ Abriendo WhatsApp', 'success')
+      } else {
+        const doc = generateMonthlyPDF({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
+        const filename = `reporte-${MESES[curMonth - 1].toLowerCase()}-${curYear}.pdf`
+        if (action === 'share') {
+          const result = await sharePDF(doc, filename, `Reporte ${MESES[curMonth - 1]} ${curYear}`)
+          if (result.downloaded) showToast('✓ PDF descargado', 'success')
+          else if (result.shared) showToast('✓ Compartido', 'success')
+        } else {
+          downloadPDF(doc, filename)
+          showToast('✓ PDF descargado', 'success')
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      showToast('⚠ Error al generar reporte', 'error')
+    }
+    setExporting(false)
+  }
 
   const { autos, totales } = resumen
   const autoEntries = Object.entries(autos)
@@ -1574,12 +1616,28 @@ function ResumenPage({ resumen, showToast, onRefresh }) {
 
   return (
     <div className="page">
-      {/* Botón PDF */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
-        <button onClick={() => window.print()}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-          ↓ Exportar PDF
+      {/* Exportar / Compartir */}
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
+        <button disabled={exporting} onClick={() => setExportMenu(v => !v)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", opacity: exporting ? 0.6 : 1 }}>
+          {exporting ? '⏳ Generando...' : '↓ Exportar / Compartir'}
         </button>
+        {exportMenu && (
+          <>
+            <div onClick={() => setExportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 12, padding: 6, minWidth: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 20 }}>
+              <button onClick={() => handleExport('download')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
+                <span style={{ fontSize: 16 }}>📄</span> Descargar PDF
+              </button>
+              <button onClick={() => handleExport('share')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
+                <span style={{ fontSize: 16 }}>📤</span> Compartir PDF
+              </button>
+              <button onClick={() => handleExport('whatsapp')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
+                <span style={{ fontSize: 16 }}>💬</span> Resumen por WhatsApp
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Alertas VTV/Seguro */}
