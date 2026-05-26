@@ -2103,15 +2103,19 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   // Totales del mes
-  let brutoMes = 0, diasPendientes = 0
+  let brutoMes = 0, diasPendientes = 0, totalDeuda = 0
+  const turnoBase = choferData?.turno_base || 50000
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`
     if (ds > hoy) continue
     const dowLunes = (new Date(calYear, calMonth - 1, d).getDay() + 6) % 7
     if (dowLunes === francoWeekday || francos.has(ds)) continue
     const t = turnos[ds]
-    if (t?.monto) brutoMes += parseFloat(t.monto)
+    const monto = parseFloat(t?.monto) || 0
+    if (monto) brutoMes += monto
     else diasPendientes++
+    const diff = turnoBase - monto
+    if (diff > 0) totalDeuda += diff
   }
 
   return (
@@ -2137,8 +2141,10 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
         {/* Banner resumen del mes */}
         <div className="total-banner" style={{ marginTop: 16 }}>
           <div style={{ flex: 1 }}>
-            <div className="total-label">Cobrado este mes</div>
-            <div className="total-value">{fmt(brutoMes)}</div>
+            <div className="total-label" style={{ color: totalDeuda > 0 ? '#EF4444' : 'var(--text-sub)' }}>Deuda del mes</div>
+            <div className="total-value" style={{ color: totalDeuda > 0 ? '#EF4444' : '#10B981' }}>
+              {totalDeuda > 0 ? fmt(totalDeuda) : '✓ Sin deuda'}
+            </div>
           </div>
           <div style={{ width: 1, background: 'var(--border-card)', alignSelf: 'stretch', margin: '0 18px' }} />
           <div style={{ flex: 1, textAlign: 'right' }}>
