@@ -4197,14 +4197,14 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                     <div style={{ textAlign: 'right' }}>
                       {tieneDeuda ? (
                         <>
+                          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, color: '#EF4444', fontWeight: 700 }}>
+                            ~{fmt(totalDebe)}
+                          </div>
                           {d.diasDebe > 0 && (
-                            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#EF4444' }}>
+                            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444', opacity: 0.75, marginTop: 2 }}>
                               {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''} sin pagar
                             </div>
                           )}
-                          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, color: '#EF4444', fontWeight: 700, marginTop: 2 }}>
-                            ~{fmt(totalDebe)}
-                          </div>
                         </>
                       ) : (
                         <div style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 600 }}>✓ Al día</div>
@@ -4213,7 +4213,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
                   </div>
                   {extraManual > 0 && (
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Deudas manuales pendientes</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Deudas pendientes</span>
                       <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#F59E0B' }}>{fmt(extraManual)}</span>
                     </div>
                   )}
