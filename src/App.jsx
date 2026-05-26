@@ -4389,9 +4389,9 @@ const globalStyles = `
   .monto-btn{padding:12px 18px;background:var(--bg-inner);color:var(--text);border:1px solid var(--border-card);border-radius:12px;font-weight:600;font-size:13px;cursor:pointer;transition:background 0.15s}
   .monto-btn:active{background:var(--text);color:var(--bg)}.monto-btn:disabled{opacity:0.4}
 
-  .tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--bg-modal);padding:4px;border-radius:14px;border:1px solid var(--border)}
-  .tab{flex:1;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text-sub);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;text-align:center;transition:all 0.2s}
-  .tab.active{background:var(--bg-card);color:#3F7DF5;font-weight:700;border:1px solid #3F7DF522}
+  .tabs{display:flex;gap:6px;margin-bottom:18px;background:var(--bg-dark);padding:4px;border-radius:12px}
+  .tab{flex:1;padding:9px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.2s}
+  .tab.active{background:var(--bg-card);color:#3F7DF5;border-color:#3F7DF533}
 
   .gasto-item{display:flex;align-items:center;padding:14px 16px;background:var(--bg-modal);border:1px solid var(--border);border-radius:14px;margin-bottom:8px}
   .gasto-desc{font-size:14px;font-weight:600;color:var(--text)}.gasto-auto{font-size:12px;color:var(--text-sub);margin-top:2px}
