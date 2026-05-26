@@ -3945,6 +3945,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
   const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
   const [deuda, setDeuda] = useState(null)
+  const [deudasManuales, setDeudasManuales] = useState({}) // choferId → monto pendiente
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -3958,9 +3959,16 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
       setLoading(true)
       try {
         const cfg = resumen?.config || null
-        const [md, dd] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg)])
+        const [md, dd, dm] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg), getDeudas()])
         setMonthlyData(md)
         setDeuda(dd)
+        // Agrupar deudas manuales no saldadas por chofer
+        const manual = {}
+        for (const d of dm.data || []) {
+          if (d.saldado) continue
+          manual[d.chofer_id] = (manual[d.chofer_id] || 0) + parseFloat(d.monto || 0)
+        }
+        setDeudasManuales(manual)
       } catch (e) {
         showToast('Error al cargar stats', 'error')
       } finally {
@@ -4172,39 +4180,46 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
           <div className="stitle">Deuda acumulada — {new Date().getFullYear()}</div>
           {deudaEntries.length === 0 ? (
             <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
-          ) : !hayDeuda ? (
+          ) : !hayDeuda && Object.keys(deudasManuales).length === 0 ? (
             <div className="card" style={{ textAlign: 'center', color: '#3F7DF5', fontSize: 13 }}>✓ Todos los choferes al día</div>
           ) : (
-            deudaEntries.map(([cid, d]) => (
-              <div key={cid} className="card" style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{d.autoNombre}</div>
+            deudaEntries.map(([cid, d]) => {
+              const extraManual = deudasManuales[cid] || 0
+              const totalDebe = d.montoDebe + extraManual
+              const tieneDeuda = d.diasDebe > 0 || extraManual > 0
+              return (
+                <div key={cid} className="card" style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{d.autoNombre}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {tieneDeuda ? (
+                        <>
+                          {d.diasDebe > 0 && (
+                            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#EF4444' }}>
+                              {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''} sin pagar
+                            </div>
+                          )}
+                          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, color: '#EF4444', fontWeight: 700, marginTop: 2 }}>
+                            ~{fmt(totalDebe)}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 600 }}>✓ Al día</div>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    {d.diasDebe > 0 ? (
-                      <>
-                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, color: '#EF4444', fontWeight: 700 }}>
-                          {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''}
-                        </div>
-                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444' }}>
-                          ~{fmt(d.montoDebe)}
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 600 }}>✓ Al día</div>
-                    )}
-                  </div>
+                  {extraManual > 0 && (
+                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Deudas manuales pendientes</span>
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#F59E0B' }}>{fmt(extraManual)}</span>
+                    </div>
+                  )}
                 </div>
-                {d.ganTotal > 0 && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Recaudado en {new Date().getFullYear()}</span>
-                    <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#3F7DF5' }}>{fmt(d.ganTotal)}</span>
-                  </div>
-                )}
-              </div>
-            ))
+              )
+            })
           )}
         </>
       )}
