@@ -2030,8 +2030,40 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
   const [loadingG, setLoadingG] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // id del gasto a confirmar
+  const [ocrProgress, setOcrProgress] = useState(null) // null | 0..100
+  const ocrInputRef = useRef(null)
   const autos = resumen?.config?.autos || []
   const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
+
+  const handleScanReceipt = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setOcrProgress(0)
+    try {
+      const { scanReceipt } = await import('./ocr')
+      const res = await scanReceipt(file, (pct) => setOcrProgress(pct))
+      setOcrProgress(null)
+      // Autollenar el form con lo que se pudo extraer
+      setForm(f => ({
+        ...f,
+        descripcion: res.descripcion || f.descripcion,
+        monto: res.monto ? String(res.monto) : f.monto,
+        categoria: res.categoria !== 'otro' ? res.categoria : f.categoria,
+        fecha: res.fecha || f.fecha,
+      }))
+      const extracted = []
+      if (res.monto) extracted.push(`monto ${fmt(res.monto)}`)
+      if (res.fecha) extracted.push('fecha')
+      if (res.categoria && res.categoria !== 'otro') extracted.push(`categoría: ${res.categoria}`)
+      showToast(extracted.length > 0 ? `✓ Detectado: ${extracted.join(', ')}` : '⚠ No se detectaron datos, completá manualmente', extracted.length > 0 ? 'success' : 'error')
+    } catch (err) {
+      console.error(err)
+      setOcrProgress(null)
+      showToast('⚠ Error al leer el recibo', 'error')
+    }
+    // Reset input para permitir re-subir la misma foto
+    if (ocrInputRef.current) ocrInputRef.current.value = ''
+  }
 
   useEffect(() => {
     if (autos.length > 0 && !form.auto_id) {
@@ -2109,6 +2141,35 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
 
       {tab === 'nuevo' && (
         <>
+          {/* Escanear recibo con OCR */}
+          <input ref={ocrInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleScanReceipt} />
+          <button
+            type="button"
+            disabled={ocrProgress !== null}
+            onClick={() => ocrInputRef.current?.click()}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: ocrProgress !== null ? 'var(--bg-inner)' : 'linear-gradient(135deg, #3F7DF5 0%, #6366F1 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 14,
+              fontFamily: "'DM Sans',sans-serif",
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: ocrProgress !== null ? 'wait' : 'pointer',
+              marginBottom: 16,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            {ocrProgress !== null
+              ? `⏳ Procesando... ${ocrProgress}%`
+              : '📷 Escanear recibo (auto-llenar)'}
+          </button>
+
           <div className="stitle">Auto</div>
           <div className="radio-group" style={{ marginBottom: 12 }}>
             {autos.map(a => (
