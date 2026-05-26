@@ -55,24 +55,27 @@ END;
 $$;
 
 -- 4. Función: obtener los turnos del mes para el chofer ──────
+-- estado se calcula desde monto vs turno_base (no existe columna estado en turnos)
 CREATE OR REPLACE FUNCTION get_mis_turnos(p_year INTEGER, p_month INTEGER)
 RETURNS TABLE(
-  fecha       DATE,
-  monto       INTEGER,
-  estado      TEXT,
+  fecha           DATE,
+  monto           INTEGER,
+  estado          TEXT,
   comprobante_url TEXT,
-  marcado_por TEXT
+  marcado_por     TEXT
 )
 SECURITY DEFINER
 LANGUAGE plpgsql
 AS $$
 DECLARE
-  v_chofer_id UUID;
-  v_dueno_id  UUID;
+  v_chofer_id  UUID;
+  v_dueno_id   UUID;
+  v_turno_base INTEGER;
 BEGIN
-  -- Obtener info del chofer autenticado
-  SELECT c.id, c.user_id INTO v_chofer_id, v_dueno_id
+  SELECT c.id, c.user_id, COALESCE(a.turno_base, 50000)
+    INTO v_chofer_id, v_dueno_id, v_turno_base
   FROM choferes c
+  JOIN autos a ON a.id = c.auto_id
   WHERE c.chofer_user_id = auth.uid()
   LIMIT 1;
 
@@ -84,7 +87,11 @@ BEGIN
   SELECT
     t.fecha,
     t.monto,
-    t.estado,
+    CASE
+      WHEN t.monto >= v_turno_base THEN 'completo'
+      WHEN t.monto  > 0            THEN 'parcial'
+      ELSE 'debe'
+    END AS estado,
     t.comprobante_url,
     t.marcado_por
   FROM turnos t
@@ -97,9 +104,10 @@ END;
 $$;
 
 -- 5. Función: chofer marca su propio turno con comprobante ───
+-- Nota: turnos no tiene columna "estado" — se calcula client-side
 CREATE OR REPLACE FUNCTION chofer_marcar_turno(
-  p_fecha          DATE,
-  p_monto          INTEGER,
+  p_fecha           DATE,
+  p_monto           INTEGER,
   p_comprobante_url TEXT
 )
 RETURNS JSON
@@ -108,34 +116,21 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   v_chofer choferes%ROWTYPE;
-  v_auto   autos%ROWTYPE;
-  v_turno_base INTEGER;
-  v_estado TEXT;
 BEGIN
-  -- Obtener chofer del usuario autenticado
   SELECT * INTO v_chofer FROM choferes WHERE chofer_user_id = auth.uid() LIMIT 1;
   IF NOT FOUND THEN
     RETURN json_build_object('error', 'Usuario no vinculado como chofer');
   END IF;
 
-  -- Obtener turno base del auto
-  SELECT * INTO v_auto FROM autos WHERE id = v_chofer.auto_id LIMIT 1;
-  v_turno_base := COALESCE(v_auto.turno_base, 50000);
-
-  -- Determinar estado
-  v_estado := CASE WHEN p_monto >= v_turno_base THEN 'completo' ELSE 'parcial' END;
-
-  -- Upsert del turno
-  INSERT INTO turnos (user_id, chofer_id, fecha, monto, estado, comprobante_url, marcado_por)
-  VALUES (v_chofer.user_id, v_chofer.id, p_fecha, p_monto, v_estado, p_comprobante_url, 'chofer')
+  INSERT INTO turnos (user_id, chofer_id, fecha, monto, comprobante_url, marcado_por)
+  VALUES (v_chofer.user_id, v_chofer.id, p_fecha, p_monto, p_comprobante_url, 'chofer')
   ON CONFLICT (chofer_id, fecha)
   DO UPDATE SET
     monto           = p_monto,
-    estado          = v_estado,
     comprobante_url = p_comprobante_url,
     marcado_por     = 'chofer';
 
-  RETURN json_build_object('ok', true, 'estado', v_estado);
+  RETURN json_build_object('ok', true);
 END;
 $$;
 
