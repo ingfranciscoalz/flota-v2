@@ -338,3 +338,141 @@ export function shareWhatsApp(text, phone = '') {
     : `https://wa.me/?text=${encoded}`
   window.open(url, '_blank', 'noopener,noreferrer')
 }
+
+// ── REPORTE SEMANAL DE COMPROBANTES ──────────────────────────────────────────
+export function generateComprobantesReport({ turnos = [], fechaDesde, fechaHasta, nombreFlota = 'Flota' }) {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const W = doc.internal.pageSize.getWidth()
+  const M = 40
+  let y = M
+
+  // Header
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(20)
+  doc.setTextColor(15, 15, 26)
+  doc.text(nombreFlota, M, y)
+  y += 8
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(11)
+  doc.setTextColor(106, 112, 128)
+  const desdeFmt = fmtFecha(fechaDesde)
+  const hastaFmt = fmtFecha(fechaHasta)
+  doc.text(`Comprobantes recibidos · ${desdeFmt} al ${hastaFmt}`, M, y + 14)
+  y += 24
+
+  const hoy = new Date()
+  const hoyStr = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`
+  doc.setFontSize(9)
+  doc.setTextColor(150, 155, 170)
+  doc.text(`Emitido: ${hoyStr}`, W - M, M + 4, { align: 'right' })
+
+  y += 30
+
+  if (turnos.length === 0) {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(12)
+    doc.setTextColor(106, 112, 128)
+    doc.text('Sin comprobantes en este período.', M, y)
+  } else {
+    // Resumen rápido
+    const totalMonto = turnos.reduce((acc, t) => acc + (t.monto || 0), 0)
+    const completos = turnos.filter(t => t.estado === 'completo').length
+    const parciales = turnos.filter(t => t.estado === 'parcial').length
+
+    doc.setDrawColor(216, 218, 232)
+    doc.setLineWidth(0.5)
+    doc.roundedRect(M, y, W - M*2, 64, 6, 6)
+
+    const cw = (W - M*2) / 3
+    const cells = [
+      ['Comprobantes', `${turnos.length}`, [29, 78, 216]],
+      ['Completos / Parciales', `${completos} / ${parciales}`, [6, 95, 70]],
+      ['Total cobrado', fmt(totalMonto), [15, 15, 26]],
+    ]
+    cells.forEach(([label, val, color], i) => {
+      const cx = M + cw * i
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9)
+      doc.setTextColor(106, 112, 128)
+      doc.text(label.toUpperCase(), cx + 12, y + 18)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(13)
+      doc.setTextColor(...color)
+      doc.text(val, cx + 12, y + 46)
+    })
+
+    y += 84
+
+    // Tabla detallada
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(13)
+    doc.setTextColor(15, 15, 26)
+    doc.text(`Detalle (${turnos.length})`, M, y)
+
+    const rows = turnos.map(t => {
+      const choferNombre = t.choferes?.nombre || '—'
+      const autoNombre = t.choferes?.autos?.nombre || '—'
+      const estado = t.estado === 'completo' ? 'Completo' : t.estado === 'parcial' ? 'Parcial' : t.estado || '—'
+      const marcado = t.marcado_por === 'chofer' ? 'Chofer' : 'Dueño'
+      return [
+        fmtFecha(t.fecha),
+        choferNombre,
+        autoNombre,
+        fmt(t.monto),
+        estado,
+        marcado,
+        t.comprobante_url ? 'Ver →' : '—',
+      ]
+    })
+
+    autoTable(doc, {
+      startY: y + 8,
+      margin: { left: M, right: M },
+      head: [['Fecha', 'Chofer', 'Auto', 'Monto', 'Estado', 'Marcado por', 'Comprobante']],
+      body: rows,
+      theme: 'plain',
+      headStyles: {
+        fillColor: [240, 242, 248],
+        textColor: [75, 80, 96],
+        fontStyle: 'bold',
+        fontSize: 9,
+        cellPadding: 7,
+      },
+      bodyStyles: {
+        fontSize: 9,
+        cellPadding: 7,
+        textColor: [15, 15, 26],
+      },
+      alternateRowStyles: { fillColor: [248, 249, 253] },
+      columnStyles: {
+        3: { halign: 'right', fontStyle: 'bold' },
+        4: { halign: 'center' },
+        5: { halign: 'center', textColor: [106, 112, 128] },
+        6: { halign: 'center', textColor: [29, 78, 216] },
+      },
+      didDrawCell: (data) => {
+        // Agregar link clickeable en columna "Comprobante"
+        if (data.column.index === 6 && data.cell.section === 'body') {
+          const turno = turnos[data.row.index]
+          if (turno?.comprobante_url) {
+            doc.link(data.cell.x, data.cell.y, data.cell.width, data.cell.height, { url: turno.comprobante_url })
+          }
+        }
+      },
+    })
+  }
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages()
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(150, 155, 170)
+    doc.text(`Página ${i} de ${pageCount}`, W - M, doc.internal.pageSize.getHeight() - 20, { align: 'right' })
+    doc.text('Generado con Flota', M, doc.internal.pageSize.getHeight() - 20)
+  }
+
+  return doc
+}

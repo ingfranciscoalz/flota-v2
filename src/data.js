@@ -718,3 +718,21 @@ export async function uploadComprobante(chofer_id, fecha, imageFile) {
 
   return { url: urlData.publicUrl }
 }
+
+// ── COMPROBANTES SEMANALES ────────────────────────────────────────────────────
+export async function getWeeklyTurnosConComprobantes(fechaDesde, fechaHasta) {
+  const id = await uid()
+  const { data, error } = await supabase
+    .from('turnos')
+    .select(`
+      id, fecha, monto, estado, comprobante_url, marcado_por, chofer_id,
+      choferes ( nombre, auto_id, autos ( nombre ) )
+    `)
+    .eq('user_id', id)
+    .gte('fecha', fechaDesde)
+    .lte('fecha', fechaHasta)
+    .not('comprobante_url', 'is', null)
+    .order('fecha', { ascending: false })
+  if (error) throw error
+  return data || []
+}

@@ -15,6 +15,7 @@ import {
   savePushSubscription, deletePushSubscription,
   generateChoferLink, desvincularChofer, vincularChofer,
   getMyChoferData, getMisTurnos, getMisFrancos, choferMarcarTurno, uploadComprobante,
+  getWeeklyTurnosConComprobantes,
 } from './data'
 // reports.js se importa dinámicamente al exportar (evita cargar jsPDF en el bundle inicial)
 
@@ -398,6 +399,136 @@ const TUTORIAL_STEPS = [
   { color: '#EF4444', subtitle: 'Sección Deudas', title: 'Deudas de\nchoferes', body: 'En Flota → Deudas registrás adelantos, multas o gastos a cargo del chofer. Marcalos como saldados cuando te devuelvan el dinero.', Illust: IllustDeudas },
 ]
 
+// ── WEEKLY COMPROBANTES REPORT ────────────────────────────────────────────────
+function WeeklyReportModal({ onClose, showToast, nombreFlota }) {
+  const [loading, setLoading] = useState(true)
+  const [turnos, setTurnos] = useState([])
+  const [exporting, setExporting] = useState(false)
+
+  // Período: últimos 7 días
+  const today = new Date()
+  const todayStr = today.toISOString().split('T')[0]
+  const weekAgo = new Date(today)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  const weekAgoStr = weekAgo.toISOString().split('T')[0]
+
+  function fmtFecha(ds) {
+    if (!ds) return ''
+    const [y, m, d] = ds.split('-')
+    return `${d}/${m}/${y.slice(2)}`
+  }
+
+  useEffect(() => {
+    getWeeklyTurnosConComprobantes(weekAgoStr, todayStr)
+      .then(data => { setTurnos(data); setLoading(false) })
+      .catch(() => { setLoading(false) })
+  }, [])
+
+  async function handleDownloadPDF() {
+    setExporting(true)
+    try {
+      const { generateComprobantesReport, downloadPDF } = await import('./reports')
+      const doc = generateComprobantesReport({ turnos, fechaDesde: weekAgoStr, fechaHasta: todayStr, nombreFlota })
+      downloadPDF(doc, `comprobantes_${weekAgoStr}_${todayStr}.pdf`)
+    } catch (e) {
+      showToast('Error al generar PDF', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const totalMonto = turnos.reduce((acc, t) => acc + (t.monto || 0), 0)
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 520, maxHeight: '90vh', background: 'var(--bg-card)', borderRadius: '20px 20px 0 0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>📋 Comprobantes de la semana</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{fmtFecha(weekAgoStr)} → {fmtFecha(todayStr)}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: 14 }}>Cargando comprobantes...</div>
+          ) : turnos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px' }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Sin comprobantes en los últimos 7 días</div>
+            </div>
+          ) : (
+            <>
+              {/* Resumen */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 14 }}>
+                {[
+                  ['Total', `${turnos.length}`, '#3F7DF5'],
+                  ['Cobrado', '$' + Math.round(totalMonto).toLocaleString('es-AR'), '#10B981'],
+                  ['Choferes', `${new Set(turnos.map(t => t.chofer_id)).size}`, '#8B5CF6'],
+                ].map(([label, val, color]) => (
+                  <div key={label} style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{label}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color }}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Lista */}
+              {turnos.map(t => {
+                const chofer = t.choferes?.nombre || '—'
+                const auto = t.choferes?.autos?.nombre || '—'
+                const esCompleto = t.estado === 'completo'
+                return (
+                  <div key={t.id} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    {/* Thumbnail */}
+                    <a href={t.comprobante_url} target="_blank" rel="noopener noreferrer" style={{ flexShrink: 0 }}>
+                      <img
+                        src={t.comprobante_url}
+                        alt="comprobante"
+                        style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', display: 'block' }}
+                        onError={e => { e.target.style.display = 'none' }}
+                      />
+                    </a>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>{chofer}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{auto} · {fmtFecha(t.fecha)}</div>
+                    </div>
+                    {/* Monto + estado */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: esCompleto ? '#10B981' : '#F59E0B' }}>
+                        ${Math.round(t.monto || 0).toLocaleString('es-AR')}
+                      </div>
+                      <div style={{ fontSize: 10, color: esCompleto ? '#10B981' : '#F59E0B', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {esCompleto ? 'Completo' : 'Parcial'}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!loading && (
+          <div style={{ padding: '12px 16px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+            <button
+              onClick={handleDownloadPDF}
+              disabled={exporting || turnos.length === 0}
+              style={{ width: '100%', padding: '13px', background: exporting ? 'var(--bg)' : 'linear-gradient(135deg,#3F7DF5,#6366F1)', border: 'none', borderRadius: 13, color: exporting ? 'var(--text-muted)' : '#fff', fontSize: 14, fontWeight: 700, cursor: exporting || turnos.length === 0 ? 'default' : 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+              {exporting ? '⏳ Generando PDF...' : '📄 Descargar reporte PDF'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function TutorialOverlay({ onDone }) {
   const [step, setStep] = useState(0)
   const [animKey, setAnimKey] = useState(0)
@@ -623,6 +754,8 @@ export default function App() {
   })
   // Upgrade modal
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  // Weekly comprobantes report
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false)
   // Push notifications
   const [notifState, setNotifState] = useState('unknown') // unknown|granted|denied|unsupported
   const installPrompt = useRef(null)
@@ -706,7 +839,7 @@ export default function App() {
     }
   }, [authState])
 
-  // Detectar parámetros del QR de vinculación en la URL al cargar
+  // Detectar parámetros del QR de vinculación y deep links en la URL al cargar
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const token = params.get('vincular')
@@ -714,10 +847,22 @@ export default function App() {
     if (token && cid) {
       sessionStorage.setItem('vincular_token', token)
       sessionStorage.setItem('vincular_chofer_id', cid)
-      // Limpiar la URL sin recargar
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    // Deep link desde notificación semanal de comprobantes
+    if (params.get('reporte') === 'semana') {
+      sessionStorage.setItem('flota_open_reporte_semana', '1')
       window.history.replaceState({}, '', window.location.pathname)
     }
   }, [])
+
+  // Abrir reporte semanal automáticamente si vino por deep link
+  useEffect(() => {
+    if (authState === 'app' && sessionStorage.getItem('flota_open_reporte_semana')) {
+      sessionStorage.removeItem('flota_open_reporte_semana')
+      setShowWeeklyReport(true)
+    }
+  }, [authState])
 
   const handleSession = useCallback(async () => {
     // Procesar token de vinculación pendiente (el chofer acaba de hacer login con Google)
@@ -948,6 +1093,15 @@ export default function App() {
               </svg>
             </button>
           )}
+          {/* Comprobantes semanales */}
+          {!isDemoMode && (
+            <button
+              className="sync-btn"
+              onClick={() => setShowWeeklyReport(true)}
+              title="Comprobantes de la semana"
+              style={{ fontSize: 14 }}
+            >📋</button>
+          )}
           {/* Plan badge */}
           {!isDemoMode && (
             isPro
@@ -1008,6 +1162,13 @@ export default function App() {
             setProfile(prof)
             showToast('⭐ ¡Bienvenido a Flota Pro!', 'success')
           }}
+        />
+      )}
+      {showWeeklyReport && (
+        <WeeklyReportModal
+          onClose={() => setShowWeeklyReport(false)}
+          showToast={showToast}
+          nombreFlota={profile?.nombre || 'Flota'}
         />
       )}
       </div>{/* end app-wrap */}
@@ -3013,14 +3174,14 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>VTV vence</div>
-                <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
+                <input className="form-input" type="date" style={{ fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.vtv ?? (auto.vtv_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], vtv: e.target.value } }))}
                 />
               </div>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>Seguro vence</div>
-                <input className="form-input" type="date" style={{ colorScheme: 'dark', fontSize: 13, padding: '10px 12px' }}
+                <input className="form-input" type="date" style={{ fontSize: 13, padding: '10px 12px' }}
                   value={vencimientos[auto.id]?.seguro ?? (auto.seguro_vence || '')}
                   onChange={e => setVencimientos(p => ({ ...p, [auto.id]: { ...p[auto.id], seguro: e.target.value } }))}
                 />
