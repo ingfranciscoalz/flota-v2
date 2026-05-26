@@ -335,7 +335,7 @@ export async function getCalendario(year, month, cfg = null) {
 
   const [cfgData, turnosRes, francosRes] = await Promise.all([
     cfg ? Promise.resolve(cfg) : getConfig(),
-    supabase.from('turnos').select('*, choferes(auto_id)').gte('fecha', inicioMes).lte('fecha', finMes),
+    supabase.from('turnos').select('chofer_id, fecha, monto, comprobante_url, marcado_por, choferes(auto_id)').gte('fecha', inicioMes).lte('fecha', finMes),
     supabase.from('francos').select('*').gte('fecha', inicioMes).lte('fecha', finMes),
   ])
 

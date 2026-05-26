@@ -2057,9 +2057,16 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     setSaving(false)
     if (tErr || data?.error) return showToast('⚠ ' + (data?.error || tErr?.message), 'error')
     showToast('✓ Turno registrado', 'success')
-    setCompImg(null)
+    // Actualización optimista: el día se pone verde de inmediato sin esperar loadData
+    const turnoBase = choferData?.turno_base || 50000
+    const estadoLocal = monto >= turnoBase ? 'completo' : 'parcial'
+    setTurnos(prev => ({
+      ...prev,
+      [pagarModal]: { fecha: pagarModal, monto, estado: estadoLocal, comprobante_url: url, marcado_por: 'chofer' },
+    }))
     setPagarModal(null)
-    loadData()
+    setCompImg(null)
+    loadData() // también recarga desde el servidor en segundo plano
   }
 
   const changeMonth = (delta) => {
