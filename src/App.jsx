@@ -3013,19 +3013,19 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
 
 // ── FLOTA PAGE ────────────────────────────────────────────────────────────────
 function FlotaPage({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade }) {
-  const [tab, setTab] = useState('autos')
+  const [tab, setTab] = useState('gastos')
   return (
     <div className="page">
       <div className="tabs">
-        <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
         <button className={`tab ${tab === 'gastos' ? 'active' : ''}`} onClick={() => setTab('gastos')}>Gastos</button>
-        <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
         <button className={`tab ${tab === 'deudas' ? 'active' : ''}`} onClick={() => setTab('deudas')}>Deudas</button>
+        <button className={`tab ${tab === 'mant' ? 'active' : ''}`} onClick={() => setTab('mant')}>Mantenimiento</button>
+        <button className={`tab ${tab === 'autos' ? 'active' : ''}`} onClick={() => setTab('autos')}>Autos</button>
       </div>
-      {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={onUpgrade} />}
       {tab === 'gastos'  && <GastosPage resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} embedded />}
-      {tab === 'mant'    && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
       {tab === 'deudas'  && <DeudasTab resumen={resumen} showToast={showToast} isDemoMode={isDemoMode} />}
+      {tab === 'mant'    && <MantItemsTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} />}
+      {tab === 'autos'   && <AutosTab resumen={resumen} showToast={showToast} onRefresh={onRefresh} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={onUpgrade} />}
     </div>
   )
 }
