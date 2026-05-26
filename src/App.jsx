@@ -4322,7 +4322,7 @@ const globalStyles = `
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
   .cal-nav-btn{width:38px;height:38px;border-radius:50%;background:var(--bg-inner);border:none;color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-  .cal-month-label{font-size:17px;font-weight:700;letter-spacing:-0.3px;color:var(--text)}
+  .cal-month-label{font-size:17px;font-weight:700;letter-spacing:-0.3px;color:var(--text);padding:0 14px}
   .cal-legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
   .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sub)}
   .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
