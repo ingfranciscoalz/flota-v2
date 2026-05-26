@@ -283,6 +283,51 @@ export async function sharePDF(doc, filename = 'reporte.pdf', title = 'Reporte F
   return { shared: false, downloaded: true }
 }
 
+// ── CONSTRUIR RESUMEN DESDE CAL (para exportar meses históricos) ─────────────
+// cal = { autoId: { nombre, turno_base, choferes, dias }, franco_weekday }
+export function buildResumenFromCal(cal, gastos, year, month) {
+  const autoEntries = Object.entries(cal).filter(([, v]) => v && v.nombre)
+  let totalMes = 0
+  const autos = {}
+
+  for (const [autoId, autoData] of autoEntries) {
+    let autoMes = 0
+    const choferStats = {}
+    for (const [cid, cname] of Object.entries(autoData.choferes || {})) {
+      choferStats[cid] = { nombre: cname, ganMes: 0, dias: [] }
+    }
+    for (const [, diaData] of Object.entries(autoData.dias || {})) {
+      for (const [cid, info] of Object.entries(diaData)) {
+        if (!choferStats[cid]) continue
+        if (info.monto) { autoMes += info.monto; choferStats[cid].ganMes += info.monto }
+        if (info.estado === 'debe') choferStats[cid].dias.push(info.fecha)
+      }
+    }
+    totalMes += autoMes
+
+    const autoGastosMes = (gastos || [])
+      .filter(g => {
+        const gy = parseInt(g.fecha?.slice(0, 4), 10)
+        const gm = parseInt(g.fecha?.slice(5, 7), 10)
+        return g.auto_id === autoId && gy === year && gm === month
+      })
+      .reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0)
+
+    const deudas = {}
+    for (const [cid, cs] of Object.entries(choferStats)) {
+      deudas[cid] = { nombre: cs.nombre, gan_mes: cs.ganMes, gan_semana: 0, dias: cs.dias }
+    }
+    autos[autoId] = {
+      nombre: autoData.nombre,
+      turno_base: autoData.turno_base,
+      ganancias: { mes: autoMes, gastos_mes: autoGastosMes, neto_mes: autoMes - autoGastosMes },
+      kms_actuales: 0, kms_iniciales: 0, gastos_total: autoGastosMes,
+      deudas,
+    }
+  }
+  return { totales: { mes: totalMes }, autos }
+}
+
 // ── COMPARTIR RESUMEN POR WHATSAPP (texto plano) ─────────────────────────────
 export function buildWhatsAppSummary({ resumen, gastos, year, month, nombreFlota = 'Flota' }) {
   const totales = resumen?.totales || {}

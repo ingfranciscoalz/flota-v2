@@ -756,6 +756,8 @@ export default function App() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   // Weekly comprobantes report
   const [showWeeklyReport, setShowWeeklyReport] = useState(false)
+  // Export desde calendario
+  const [calExporting, setCalExporting] = useState(false)
   // Push notifications
   const [notifState, setNotifState] = useState('unknown') // unknown|granted|denied|unsupported
   const installPrompt = useRef(null)
@@ -986,6 +988,40 @@ export default function App() {
     setCal(data)
   }
 
+  const handleCalExport = async (action, year, month) => {
+    if (!cal) return
+    setCalExporting(true)
+    try {
+      const reportsMod = await import('./reports')
+      const { generateMonthlyPDF, downloadPDF, sharePDF, buildWhatsAppSummary, buildResumenFromCal } = reportsMod
+      const gastos = isDemoMode ? getDemoGastos() : ((await getGastos()).data || [])
+      const nombreFlota = profile?.nombre_flota || profile?.nombre || 'Flota'
+      const resumenCal = buildResumenFromCal(cal, gastos, year, month)
+
+      if (action === 'whatsapp') {
+        const text = buildWhatsAppSummary({ resumen: resumenCal, gastos, year, month, nombreFlota })
+        const encoded = encodeURIComponent(text)
+        window.location.href = `https://wa.me/?text=${encoded}`
+        showToast('✓ Abriendo WhatsApp', 'success')
+      } else {
+        const doc = generateMonthlyPDF({ resumen: resumenCal, gastos, year, month, nombreFlota })
+        const filename = `reporte-${MESES[month - 1].toLowerCase()}-${year}.pdf`
+        if (action === 'share') {
+          const result = await sharePDF(doc, filename, `Reporte ${MESES[month - 1]} ${year}`)
+          if (result.downloaded) showToast('✓ PDF descargado', 'success')
+          else if (result.shared) showToast('✓ Compartido', 'success')
+        } else {
+          downloadPDF(doc, filename)
+          showToast('✓ PDF descargado', 'success')
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      showToast('⚠ Error al generar reporte', 'error')
+    }
+    setCalExporting(false)
+  }
+
   if (authState === 'loading') {
     return (
       <div style={{ background: 'var(--bg)', minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1131,7 +1167,7 @@ export default function App() {
             {resumenTab === 'analisis' && <StatsPage resumen={resumen} cal={cal} calYear={calYear} calMonth={calMonth} showToast={showToast} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
           </>
         )}
-        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) { loadCal(calYear, calMonth); loadResumen() } }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} />}
+        {page === 'calendario' && <CalendarioPage cal={cal} calYear={calYear} calMonth={calMonth} changeMonth={changeMonth} showToast={showToast} onRefresh={() => { if (!isDemoMode) { loadCal(calYear, calMonth); loadResumen() } }} turnoBase={resumen?.config?.turno_base || TURNO_BASE_DEFAULT} isDemoMode={isDemoMode} onDemoUpdateDay={updateCalDay} onExport={handleCalExport} exporting={calExporting} />}
         {page === 'flota'      && <FlotaPage resumen={resumen} showToast={showToast} onRefresh={loadAll} isDemoMode={isDemoMode} isPro={isPro} onUpgrade={() => setShowUpgradeModal(true)} />}
         {page === 'admin'      && <AdminScreen showToast={showToast} />}
       </div>
@@ -1779,50 +1815,9 @@ function diasParaVencer(fecha) {
 function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
   const [kmsInputs, setKmsInputs] = useState({})
   const [kmsLoading, setKmsLoading] = useState({})
-  const [exportMenu, setExportMenu] = useState(false)
-  const [exporting, setExporting] = useState(false)
   if (!resumen) return <SkeletonResumen />
 
   const nombreFlota = profile?.nombre_flota || profile?.nombre || 'Flota'
-  const now = new Date()
-  const curYear = now.getFullYear()
-  const curMonth = now.getMonth() + 1
-
-  const handleExport = async (action) => {
-    setExporting(true)
-    setExportMenu(false)
-    try {
-      // Dynamic import — jsPDF y dependencias solo se descargan al exportar
-      const reportsMod = await import('./reports')
-      const { generateMonthlyPDF, downloadPDF, sharePDF, buildWhatsAppSummary } = reportsMod
-
-      // Cargar gastos (demo o real)
-      const gastos = isDemoMode ? getDemoGastos() : ((await getGastos()).data || [])
-
-      if (action === 'whatsapp') {
-        const text = buildWhatsAppSummary({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
-        const encoded = encodeURIComponent(text)
-        // window.location.href funciona en PWA: en móvil el SO intercepta wa.me y abre WhatsApp sin salir de la app
-        window.location.href = `https://wa.me/?text=${encoded}`
-        showToast('✓ Abriendo WhatsApp', 'success')
-      } else {
-        const doc = generateMonthlyPDF({ resumen, gastos, year: curYear, month: curMonth, nombreFlota })
-        const filename = `reporte-${MESES[curMonth - 1].toLowerCase()}-${curYear}.pdf`
-        if (action === 'share') {
-          const result = await sharePDF(doc, filename, `Reporte ${MESES[curMonth - 1]} ${curYear}`)
-          if (result.downloaded) showToast('✓ PDF descargado', 'success')
-          else if (result.shared) showToast('✓ Compartido', 'success')
-        } else {
-          downloadPDF(doc, filename)
-          showToast('✓ PDF descargado', 'success')
-        }
-      }
-    } catch (e) {
-      console.error(e)
-      showToast('⚠ Error al generar reporte', 'error')
-    }
-    setExporting(false)
-  }
 
   const { autos, totales } = resumen
   const autoEntries = Object.entries(autos)
@@ -1841,30 +1836,6 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
 
   return (
     <div className="page">
-      {/* Exportar / Compartir */}
-      <div style={{ position: 'relative', display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 4 }} className="no-print">
-        <button disabled={exporting} onClick={() => setExportMenu(v => !v)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", opacity: exporting ? 0.6 : 1 }}>
-          {exporting ? '⏳ Generando...' : '↓ Exportar / Compartir'}
-        </button>
-        {exportMenu && (
-          <>
-            <div onClick={() => setExportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
-            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 12, padding: 6, minWidth: 220, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 20 }}>
-              <button onClick={() => handleExport('download')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
-                <span style={{ fontSize: 16 }}>📄</span> Descargar PDF
-              </button>
-              <button onClick={() => handleExport('share')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
-                <span style={{ fontSize: 16 }}>📤</span> Compartir PDF
-              </button>
-              <button onClick={() => handleExport('whatsapp')} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }}>
-                <span style={{ fontSize: 16 }}>💬</span> Resumen por WhatsApp
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-
       {/* Alertas VTV/Seguro */}
       {alertas.map((a, i) => (
         <div key={i} className={`alert-banner ${a.dias <= 0 ? 'alert-danger' : 'alert-warn'}`}>
@@ -2431,9 +2402,10 @@ function ChoferLinkModal({ chofer, isDemoMode, showToast, onClose }) {
 }
 
 // ── CALENDARIO PAGE ───────────────────────────────────────────────────────────
-function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode, onDemoUpdateDay }) {
+function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefresh, turnoBase, isDemoMode, onDemoUpdateDay, onExport, exporting }) {
   const [dayModal, setDayModal] = useState(null)
   const [filterAuto, setFilterAuto] = useState(null)
+  const [exportMenu, setExportMenu] = useState(false)
   if (!cal) return <div className="loading"><div className="spinner" /></div>
 
   const todayStr = today()
@@ -2452,12 +2424,42 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   for (let i = 0; i < firstDow; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
+  const btnExportStyle = { display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: 'transparent', border: 'none', borderRadius: 8, color: 'var(--text)', fontSize: 13, cursor: 'pointer', textAlign: 'left', fontFamily: "'DM Sans',sans-serif" }
+
   return (
     <div className="page page-cal">
       <div className="cal-nav">
         <button className="cal-nav-btn" onClick={() => changeMonth(-1)}>‹</button>
         <span className="cal-month-label">{MESES[calMonth - 1]} {calYear}</span>
         <button className="cal-nav-btn" onClick={() => changeMonth(1)}>›</button>
+        {/* Export dropdown */}
+        <div style={{ position: 'relative', marginLeft: 'auto' }}>
+          <button
+            className="cal-nav-btn"
+            onClick={() => setExportMenu(v => !v)}
+            disabled={exporting}
+            title="Exportar mes"
+            style={{ fontSize: 13, padding: '6px 10px', opacity: exporting ? 0.6 : 1 }}
+          >
+            {exporting ? '⏳' : '↓ PDF'}
+          </button>
+          {exportMenu && (
+            <>
+              <div onClick={() => setExportMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 10 }} />
+              <div style={{ position: 'absolute', top: '110%', right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-card)', borderRadius: 12, padding: 6, minWidth: 210, boxShadow: '0 8px 24px rgba(0,0,0,0.25)', zIndex: 20 }}>
+                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('download', calYear, calMonth) }}>
+                  <span style={{ fontSize: 16 }}>📄</span> Descargar PDF
+                </button>
+                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('share', calYear, calMonth) }}>
+                  <span style={{ fontSize: 16 }}>📤</span> Compartir PDF
+                </button>
+                <button style={btnExportStyle} onClick={() => { setExportMenu(false); onExport('whatsapp', calYear, calMonth) }}>
+                  <span style={{ fontSize: 16 }}>💬</span> Resumen por WhatsApp
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
       <div className="cal-legend">
         {[['#10B981','Completo'],['#F59E0B','Parcial'],['#EF4444','Debe'],['#60A5FA','Franco']].map(([bg,lbl]) => (
