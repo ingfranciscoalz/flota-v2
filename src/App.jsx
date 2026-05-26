@@ -1998,17 +1998,21 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   const curMonthStr = `${calYear}-${String(calMonth).padStart(2, '0')}`
   const francoWeekday = choferData?.franco_weekday ?? 1
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
     const [turnosRes, francosRes] = await Promise.all([
       getMisTurnos(calYear, calMonth),
       getMisFrancos(calYear, calMonth),
     ])
-    const tMap = {}
-    for (const t of turnosRes.data || []) tMap[t.fecha] = t
-    setTurnos(tMap)
-    const fSet = new Set((francosRes.data || []).map(f => f.fecha))
-    setFrancos(fSet)
+    // Solo pisa el estado si la respuesta es válida — así el update optimista sobrevive errores de red
+    if (!turnosRes.error && turnosRes.data) {
+      const tMap = {}
+      for (const t of turnosRes.data) tMap[t.fecha] = t
+      setTurnos(tMap)
+    }
+    if (!francosRes.error && francosRes.data) {
+      setFrancos(new Set(francosRes.data.map(f => f.fecha)))
+    }
     setLoading(false)
   }, [calYear, calMonth])
 
@@ -2066,7 +2070,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     }))
     setPagarModal(null)
     setCompImg(null)
-    loadData() // también recarga desde el servidor en segundo plano
+    loadData(true) // recarga silenciosa — sin spinner, sin borrar estado si falla
   }
 
   const changeMonth = (delta) => {
@@ -2108,6 +2112,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="sync-btn" onClick={() => loadData()} title="Actualizar" style={{ fontSize: 16 }}>↻</button>
           <button className="sync-btn" onClick={toggleTheme} title="Cambiar tema">{theme === 'dark' ? '☀' : '🌙'}</button>
           <button className="sync-btn" onClick={onSignOut} title="Cerrar sesión" style={{ fontSize: 12 }}>↩</button>
         </div>
@@ -2138,7 +2143,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
 
         {/* Leyenda */}
         <div className="cal-legend">
-          {[['#10B981','Pagado'],['#EF4444','Pendiente'],['#60A5FA','Franco']].map(([c,l]) => (
+          {[['#10B981','Completo'],['#F59E0B','Parcial'],['#EF4444','Pendiente'],['#60A5FA','Franco']].map(([c,l]) => (
             <div key={l} className="leg-item"><div className="leg-dot" style={{ background: c }} />{l}</div>
           ))}
         </div>
@@ -2158,14 +2163,17 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
                     const esFranco = dowLunes === francoWeekday || francos.has(ds)
                     const esFuturo = ds > hoy
                     const t = turnos[ds]
-                    const esPagado = t?.estado === 'completo' || t?.estado === 'parcial'
-                    const tieneComp = !!t?.comprobante_url
+                    const esCompleto = t?.estado === 'completo'
+                    const esParcial  = t?.estado === 'parcial'
+                    const esPagado   = esCompleto || esParcial
+                    const tieneComp  = !!t?.comprobante_url
 
-                    let bgColor, textColor
-                    if (esFranco)      { bgColor = '#08111F'; textColor = '#60A5FA' }
-                    else if (esFuturo) { bgColor = 'var(--bg-dark)'; textColor = 'var(--text-dim)' }
-                    else if (esPagado) { bgColor = '#0A1A10'; textColor = '#10B981' }
-                    else               { bgColor = '#1A0808'; textColor = '#EF4444' }
+                    let bgColor, textColor, borderColor
+                    if (esFranco)        { bgColor = '#08111F'; textColor = '#60A5FA'; borderColor = '#0F2040' }
+                    else if (esFuturo)   { bgColor = 'var(--bg-dark)'; textColor = 'var(--text-dim)'; borderColor = 'transparent' }
+                    else if (esCompleto) { bgColor = '#0A1A10'; textColor = '#10B981'; borderColor = '#0F3020' }
+                    else if (esParcial)  { bgColor = '#1A1200'; textColor = '#F59E0B'; borderColor = '#3A2800' }
+                    else                 { bgColor = '#1A0808'; textColor = '#EF4444'; borderColor = '#3A1515' }
 
                     const clickable = !esFranco && !esFuturo && !esPagado
                     const verComp = tieneComp
@@ -2175,7 +2183,7 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
                         if (verComp) setVisorUrl(t.comprobante_url)
                         else if (clickable) setPagarModal(ds)
                       }}>
-                        <div style={{ borderRadius: 8, background: bgColor, border: `1px solid ${esFuturo ? 'transparent' : (esPagado ? '#0F3020' : esFranco ? '#0F2040' : '#3A1515')}`, padding: '4px 2px 3px', minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, opacity: esFuturo ? 0.3 : 1, cursor: clickable || verComp ? 'pointer' : 'default' }}>
+                        <div style={{ borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, padding: '4px 2px 3px', minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, opacity: esFuturo ? 0.3 : 1, cursor: clickable || verComp ? 'pointer' : 'default' }}>
                           <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 600, color: textColor, lineHeight: 1 }}>{day}</span>
                           <span style={{ fontSize: 8, fontWeight: 700, color: textColor, textAlign: 'center', lineHeight: 1.3 }}>
                             {esFranco ? 'F' : esFuturo ? '' : esPagado ? (tieneComp ? '📎✓' : '✓') : '!'}
