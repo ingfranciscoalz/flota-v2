@@ -1989,6 +1989,9 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   const [saving, setSaving] = useState(false)
   const compInputRef = useRef(null)
   const [visorUrl, setVisorUrl] = useState(null) // URL del comprobante a ver
+  const [montoInput, setMontoInput] = useState('') // monto editable (puede venir del OCR)
+  const [ocrProgress, setOcrProgress] = useState(null) // null | 0-100
+  const [ocrDetected, setOcrDetected] = useState(false) // si el OCR encontró monto
 
   const hoy = today()
   const curMonthStr = `${calYear}-${String(calMonth).padStart(2, '0')}`
@@ -2010,13 +2013,41 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
 
   useEffect(() => { loadData() }, [loadData])
 
+  // Resetear monto al abrir el modal
+  useEffect(() => {
+    if (pagarModal) {
+      setMontoInput(String(choferData?.turno_base || 50000))
+      setOcrDetected(false)
+      setOcrProgress(null)
+      setCompImg(null)
+    }
+  }, [pagarModal])
+
+  // OCR automático cuando el chofer elige la imagen
+  useEffect(() => {
+    if (!compImg) { setOcrProgress(null); return }
+    setOcrProgress(0)
+    setOcrDetected(false)
+    import('./ocr').then(({ scanReceipt }) => {
+      scanReceipt(compImg, p => setOcrProgress(p))
+        .then(res => {
+          setOcrProgress(null)
+          if (res.monto && res.monto > 100) {
+            setMontoInput(String(Math.round(res.monto)))
+            setOcrDetected(true)
+          }
+        })
+        .catch(() => setOcrProgress(null))
+    })
+  }, [compImg])
+
   const handlePagar = async () => {
     if (!compImg) return showToast('Adjuntá el comprobante', 'error')
     setSaving(true)
     const { url, error: upErr } = await uploadComprobante(choferData.chofer_id, pagarModal, compImg)
     if (upErr) { setSaving(false); return showToast('⚠ Error al subir comprobante', 'error') }
-    const turnoBase = choferData.turno_base || 50000
-    const { data, error: tErr } = await choferMarcarTurno(pagarModal, turnoBase, url)
+    const monto = parseInt(montoInput, 10) || choferData?.turno_base || 50000
+    const { data, error: tErr } = await choferMarcarTurno(pagarModal, monto, url)
     setSaving(false)
     if (tErr || data?.error) return showToast('⚠ ' + (data?.error || tErr?.message), 'error')
     showToast('✓ Turno registrado', 'success')
@@ -2161,10 +2192,8 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
           <div className="modal-sheet">
             <div className="modal-date">REGISTRAR PAGO</div>
             <div className="modal-title">{pagarModal.split('-').reverse().join('/')}</div>
-            <div className="stitle" style={{ marginTop: 0 }}>Monto</div>
-            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 22, fontWeight: 700, color: 'var(--text)', marginBottom: 16 }}>
-              {fmt(choferData?.turno_base || 50000)}
-            </div>
+
+            {/* Comprobante primero — el OCR llena el monto */}
             <div className="stitle">Comprobante de transferencia</div>
             <input
               ref={compInputRef}
@@ -2175,24 +2204,54 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
               onChange={e => setCompImg(e.target.files?.[0] || null)}
             />
             {compImg ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 12, border: '1px solid #10B981' }}>
-                <span style={{ fontSize: 20 }}>📎</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 10, border: `1px solid ${ocrProgress !== null ? '#F59E0B' : '#10B981'}` }}>
+                <span style={{ fontSize: 20 }}>{ocrProgress !== null ? '🔍' : '📎'}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>Comprobante listo</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compImg.name}</div>
+                  {ocrProgress !== null ? (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#F59E0B' }}>Leyendo monto… {ocrProgress}%</div>
+                      <div style={{ marginTop: 5, height: 4, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${ocrProgress}%`, background: '#F59E0B', borderRadius: 4, transition: 'width 0.3s' }} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>
+                        Comprobante listo {ocrDetected && <span style={{ fontSize: 11, background: '#10B98122', border: '1px solid #10B98144', borderRadius: 6, padding: '1px 6px', marginLeft: 4 }}>🤖 monto leído</span>}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compImg.name}</div>
+                    </>
+                  )}
                 </div>
-                <button onClick={() => setCompImg(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+                <button onClick={() => { setCompImg(null); setOcrDetected(false) }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={() => compInputRef.current?.click()}
-                style={{ width: '100%', padding: '14px', background: 'var(--bg-inner)', border: '2px dashed var(--border-card)', borderRadius: 12, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', marginBottom: 12, fontFamily: "'DM Sans',sans-serif" }}
+                style={{ width: '100%', padding: '14px', background: 'var(--bg-inner)', border: '2px dashed var(--border-card)', borderRadius: 12, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', marginBottom: 10, fontFamily: "'DM Sans',sans-serif" }}
               >
                 📷 Adjuntar foto del comprobante
               </button>
             )}
-            <button className="btn-primary" disabled={saving || !compImg} onClick={handlePagar} style={{ marginTop: 4 }}>
+
+            {/* Monto — editable, pre-llenado por OCR si lo detectó */}
+            <div className="stitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Monto</span>
+              {!ocrDetected && <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>Verificá que coincida con el comprobante</span>}
+            </div>
+            <div style={{ position: 'relative', marginBottom: 14 }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, fontWeight: 700, color: 'var(--text-muted)', pointerEvents: 'none' }}>$</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={montoInput}
+                onChange={e => { setMontoInput(e.target.value); setOcrDetected(false) }}
+                style={{ width: '100%', padding: '12px 14px 12px 28px', background: 'var(--bg-inner)', border: `1px solid ${ocrDetected ? '#10B98166' : 'var(--border-card)'}`, borderRadius: 12, fontSize: 20, fontWeight: 700, color: 'var(--text)', fontFamily: "'DM Mono',monospace", boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <button className="btn-primary" disabled={saving || !compImg || ocrProgress !== null} onClick={handlePagar} style={{ marginTop: 4 }}>
               {saving ? 'Enviando...' : '✓ CONFIRMAR PAGO'}
             </button>
             <button className="modal-close" onClick={() => { setPagarModal(null); setCompImg(null) }}>Cancelar</button>
