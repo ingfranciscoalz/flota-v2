@@ -183,7 +183,7 @@ function IllustWelcome() {
       <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 58, fontWeight: 800, letterSpacing: -3, color: '#fff', lineHeight: 1 }}>
         Flota<span style={{ color: '#3F7DF5' }}>.</span>
       </div>
-      <div style={{ color: '#666', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE REMISES</div>
+      <div style={{ color: '#666', fontSize: 11, marginTop: 10, letterSpacing: 3, fontWeight: 700 }}>GESTIÓN DE FLOTA</div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 28 }}>
         {['$312k', '6 autos', '4 choferes'].map((t, i) => (
           <div key={i} style={{ background: '#15151B', borderRadius: 10, padding: '8px 14px', fontSize: 11, color: '#888', fontWeight: 700 }}>{t}</div>
@@ -1102,13 +1102,8 @@ export default function App() {
 
       <div className="header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/icons/icon-192.png" alt="" style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: -0.3, lineHeight: 1, color: 'var(--text)' }}>
-              Flota<span style={{ color: '#3F7DF5' }}>.</span>
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.5, fontWeight: 600, marginTop: 2, textTransform: 'uppercase' }}>Gestión de remises</div>
-          </div>
+          <img src="/icons/icon-192.png" alt="Flota" style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0 }} />
+          <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Gestión de flota</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {showInstall && (
@@ -1292,12 +1287,7 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, alignSelf: 'flex-start', marginBottom: 6 }}>
         <img src="/icons/icon-192.png" alt="Flota" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
-        <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: '#F4F4F8' }}>
-            Flota<span style={{ color: '#3F7DF5' }}>.</span>
-          </div>
-          <div style={{ fontSize: 10, color: '#555', letterSpacing: 1.5, fontWeight: 600, marginTop: 3, textTransform: 'uppercase' }}>Gestión de remises</div>
-        </div>
+        <div style={{ fontSize: 11, color: '#666', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Gestión de flota</div>
       </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
@@ -2128,14 +2118,9 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
       {/* Header */}
       <div className="header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/icons/icon-192.png" alt="" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0 }} />
-          <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, letterSpacing: -0.3, lineHeight: 1, color: 'var(--text)' }}>
-              Flota<span style={{ color: '#3F7DF5' }}>.</span>
-            </div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
-              {choferData?.nombre} · {choferData?.auto_nombre}
-            </div>
+          <img src="/icons/icon-192.png" alt="Flota" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0 }} />
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {choferData?.nombre} · {choferData?.auto_nombre}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
