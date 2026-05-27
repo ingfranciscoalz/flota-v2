@@ -1953,14 +1953,12 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null) // mensaje de error del RPC
   const [pagarModal, setPagarModal] = useState(null) // fecha seleccionada
-  const [compImg, setCompImg] = useState(null)  // File seleccionado para comprobante
+  const [compImgs, setCompImgs] = useState([]) // [{id, file, ocrProgress, ocrDetected, ocrSuspect}]
+  const compIdRef = useRef(0) // contador estable para keys
   const [saving, setSaving] = useState(false)
   const compInputRef = useRef(null)
-  const [visorUrl, setVisorUrl] = useState(null) // URL del comprobante a ver
-  const [montoInput, setMontoInput] = useState('') // monto editable (puede venir del OCR)
-  const [ocrProgress, setOcrProgress] = useState(null) // null | 0-100
-  const [ocrDetected, setOcrDetected] = useState(false) // si el OCR encontró monto
-  const [ocrSuspect, setOcrSuspect] = useState(false)  // monto detectado parece incorrecto
+  const [visorUrl, setVisorUrl] = useState(null) // URL para visor pantalla completa
+  const [montoInput, setMontoInput] = useState('') // monto total editable
 
   const hoy = today()
   const curMonthStr = `${calYear}-${String(calMonth).padStart(2, '0')}`
@@ -2000,59 +1998,81 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     return () => document.removeEventListener('visibilitychange', onVisible)
   }, [loadData])
 
-  // Resetear monto al abrir el modal
+  // Resetear modal al abrirlo — pre-llenar monto si el día ya tiene turno
   useEffect(() => {
     if (pagarModal) {
-      setMontoInput(String(choferData?.turno_base || 50000))
-      setOcrDetected(false)
-      setOcrSuspect(false)
-      setOcrProgress(null)
-      setCompImg(null)
+      const existing = turnos[pagarModal]
+      setMontoInput(String(existing?.monto || choferData?.turno_base || 50000))
+      setCompImgs([])
     }
   }, [pagarModal])
 
-  // OCR automático cuando el chofer elige la imagen
-  useEffect(() => {
-    if (!compImg) { setOcrProgress(null); return }
-    setOcrProgress(0)
-    setOcrDetected(false)
-    setOcrSuspect(false)
+  // Helper: convierte comprobante_url (string simple o JSON array) → array de URLs
+  const parseCompUrls = (raw) => {
+    if (!raw) return []
+    if (typeof raw === 'string' && raw.trimStart().startsWith('[')) {
+      try { return JSON.parse(raw) } catch { return [raw] }
+    }
+    return [raw]
+  }
+
+  // Agregar imagen al modal y lanzar OCR automático
+  const handleAddComp = (file) => {
+    const id = compIdRef.current++
+    setCompImgs(prev => [...prev, { id, file, ocrProgress: 0, ocrDetected: false, ocrSuspect: false }])
     const turnoBase = choferData?.turno_base || 50000
     import('./ocr').then(({ scanReceipt }) => {
-      scanReceipt(compImg, p => setOcrProgress(p))
-        .then(res => {
-          setOcrProgress(null)
-          if (res.monto && res.monto > 100) {
-            setMontoInput(String(Math.round(res.monto)))
-            setOcrDetected(true)
-            // Sospechoso si es menos del 30% del turno base
-            setOcrSuspect(res.monto < turnoBase * 0.3)
-          }
-        })
-        .catch(() => setOcrProgress(null))
+      scanReceipt(file, p =>
+        setCompImgs(prev => prev.map(c => c.id === id ? { ...c, ocrProgress: p } : c))
+      ).then(res => {
+        setCompImgs(prev => prev.map(c => {
+          if (c.id !== id) return c
+          const ocrMonto = res.monto && res.monto > 100 ? Math.round(res.monto) : null
+          const detected = !!ocrMonto
+          const suspect = detected && ocrMonto < turnoBase * 0.3
+          if (ocrMonto) setMontoInput(String(ocrMonto))
+          return { ...c, ocrProgress: null, ocrDetected: detected, ocrSuspect: suspect }
+        }))
+      }).catch(() =>
+        setCompImgs(prev => prev.map(c => c.id === id ? { ...c, ocrProgress: null } : c))
+      )
     })
-  }, [compImg])
+  }
 
   const handlePagar = async () => {
-    if (!compImg) return showToast('Adjuntá el comprobante', 'error')
+    const existingUrls = parseCompUrls(turnos[pagarModal]?.comprobante_url)
+    if (compImgs.length === 0 && existingUrls.length === 0) {
+      return showToast('Adjuntá al menos un comprobante', 'error')
+    }
     setSaving(true)
-    const { url, error: upErr } = await uploadComprobante(choferData.chofer_id, pagarModal, compImg)
-    if (upErr) { setSaving(false); return showToast('⚠ ' + (upErr.message || 'Error al subir comprobante'), 'error') }
+    // Subir todas las imágenes nuevas
+    const uploadedUrls = []
+    for (const comp of compImgs) {
+      const { url, error: upErr } = await uploadComprobante(choferData.chofer_id, pagarModal, comp.file)
+      if (upErr) {
+        setSaving(false)
+        return showToast('⚠ ' + (upErr.message || 'Error al subir comprobante'), 'error')
+      }
+      uploadedUrls.push(url)
+    }
+    // Combinar URLs existentes con las nuevas
+    const allUrls = [...existingUrls, ...uploadedUrls]
+    const urlToSave = allUrls.length === 1 ? allUrls[0] : JSON.stringify(allUrls)
     const monto = parseInt(montoInput, 10) || choferData?.turno_base || 50000
-    const { data, error: tErr } = await choferMarcarTurno(pagarModal, monto, url)
+    const { data, error: tErr } = await choferMarcarTurno(pagarModal, monto, urlToSave)
     setSaving(false)
     if (tErr || data?.error) return showToast('⚠ ' + (data?.error || tErr?.message), 'error')
-    showToast('✓ Turno registrado', 'success')
-    // Actualización optimista: el día se pone verde de inmediato sin esperar loadData
+    showToast('✓ Turno guardado', 'success')
+    // Actualización optimista
     const turnoBase = choferData?.turno_base || 50000
     const estadoLocal = monto >= turnoBase ? 'completo' : 'parcial'
     setTurnos(prev => ({
       ...prev,
-      [pagarModal]: { fecha: pagarModal, monto, estado: estadoLocal, comprobante_url: url, marcado_por: 'chofer' },
+      [pagarModal]: { fecha: pagarModal, monto, estado: estadoLocal, comprobante_url: urlToSave, marcado_por: 'chofer' },
     }))
     setPagarModal(null)
-    setCompImg(null)
-    loadData(true) // recarga silenciosa — sin spinner, sin borrar estado si falla
+    setCompImgs([])
+    loadData(true)
   }
 
   const changeMonth = (delta) => {
@@ -2178,18 +2198,16 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
                     else if (esParcial)  { bgColor = '#1A1200'; textColor = '#F59E0B'; borderColor = '#3A2800' }
                     else                 { bgColor = '#1A0808'; textColor = '#EF4444'; borderColor = '#3A1515' }
 
-                    const clickable = !esFranco && !esFuturo && !esPagado
-                    const verComp = tieneComp
+                    const clickable = !esFranco && !esFuturo
 
                     return (
                       <td key={di} className="cal-td" onClick={() => {
-                        if (verComp) setVisorUrl(t.comprobante_url)
-                        else if (clickable) setPagarModal(ds)
+                        if (clickable) setPagarModal(ds)
                       }}>
-                        <div style={{ borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, padding: '4px 2px 3px', minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, opacity: esFuturo ? 0.3 : 1, cursor: clickable || verComp ? 'pointer' : 'default' }}>
+                        <div style={{ borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, padding: '4px 2px 3px', minHeight: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, opacity: esFuturo ? 0.3 : 1, cursor: clickable ? 'pointer' : 'default' }}>
                           <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 600, color: textColor, lineHeight: 1 }}>{day}</span>
                           <span style={{ fontSize: 8, fontWeight: 700, color: textColor, textAlign: 'center', lineHeight: 1.3 }}>
-                            {esFranco ? 'F' : esFuturo ? '' : esPagado ? (tieneComp ? '📎✓' : '✓') : '!'}
+                            {esFranco ? 'F' : esFuturo ? '' : esPagado ? (() => { const n = parseCompUrls(t?.comprobante_url).length; return n > 1 ? `📎×${n}` : tieneComp ? '📎✓' : '✓' })() : '!'}
                           </span>
                         </div>
                       </td>
@@ -2210,85 +2228,113 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
         )}
       </div>
 
-      {/* Modal para pagar un turno */}
-      {pagarModal && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setPagarModal(null)}>
-          <div className="modal-sheet">
-            <div className="modal-date">REGISTRAR PAGO</div>
-            <div className="modal-title">{pagarModal.split('-').reverse().join('/')}</div>
+      {/* Modal de turno — registrar o agregar comprobantes */}
+      {pagarModal && (() => {
+        const existingUrls = parseCompUrls(turnos[pagarModal]?.comprobante_url)
+        const esPaidDay = existingUrls.length > 0
+        const scanning = compImgs.some(c => c.ocrProgress !== null)
+        const hasSuspect = compImgs.some(c => c.ocrSuspect)
+        const hasNewDetected = compImgs.some(c => c.ocrDetected)
+        const canConfirm = esPaidDay || compImgs.length > 0
+        return (
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setPagarModal(null)}>
+            <div className="modal-sheet">
+              <div className="modal-date">{esPaidDay ? 'AGREGAR COMPROBANTE' : 'REGISTRAR PAGO'}</div>
+              <div className="modal-title">{pagarModal.split('-').reverse().join('/')}</div>
 
-            {/* Comprobante primero — el OCR llena el monto */}
-            <div className="stitle">Comprobante de transferencia</div>
-            <input
-              ref={compInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              style={{ display: 'none' }}
-              onChange={e => setCompImg(e.target.files?.[0] || null)}
-            />
-            {compImg ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 10, border: `1px solid ${ocrProgress !== null ? '#F59E0B' : '#10B981'}` }}>
-                <span style={{ fontSize: 20 }}>{ocrProgress !== null ? '🔍' : '📎'}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {ocrProgress !== null ? (
-                    <>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#F59E0B' }}>Leyendo monto… {ocrProgress}%</div>
-                      <div style={{ marginTop: 5, height: 4, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${ocrProgress}%`, background: '#F59E0B', borderRadius: 4, transition: 'width 0.3s' }} />
+              {/* Comprobantes existentes */}
+              {esPaidDay && (
+                <>
+                  <div className="stitle">Comprobantes guardados</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                    {existingUrls.map((url, i) => (
+                      <div key={i} onClick={() => setVisorUrl(url)} style={{ position: 'relative', cursor: 'pointer' }}>
+                        <img src={url} alt={`Comprobante ${i + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 10, border: '2px solid #10B98155', display: 'block' }} />
+                        <div style={{ position: 'absolute', bottom: 3, right: 3, background: '#00000088', borderRadius: 4, padding: '1px 4px', fontSize: 9, color: '#fff', fontWeight: 700 }}>VER</div>
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>
-                        Comprobante listo {ocrDetected && <span style={{ fontSize: 11, background: '#10B98122', border: '1px solid #10B98144', borderRadius: 6, padding: '1px 6px', marginLeft: 4 }}>🤖 monto leído</span>}
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Nuevas imágenes agregadas */}
+              {compImgs.length > 0 && (
+                <>
+                  <div className="stitle">Nuevos comprobantes</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                    {compImgs.map(comp => (
+                      <div key={comp.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg-inner)', borderRadius: 12, border: `1px solid ${comp.ocrProgress !== null ? '#F59E0B55' : comp.ocrDetected ? '#10B98155' : 'var(--border-card)'}` }}>
+                        <span style={{ fontSize: 18 }}>{comp.ocrProgress !== null ? '🔍' : comp.ocrSuspect ? '⚠️' : '📎'}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          {comp.ocrProgress !== null ? (
+                            <>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#F59E0B' }}>Leyendo… {comp.ocrProgress}%</div>
+                              <div style={{ marginTop: 4, height: 3, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${comp.ocrProgress}%`, background: '#F59E0B', borderRadius: 4, transition: 'width 0.3s' }} />
+                              </div>
+                            </>
+                          ) : (
+                            <div style={{ fontSize: 12, fontWeight: 600, color: comp.ocrDetected ? '#10B981' : 'var(--text-sub)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {comp.file.name}
+                              {comp.ocrDetected && <span style={{ fontSize: 10, background: '#10B98122', border: '1px solid #10B98144', borderRadius: 5, padding: '1px 5px', marginLeft: 6 }}>🤖 monto leído</span>}
+                            </div>
+                          )}
+                        </div>
+                        <button onClick={() => setCompImgs(prev => prev.filter(c => c.id !== comp.id))} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16, padding: 0 }}>✕</button>
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{compImg.name}</div>
-                    </>
-                  )}
-                </div>
-                <button onClick={() => { setCompImg(null); setOcrDetected(false) }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 16 }}>✕</button>
-              </div>
-            ) : (
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Botón agregar imagen */}
+              <input
+                ref={compInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                style={{ display: 'none' }}
+                onChange={e => { if (e.target.files?.[0]) { handleAddComp(e.target.files[0]); e.target.value = '' } }}
+              />
               <button
                 type="button"
                 onClick={() => compInputRef.current?.click()}
-                style={{ width: '100%', padding: '14px', background: 'var(--bg-inner)', border: '2px dashed var(--border-card)', borderRadius: 12, color: 'var(--text-muted)', fontSize: 14, cursor: 'pointer', marginBottom: 10, fontFamily: "'DM Sans',sans-serif" }}
+                style={{ width: '100%', padding: '12px', background: 'var(--bg-inner)', border: '2px dashed var(--border-card)', borderRadius: 12, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', marginBottom: 12, fontFamily: "'DM Sans',sans-serif", fontWeight: 600 }}
               >
-                📷 Adjuntar foto del comprobante
+                📷 {compImgs.length > 0 || esPaidDay ? 'Agregar otro comprobante' : 'Adjuntar comprobante'}
               </button>
-            )}
 
-            {/* Monto — editable, pre-llenado por OCR si lo detectó */}
-            <div className="stitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Monto</span>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>Verificá antes de confirmar</span>
-            </div>
-            {ocrSuspect && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: '#2D1500', border: '1px solid #F59E0B55', borderRadius: 10, marginBottom: 8, fontSize: 12, color: '#F59E0B' }}>
-                ⚠ El OCR leyó un monto bajo — revisá que sea correcto
+              {/* Monto */}
+              <div className="stitle" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Monto total</span>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 400 }}>Verificá antes de confirmar</span>
               </div>
-            )}
-            <div style={{ position: 'relative', marginBottom: 14 }}>
-              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, fontWeight: 700, color: 'var(--text-muted)', pointerEvents: 'none' }}>$</span>
-              <input
-                type="number"
-                inputMode="numeric"
-                value={montoInput}
-                onChange={e => { setMontoInput(e.target.value); setOcrDetected(false); setOcrSuspect(false) }}
-                style={{ width: '100%', padding: '12px 14px 12px 28px', background: 'var(--bg-inner)', border: `1px solid ${ocrSuspect ? '#F59E0B88' : ocrDetected ? '#10B98166' : 'var(--border-card)'}`, borderRadius: 12, fontSize: 20, fontWeight: 700, color: 'var(--text)', fontFamily: "'DM Mono',monospace", boxSizing: 'border-box' }}
-              />
+              {hasSuspect && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', background: '#2D1500', border: '1px solid #F59E0B55', borderRadius: 10, marginBottom: 8, fontSize: 12, color: '#F59E0B' }}>
+                  ⚠ El OCR leyó un monto bajo — revisá que sea correcto
+                </div>
+              )}
+              <div style={{ position: 'relative', marginBottom: 14 }}>
+                <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16, fontWeight: 700, color: 'var(--text-muted)', pointerEvents: 'none' }}>$</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={montoInput}
+                  onChange={e => setMontoInput(e.target.value)}
+                  style={{ width: '100%', padding: '12px 14px 12px 28px', background: 'var(--bg-inner)', border: `1px solid ${hasSuspect ? '#F59E0B88' : hasNewDetected ? '#10B98166' : 'var(--border-card)'}`, borderRadius: 12, fontSize: 20, fontWeight: 700, color: 'var(--text)', fontFamily: "'DM Mono',monospace", boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <button className="btn-primary" disabled={saving || !canConfirm || scanning} onClick={handlePagar} style={{ marginTop: 4 }}>
+                {saving ? 'Guardando...' : canConfirm ? '✓ CONFIRMAR' : 'Adjuntá un comprobante'}
+              </button>
+              <button className="modal-close" onClick={() => { setPagarModal(null); setCompImgs([]) }}>Cancelar</button>
             </div>
-
-            <button className="btn-primary" disabled={saving || !compImg || ocrProgress !== null} onClick={handlePagar} style={{ marginTop: 4 }}>
-              {saving ? 'Enviando...' : '✓ CONFIRMAR PAGO'}
-            </button>
-            <button className="modal-close" onClick={() => { setPagarModal(null); setCompImg(null) }}>Cancelar</button>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
-      {/* Visor de comprobante */}
+      {/* Visor de imagen completa */}
       {visorUrl && (
         <div className="modal-overlay" onClick={() => setVisorUrl(null)}>
           <div className="modal-sheet" style={{ textAlign: 'center' }}>
