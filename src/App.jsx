@@ -1380,11 +1380,8 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall, chofe
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <img src="/icons/icon-192.png" alt="Flota" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
-        <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: '#F4F4F8' }}>
-            Flota<span style={{ color: '#3F7DF5' }}>.</span>
-          </div>
-          <div style={{ fontSize: 10, color: '#555', letterSpacing: 1.5, fontWeight: 600, marginTop: 3, textTransform: 'uppercase' }}>Gestión de remises</div>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: '#F4F4F8' }}>
+          Flota<span style={{ color: '#3F7DF5' }}>.</span>
         </div>
       </div>
       {showInstall && (
@@ -1407,7 +1404,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall, chofe
         ? <p style={{ color: '#7EB1FF', fontSize: 14, fontWeight: 600, marginBottom: 36, background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 12, padding: '12px 16px' }}>
             🚗 Vas a vincular tu cuenta como <strong>chofer</strong>. Iniciá sesión con la misma cuenta de Google que usás habitualmente.
           </p>
-        : <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Gestión de flotas de remises</p>
+        : <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Flota</p>
       }
 
       {!choferMode && (
