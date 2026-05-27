@@ -1404,7 +1404,7 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall, chofe
         ? <p style={{ color: '#7EB1FF', fontSize: 14, fontWeight: 600, marginBottom: 36, background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 12, padding: '12px 16px' }}>
             🚗 Vas a vincular tu cuenta como <strong>chofer</strong>. Iniciá sesión con la misma cuenta de Google que usás habitualmente.
           </p>
-        : <p style={{ color: '#888', fontSize: 13, marginBottom: 36 }}>Flota</p>
+        : <p style={{ marginBottom: 36 }} />
       }
 
       {!choferMode && (
