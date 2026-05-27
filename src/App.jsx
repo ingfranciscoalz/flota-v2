@@ -1101,9 +1101,15 @@ export default function App() {
       )}
 
       <div className="header">
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 800, letterSpacing: -0.5, color: 'var(--text)' }}>
-          Flota<span style={{ color: '#3F7DF5' }}>.</span>
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/icons/icon-192.png" alt="" style={{ width: 36, height: 36, borderRadius: 9, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800, letterSpacing: -0.3, lineHeight: 1, color: 'var(--text)' }}>
+              Flota<span style={{ color: '#3F7DF5' }}>.</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1.5, fontWeight: 600, marginTop: 2, textTransform: 'uppercase' }}>Gestión de remises</div>
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {showInstall && (
             <button className="sync-btn" onClick={handleInstall} title="Instalar app"
@@ -1284,9 +1290,15 @@ function SubscriptionScreen({ profile, onSignOut, onSubscribed }) {
     <div style={{ padding: '80px 24px 60px', display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: '100dvh', textAlign: 'center' }}>
       {toast && <div className={`toast show ${toast.type}`}>{toast.msg}</div>}
 
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 32, fontWeight: 800, marginBottom: 6, color: '#F4F4F8', alignSelf: 'flex-start' }}>
-        Flota<span style={{ color: '#3F7DF5' }}>.</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, alignSelf: 'flex-start', marginBottom: 6 }}>
+        <img src="/icons/icon-192.png" alt="Flota" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
+        <div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: '#F4F4F8' }}>
+            Flota<span style={{ color: '#3F7DF5' }}>.</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#555', letterSpacing: 1.5, fontWeight: 600, marginTop: 3, textTransform: 'uppercase' }}>Gestión de remises</div>
+        </div>
+      </div>
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 400 }}>
         <div style={{ fontSize: 56, marginBottom: 20 }}>📋</div>
@@ -1376,9 +1388,15 @@ function AuthScreen({ onEnterDemo, showInstall, onInstall, showIosInstall, chofe
 
   return (
     <div style={{ padding: '80px 24px 40px', display: 'flex', flexDirection: 'column', minHeight: '100dvh' }}>
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 36, fontWeight: 800, marginBottom: 6, color: '#F4F4F8' }}>
-        Flota<span style={{ color: '#3F7DF5' }}>.</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
+        <img src="/icons/icon-192.png" alt="Flota" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
+        <div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: -0.5, lineHeight: 1, color: '#F4F4F8' }}>
+            Flota<span style={{ color: '#3F7DF5' }}>.</span>
+          </div>
+          <div style={{ fontSize: 10, color: '#555', letterSpacing: 1.5, fontWeight: 600, marginTop: 3, textTransform: 'uppercase' }}>Gestión de remises</div>
+        </div>
+      </div>
       {showInstall && (
         <button onClick={onInstall}
           style={{ alignSelf: 'flex-start', marginBottom: 16, padding: '8px 14px', background: '#0B1A3A', border: '1px solid #1A2B5C', borderRadius: 10, color: '#3F7DF5', fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: 0.5 }}>
@@ -2109,12 +2127,15 @@ function ChoferApp({ choferData, showToast, onSignOut, theme, toggleTheme }) {
     <div style={{ fontFamily: "'DM Sans', sans-serif", minHeight: '100dvh', background: 'var(--bg)', color: 'var(--text)' }}>
       {/* Header */}
       <div className="header">
-        <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>
-            Flota<span style={{ color: '#3F7DF5' }}>.</span>
-          </h1>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
-            {choferData?.nombre} · {choferData?.auto_nombre}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/icons/icon-192.png" alt="" style={{ width: 34, height: 34, borderRadius: 8, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 19, fontWeight: 800, letterSpacing: -0.3, lineHeight: 1, color: 'var(--text)' }}>
+              Flota<span style={{ color: '#3F7DF5' }}>.</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
+              {choferData?.nombre} · {choferData?.auto_nombre}
+            </div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
