@@ -39,7 +39,10 @@ function fmt(n) {
   return '$' + Math.round(n).toLocaleString('es-AR')
 }
 
-function today() { return new Date().toISOString().split('T')[0] }
+function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${padZ(d.getMonth() + 1)}-${padZ(d.getDate())}`
+}
+function today() { return localDate() }
 function padZ(n) { return String(n).padStart(2, '0') }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────
@@ -407,10 +410,10 @@ function WeeklyReportModal({ onClose, showToast, nombreFlota }) {
 
   // Período: últimos 7 días
   const today = new Date()
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = localDate(today)
   const weekAgo = new Date(today)
   weekAgo.setDate(weekAgo.getDate() - 7)
-  const weekAgoStr = weekAgo.toISOString().split('T')[0]
+  const weekAgoStr = localDate(weekAgo)
 
   function fmtFecha(ds) {
     if (!ds) return ''
@@ -2640,7 +2643,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
       if (accion === 'marcar') {
         onDemoUpdateDay(selectedAuto, choferId, ds, { estado: 'franco', monto: null })
       } else {
-        const pasado = ds < new Date().toISOString().split('T')[0]
+        const pasado = ds < today()
         onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       }
       showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
@@ -2657,7 +2660,7 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
 
   const doBorrar = async (choferId) => {
     if (isDemoMode) {
-      const pasado = ds < new Date().toISOString().split('T')[0]
+      const pasado = ds < today()
       onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       showToast('✓ Pago eliminado', 'success')
       onRefresh()
