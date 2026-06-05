@@ -2581,8 +2581,8 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
                       <div className="day-choferes">
                         {pills.map((p, pi) => {
                           const pc = { completo: 'pill-completo', parcial: 'pill-parcial', debe: 'pill-debe', franco: 'pill-franco', futuro: 'pill-futuro' }[p.estado] || 'pill-futuro'
-                          const lbl = p.estado === 'completo' ? '✓' : p.estado === 'parcial' ? (p.monto || '') : p.estado === 'franco' ? 'F' : p.estado === 'debe' ? '—' : '·'
-                          return <div key={pi} className={`chofer-pill ${pc}`}>{p.nome} {lbl}</div>
+                          const lbl = p.estado === 'completo' ? ' ✓' : p.estado === 'parcial' ? ` ${p.monto || ''}` : p.estado === 'franco' ? '' : p.estado === 'debe' ? ' —' : ' ·'
+                          return <div key={pi} className={`chofer-pill ${pc}`}>{p.nome}{lbl}</div>
                         })}
                       </div>
                     </div>
