@@ -28,7 +28,8 @@ const DEMO_DEUDAS = [
   { id: 'dd3', chofer_id: 'dc3', descripcion: 'Reparación espejo', monto: 8500,  fecha: '2026-04-15', saldado: true,  choferes: { nombre: 'Miguel A.', autos: { nombre: 'Gol Negro' } } },
 ]
 const TOAST_DURATION = 3000
-const ALERTA_DIAS = 5   // días de anticipación para alertas VTV/seguro
+const ALERTA_DIAS = 5    // días de anticipación para alertas VTV/seguro
+const ALERTA_KMS  = 500  // kms de anticipación para alertas de mantenimiento
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 const DIAS_CORTOS = ['Lu','Ma','Mi','Ju','Vi','Sa','Do']
@@ -1842,6 +1843,13 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
     return items
   })
 
+  // Alertas de mantenimiento (aceite, filtros, etc.)
+  const alertasMant = autoEntries.flatMap(([, adata]) =>
+    (adata.mantenimiento || [])
+      .filter(m => m.faltan_kms <= ALERTA_KMS)
+      .map(m => ({ auto: adata.nombre, nombre: m.nombre, faltan: m.faltan_kms }))
+  )
+
   return (
     <div className="page">
       {/* Alertas VTV/Seguro */}
@@ -1851,6 +1859,19 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
           <span>
             <strong>{a.auto}</strong> — {a.tipo}{' '}
             {a.dias <= 0 ? 'VENCIDO' : `vence en ${a.dias} día${a.dias !== 1 ? 's' : ''}`}
+          </span>
+        </div>
+      ))}
+
+      {/* Alertas de mantenimiento */}
+      {alertasMant.map((a, i) => (
+        <div key={i} className={`alert-banner ${a.faltan <= 0 ? 'alert-danger' : 'alert-warn'}`}>
+          <span>🔧</span>
+          <span>
+            <strong>{a.auto}</strong> — {a.nombre}{' '}
+            {a.faltan <= 0
+              ? `vencido hace ${Math.abs(a.faltan).toLocaleString('es-AR')} km`
+              : `faltan ${a.faltan.toLocaleString('es-AR')} km`}
           </span>
         </div>
       ))}
