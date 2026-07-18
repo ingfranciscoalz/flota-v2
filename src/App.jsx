@@ -78,6 +78,7 @@ function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, on
 // ── BAR CHART ─────────────────────────────────────────────────────────────────
 function BarChart({ data }) {
   const scrollRef = useRef(null)
+  const [sel, setSel] = useState(null) // { label, año, turnos, gastos, neto }
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth
   }, [data])
@@ -145,12 +146,20 @@ function BarChart({ data }) {
                     const hG = Math.max((d.gastos / niceMax) * H, 2)
                     const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
                     const label = MESES[d.mes - 1].slice(0, 3)
+                    const isSelected = sel && sel.key === d.key
+                    const dimmed = sel && !isSelected
+                    const handleClick = () => setSel(isSelected ? null : { key: d.key, label: MESES[d.mes - 1], año: d.año ?? '', turnos: d.turnos, gastos: d.gastos, neto })
                     return (
-                      <g key={d.key}>
-                        <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" />
-                        <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" />
-                        <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity="0.85" />
-                        <text x={cx} y={PT + H + 16} textAnchor="middle" style={{ fill: 'var(--text-muted)' }} fontSize="9" fontFamily="DM Mono,monospace">{label}</text>
+                      <g key={d.key} onClick={handleClick} style={{ cursor: 'pointer' }}>
+                        {/* Área de clic invisible sobre toda la columna */}
+                        <rect x={cx - SW / 2} y={0} width={SW} height={PT + H + 20} fill="transparent" />
+                        {/* Fondo de selección */}
+                        {isSelected && <rect x={cx - SW / 2 + 2} y={PT} width={SW - 4} height={H} fill="var(--bg-inner)" rx="4" />}
+                        <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" opacity={dimmed ? 0.25 : 1} />
+                        <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" opacity={dimmed ? 0.25 : 1} />
+                        <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity={dimmed ? 0.2 : 0.85} />
+                        <text x={cx} y={PT + H + 16} textAnchor="middle" fontSize="9" fontFamily="DM Mono,monospace"
+                          style={{ fill: isSelected ? '#3F7DF5' : 'var(--text-muted)', fontWeight: isSelected ? 700 : 400 }}>{label}</text>
                       </g>
                     )
                   })}
@@ -176,6 +185,28 @@ function BarChart({ data }) {
           </div>
         ))}
       </div>
+
+      {/* Tarjeta de detalle al seleccionar una barra */}
+      {sel && (
+        <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--bg-inner)', border: '1px solid var(--border-card)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{sel.label} {sel.año}</span>
+            <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>×</button>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              { color: '#10B981', label: 'Ganancias', value: sel.neto },
+              { color: '#3F7DF5', label: 'Ingresos',  value: sel.turnos },
+              { color: '#EF4444', label: 'Gastos',    value: sel.gastos },
+            ].map(({ color, label, value }) => (
+              <div key={label} style={{ flex: 1, background: `${color}11`, border: `1px solid ${color}33`, borderRadius: 10, padding: '8px 10px' }}>
+                <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{fmt(value)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
