@@ -4480,7 +4480,7 @@ const globalStyles = `
   .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0}
   .filter-chip{padding:5px 12px;border-radius:100px;border:1px solid var(--border-card);background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap}
   .filter-chip:active{opacity:0.7}
-  .filter-chip.active{background:#3F7DF5;border-color:#3F7DF5;color:#fff}
+  .filter-chip.active{background:var(--bg-card);border-color:#3F7DF533;color:#3F7DF5}
   .gastos-filters{background:var(--bg-inner);border:1px solid var(--border-card);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
   .gastos-filter-row{display:flex;align-items:center;gap:10px;min-width:0}
   .gastos-filter-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);flex-shrink:0;width:28px}
