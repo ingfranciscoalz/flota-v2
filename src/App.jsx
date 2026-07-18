@@ -188,23 +188,24 @@ function BarChart({ data }) {
 
       {/* Tarjeta de detalle al seleccionar una barra */}
       {sel && (
-        <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--bg-inner)', border: '1px solid var(--border-card)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ marginTop: 10, background: 'var(--bg-inner)', border: '1px solid var(--border-card)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', borderBottom: '1px solid var(--border-card)' }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{sel.label} {sel.año}</span>
             <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              { color: '#10B981', label: 'Ganancias', value: sel.neto },
-              { color: '#3F7DF5', label: 'Ingresos',  value: sel.turnos },
-              { color: '#EF4444', label: 'Gastos',    value: sel.gastos },
-            ].map(({ color, label, value }) => (
-              <div key={label} style={{ flex: 1, background: `${color}11`, border: `1px solid ${color}33`, borderRadius: 10, padding: '8px 10px' }}>
-                <div style={{ fontSize: 10, color, fontWeight: 700, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{fmt(value)}</div>
+          {[
+            { color: '#10B981', label: 'Ganancias', value: sel.neto },
+            { color: '#3F7DF5', label: 'Ingresos',  value: sel.turnos },
+            { color: '#EF4444', label: 'Gastos',    value: sel.gastos },
+          ].map(({ color, label, value }, i, arr) => (
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 14px', borderBottom: i < arr.length - 1 ? '1px solid var(--border-card)' : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: 'var(--text-sub)', fontWeight: 600 }}>{label}</span>
               </div>
-            ))}
-          </div>
+              <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color }}>{fmt(value)}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
