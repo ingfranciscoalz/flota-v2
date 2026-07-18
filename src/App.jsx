@@ -2622,7 +2622,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           turnoBase={turnoBase}
           onClose={() => setDayModal(null)}
           showToast={showToast}
-          onRefresh={async () => { await onRefresh(); setDayModal(null) }}
+          onRefresh={onRefresh}
           isDemoMode={isDemoMode}
           onDemoUpdateDay={onDemoUpdateDay}
         />
@@ -4437,7 +4437,7 @@ const globalStyles = `
   .modal-sheet{background:var(--bg-modal);border-radius:24px 24px 0 0;width:100%;padding:24px 20px 48px;max-height:88dvh;overflow-y:auto;border-top:1px solid var(--border)}
   .modal-date{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-sub);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
   .modal-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-0.3px;color:var(--text)}
-  .modal-back{background:none;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;padding:0;margin-bottom:4px}
+  .modal-back{display:inline-flex;align-items:center;gap:4px;background:var(--bg-inner);border:1px solid var(--border-card);color:var(--text-sub);font-size:13px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:10px;margin-bottom:12px;font-family:'DM Sans',sans-serif}
   .modal-close{width:100%;padding:14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:14px;font-size:14px;cursor:pointer;margin-top:12px}
 
   .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-elem);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
