@@ -1911,15 +1911,15 @@ function ResumenPage({ resumen, showToast, onRefresh, isDemoMode, profile }) {
       <div className="stitle">Total flota</div>
       <div className="total-banner">
         <div style={{ flex: 1 }}>
-          <div className="total-label">Esta semana</div>
-          <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
-        </div>
-        <div style={{ width: 1, background: 'var(--border-card)', alignSelf: 'stretch', margin: '0 18px' }} />
-        <div style={{ flex: 1, textAlign: 'right' }}>
           <div className="total-label">Este mes</div>
           <div className="total-value">{fmt(totales.neto_mes ?? totales.mes)}</div>
           <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.mes)}</div>
+        </div>
+        <div style={{ width: 1, background: 'var(--border-card)', alignSelf: 'stretch', margin: '0 18px' }} />
+        <div style={{ flex: 1, textAlign: 'right' }}>
+          <div className="total-label">Esta semana</div>
+          <div className="total-value">{fmt(totales.neto_semana ?? totales.semana)}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2, fontFamily: "'DM Mono',monospace" }}>bruto {fmt(totales.semana)}</div>
         </div>
       </div>
 
