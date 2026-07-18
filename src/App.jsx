@@ -2963,47 +2963,36 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
           return (
             <>
               {/* Filtros */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
-                {/* Por auto */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button onClick={() => setFiltroAuto('')}
-                    style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroAuto === '' ? '#3F7DF5' : 'var(--bg-inner)', color: filtroAuto === '' ? '#fff' : 'var(--text-sub)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-                    Todos los autos
-                  </button>
-                  {autos.map(a => (
-                    <button key={a.id} onClick={() => setFiltroAuto(a.id)}
-                      style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroAuto === a.id ? '#3F7DF5' : 'var(--bg-inner)', color: filtroAuto === a.id ? '#fff' : 'var(--text-sub)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-                      {a.nombre}
-                    </button>
-                  ))}
+              <div className="gastos-filters">
+                <div className="gastos-filter-row">
+                  <span className="gastos-filter-label">Auto</span>
+                  <div className="filter-chips" style={{ flexWrap: 'wrap' }}>
+                    <button className={`filter-chip${filtroAuto === '' ? ' active' : ''}`} onClick={() => setFiltroAuto('')}>Todos</button>
+                    {autos.map(a => (
+                      <button key={a.id} className={`filter-chip${filtroAuto === a.id ? ' active' : ''}`} onClick={() => setFiltroAuto(a.id)}>{a.nombre}</button>
+                    ))}
+                  </div>
                 </div>
-                {/* Por mes */}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  <button onClick={() => setFiltroMes('')}
-                    style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroMes === '' ? 'var(--bg-card)' : 'var(--bg-inner)', color: filtroMes === '' ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-                    Todos los meses
-                  </button>
-                  {mesesDisp.map(mes => {
-                    const [y, m] = mes.split('-')
-                    const label = `${MESES[parseInt(m) - 1]} ${y}`
-                    return (
-                      <button key={mes} onClick={() => setFiltroMes(mes)}
-                        style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroMes === mes ? 'var(--bg-card)' : 'var(--bg-inner)', color: filtroMes === mes ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
-                        {label}
-                      </button>
-                    )
-                  })}
+                <div className="gastos-filter-divider" />
+                <div className="gastos-filter-row">
+                  <span className="gastos-filter-label">Mes</span>
+                  <div className="filter-chips" style={{ flexWrap: 'nowrap', overflowX: 'auto', paddingBottom: 2 }}>
+                    <button className={`filter-chip${filtroMes === '' ? ' active' : ''}`} onClick={() => setFiltroMes('')}>Todos</button>
+                    {mesesDisp.map(mes => {
+                      const [y, m] = mes.split('-')
+                      const label = `${MESES[parseInt(m) - 1].slice(0, 3)} '${y.slice(2)}`
+                      return (
+                        <button key={mes} className={`filter-chip${filtroMes === mes ? ' active' : ''}`} onClick={() => setFiltroMes(mes)}>{label}</button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Total */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 10, border: '1px solid var(--border-card)' }}>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {gFiltrados.length} gasto{gFiltrados.length !== 1 ? 's' : ''}
-                </span>
-                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: '#EF4444' }}>
-                  {fmt(totalFiltrado)}
-                </span>
+              {/* Resumen */}
+              <div className="gastos-summary">
+                <span>{gFiltrados.length} gasto{gFiltrados.length !== 1 ? 's' : ''}</span>
+                <span className="gastos-summary-total">{fmt(totalFiltrado)}</span>
               </div>
 
               {gFiltrados.length === 0
@@ -4488,9 +4477,17 @@ const globalStyles = `
   .leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sub)}
   .leg-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
 
-  .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-  .filter-chip{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--bg-dark);color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+  .filter-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0}
+  .filter-chip{padding:5px 12px;border-radius:100px;border:1px solid var(--border-card);background:transparent;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.15s,color 0.15s,border-color 0.15s;white-space:nowrap}
   .filter-chip:active{opacity:0.7}
+  .filter-chip.active{background:#3F7DF5;border-color:#3F7DF5;color:#fff}
+  .gastos-filters{background:var(--bg-inner);border:1px solid var(--border-card);border-radius:14px;padding:12px 14px;margin-bottom:10px;display:flex;flex-direction:column;gap:10px}
+  .gastos-filter-row{display:flex;align-items:center;gap:10px;min-width:0}
+  .gastos-filter-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);flex-shrink:0;width:28px}
+  .gastos-filter-divider{height:1px;background:var(--border-card);margin:0 -2px}
+  .gastos-summary{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px;margin-bottom:10px}
+  .gastos-summary>span:first-child{font-size:12px;color:var(--text-muted);font-weight:500}
+  .gastos-summary-total{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#EF4444}
   .fchip-active{background:var(--text);color:var(--bg);border-color:var(--text)}
 
   .cal-table{width:100%;table-layout:fixed;border-collapse:separate;border-spacing:2px}
