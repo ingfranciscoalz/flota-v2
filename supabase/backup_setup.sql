@@ -49,10 +49,6 @@ BEGIN
     tbl_count   := tbl_count + 1;
   END LOOP;
 
-  -- Eliminar backups con más de 6 meses para no acumular demasiado
-  DELETE FROM public.backups
-  WHERE created_at < now() - interval '6 months';
-
   INSERT INTO public.backups (label, tables_count, data)
   VALUES (lbl, tbl_count, backup_data);
 
