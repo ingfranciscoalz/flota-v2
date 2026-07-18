@@ -2867,8 +2867,10 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
   const [gastos, setGastos] = useState([])
   const [loadingG, setLoadingG] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
-  const [deleteConfirm, setDeleteConfirm] = useState(null) // id del gasto a confirmar
-  const [ocrProgress, setOcrProgress] = useState(null) // null | 0..100
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [ocrProgress, setOcrProgress] = useState(null)
+  const [filtroAuto, setFiltroAuto] = useState('')
+  const [filtroMes, setFiltroMes] = useState('')
   const ocrInputRef = useRef(null)
   const autos = resumen?.config?.autos || []
   const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
@@ -2950,31 +2952,90 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
       {tab === 'lista' && (
         loadingG ? <div className="loading"><div className="spinner" /></div> :
         gastos.length === 0 ? <div className="loading">Sin gastos registrados</div> :
-        gastos.map(g => {
-          const cat = GASTO_CATS[g.categoria] || GASTO_CATS.otro
+        (() => {
+          const mesesDisp = [...new Set(gastos.map(g => g.fecha?.slice(0, 7)).filter(Boolean))].sort().reverse()
+          const gFiltrados = gastos.filter(g => {
+            if (filtroAuto && g.auto_id !== filtroAuto) return false
+            if (filtroMes && !g.fecha?.startsWith(filtroMes)) return false
+            return true
+          })
+          const totalFiltrado = gFiltrados.reduce((s, g) => s + parseFloat(g.monto || 0), 0)
           return (
-            <div key={g.id} className="gasto-item">
-              {/* Icono de categoría */}
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cat.color}22`, border: `1px solid ${cat.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12, color: cat.color }}>
-                <div style={{ width: 18, height: 18 }}>{cat.icon}</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="gasto-desc">{g.descripcion}</div>
-                <div className="gasto-auto">
-                  {g.autos?.nombre} · {g.fecha}
-                  <span style={{ color: cat.color, fontWeight: 600, marginLeft: 4 }}>· {g.categoria}</span>
+            <>
+              {/* Filtros */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                {/* Por auto */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button onClick={() => setFiltroAuto('')}
+                    style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroAuto === '' ? '#3F7DF5' : 'var(--bg-inner)', color: filtroAuto === '' ? '#fff' : 'var(--text-sub)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                    Todos los autos
+                  </button>
+                  {autos.map(a => (
+                    <button key={a.id} onClick={() => setFiltroAuto(a.id)}
+                      style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroAuto === a.id ? '#3F7DF5' : 'var(--bg-inner)', color: filtroAuto === a.id ? '#fff' : 'var(--text-sub)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                      {a.nombre}
+                    </button>
+                  ))}
+                </div>
+                {/* Por mes */}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button onClick={() => setFiltroMes('')}
+                    style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroMes === '' ? 'var(--bg-card)' : 'var(--bg-inner)', color: filtroMes === '' ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                    Todos los meses
+                  </button>
+                  {mesesDisp.map(mes => {
+                    const [y, m] = mes.split('-')
+                    const label = `${MESES[parseInt(m) - 1]} ${y}`
+                    return (
+                      <button key={mes} onClick={() => setFiltroMes(mes)}
+                        style={{ padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border-card)', background: filtroMes === mes ? 'var(--bg-card)' : 'var(--bg-inner)', color: filtroMes === mes ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans',sans-serif" }}>
+                        {label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
-                <button className="gasto-del-btn" disabled={deletingId === g.id}
-                  onClick={() => setDeleteConfirm(g.id)}>
-                  {deletingId === g.id ? '...' : '✕'}
-                </button>
+
+              {/* Total */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--bg-inner)', borderRadius: 12, marginBottom: 10, border: '1px solid var(--border-card)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>
+                  {gFiltrados.length} gasto{gFiltrados.length !== 1 ? 's' : ''}
+                </span>
+                <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, color: '#EF4444' }}>
+                  {fmt(totalFiltrado)}
+                </span>
               </div>
-            </div>
+
+              {gFiltrados.length === 0
+                ? <div className="loading">Sin gastos para ese filtro</div>
+                : gFiltrados.map(g => {
+                    const cat = GASTO_CATS[g.categoria] || GASTO_CATS.otro
+                    return (
+                      <div key={g.id} className="gasto-item">
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cat.color}22`, border: `1px solid ${cat.color}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginRight: 12, color: cat.color }}>
+                          <div style={{ width: 18, height: 18 }}>{cat.icon}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="gasto-desc">{g.descripcion}</div>
+                          <div className="gasto-auto">
+                            {g.autos?.nombre} · {g.fecha}
+                            <span style={{ color: cat.color, fontWeight: 600, marginLeft: 4 }}>· {g.categoria}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <div className="gasto-monto">{fmt(parseFloat(g.monto))}</div>
+                          <button className="gasto-del-btn" disabled={deletingId === g.id}
+                            onClick={() => setDeleteConfirm(g.id)}>
+                            {deletingId === g.id ? '...' : '✕'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })
+              }
+            </>
           )
-        })
+        })()
       )}
 
       {tab === 'nuevo' && (
@@ -3689,10 +3750,19 @@ function MantItemsTab({ resumen, showToast, onRefresh, isDemoMode }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="mant-nombre">{m.nombre}</div>
                       <div className="mant-sub">
-                        {m.estado === 'CAMBIAR'
-                          ? `Último: ${m.ultimo_kms.toLocaleString('es-AR')} km · VENCIDO`
-                          : `Próximo: ${m.proximo_kms.toLocaleString('es-AR')} km · faltan ${m.faltan_kms.toLocaleString('es-AR')} km`
-                        }
+                        {m.estado === 'CAMBIAR' ? (
+                          <>
+                            <span className="mant-sub-chip">Último: {m.ultimo_kms.toLocaleString('es-AR')} km</span>
+                            <span className="mant-sub-chip danger">⚠ Vencido</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="mant-sub-chip">Próximo: {m.proximo_kms.toLocaleString('es-AR')} km</span>
+                            <span className={`mant-sub-chip ${m.faltan_kms <= 500 ? 'warn' : ''}`}>
+                              Faltan {m.faltan_kms.toLocaleString('es-AR')} km
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <span className={`mbadge ${m.estado === 'CAMBIAR' ? 'mbadge-cambiar' : 'mbadge-ok'}`}>
@@ -4404,9 +4474,11 @@ const globalStyles = `
   .mant-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
   .mant-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--bg-inner);border-radius:14px;cursor:pointer;border:1px solid var(--border-card);transition:border-color 0.15s}
   .mant-item:active{border-color:var(--text-faint)}
-  .mant-nombre{font-size:13px;font-weight:600;color:var(--text)}
-  .mant-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:3px}
-  .mbadge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
+  .mant-nombre{font-size:14px;font-weight:700;color:var(--text)}
+  .mant-sub{display:flex;gap:12px;margin-top:6px;flex-wrap:wrap}
+  .mant-sub-chip{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text-sub)}
+  .mant-sub-chip.warn{color:#F59E0B}.mant-sub-chip.danger{color:#EF4444}
+  .mbadge{font-size:11px;font-weight:700;padding:5px 12px;border-radius:100px;text-transform:uppercase;flex-shrink:0}
   .mbadge-ok{background:#0B1A3A;color:#7EB1FF}.mbadge-cambiar{background:#1A0A0A;color:#EF4444}
 
   .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
