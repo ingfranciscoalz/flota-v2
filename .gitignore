@@ -10,3 +10,6 @@ APK/
 .claude/
 twa/android-key.keystore
 public/icons/*.bak
+
+# Backups generados por scripts/backup.cjs (datos del negocio, no van al repo)
+backups/

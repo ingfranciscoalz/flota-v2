@@ -1,0 +1,35 @@
+name: Backup base de datos
+
+# Backup diario de Supabase, guardado como artifact del workflow
+# (fuera de Supabase y fuera del repo: los datos del negocio no se commitean).
+#
+# Requiere dos secretos en Settings -> Secrets and variables -> Actions:
+#   SUPABASE_URL          https://<ref>.supabase.co
+#   SUPABASE_SERVICE_KEY  la service_role key
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC = 03:00 Argentina
+  workflow_dispatch:       # y a mano cuando quieras
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Generar backup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/backup.cjs backups
+
+      - name: Subir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ github.run_id }}
+          path: backups/
+          retention-days: 90
