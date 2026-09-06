@@ -3959,20 +3959,37 @@ function MultiLineChart({ data, metric }) {
 
   const STEP = 52          // px por mes
   const H = 190
-  const PAD = { top: 14, right: 18, bottom: 26, left: 46 }
+
+  // La escala se adapta al mínimo y al máximo reales. Antes arrancaba fijo en
+  // cero, así que un mes con pérdida se dibujaba por debajo del área visible.
+  const allVals = data.flatMap(a => a.monthly.map(m => m[metric]))
+  const redondear = v => {
+    if (!v) return 0
+    const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(v))))
+    return Math.sign(v) * Math.ceil(Math.abs(v) / mag) * mag
+  }
+  const niceMax = redondear(Math.max(...allVals, 0)) || 1
+  const niceMin = redondear(Math.min(...allVals, 0))
+  const span = niceMax - niceMin
+  const hayPerdidas = niceMin < 0
+
+  // Los rótulos negativos son más anchos y no entran en el eje de 46px.
+  const PAD = { top: 14, right: 18, bottom: 26, left: hayPerdidas ? 56 : 46 }
   const n = data[0].monthly.length
   const cW = Math.max(n - 1, 1) * STEP
   const W = PAD.left + cW + PAD.right
   const cH = H - PAD.top - PAD.bottom
 
-  const allVals = data.flatMap(a => a.monthly.map(m => m[metric]))
-  const maxVal = Math.max(...allVals, 1)
-  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
-  const niceMax = Math.ceil(maxVal / magnitude) * magnitude
-
   const X = i => PAD.left + (n > 1 ? i * STEP : cW / 2)
-  const Y = v => PAD.top + cH - (v / niceMax) * cH
-  const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
+  const Y = v => PAD.top + cH - ((v - niceMin) / span) * cH
+  const yCero = Y(0)
+  const fmtY = v => {
+    const abs = Math.abs(v), signo = v < 0 ? '-' : ''
+    if (abs >= 1000000) return `${signo}${(abs / 1000000).toFixed(1)}M`
+    if (abs >= 1000) return `${signo}${Math.round(abs / 1000)}k`
+    return `${v}`
+  }
+  const ticksY = hayPerdidas ? [niceMin, 0, niceMax] : [0, niceMax / 2, niceMax]
 
   return (
     <div style={{ position: 'relative' }}>
@@ -3987,15 +4004,20 @@ function MultiLineChart({ data, metric }) {
             <line key={p}
               x1={PAD.left} x2={W - PAD.right}
               y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
-              style={{ stroke: p === 0 ? 'var(--border)' : 'var(--bg-inner)' }} strokeWidth={p === 0 ? 1.5 : 1} />
+              style={{ stroke: 'var(--bg-inner)' }} strokeWidth={1} />
           ))}
+
+          {/* El cero va resaltado: con pérdidas deja de estar en el piso */}
+          <line x1={PAD.left} x2={W - PAD.right} y1={yCero} y2={yCero}
+            style={{ stroke: 'var(--border)' }} strokeWidth="1.5" />
 
           {/* Líneas y áreas por auto */}
           {data.map((auto, ai) => {
             const color = AUTO_COLORS[ai % AUTO_COLORS.length]
             const pts = auto.monthly.map((m, i) => [X(i), Y(m[metric])])
             const polyPts = pts.map(p => p.join(',')).join(' ')
-            const areaPts = `${X(0)},${PAD.top + cH} ${polyPts} ${X(n - 1)},${PAD.top + cH}`
+            // El área se rellena contra el cero, no contra el piso del gráfico
+            const areaPts = `${X(0)},${yCero} ${polyPts} ${X(n - 1)},${yCero}`
             return (
               <g key={auto.id}>
                 <polygon points={areaPts} fill={color} opacity="0.07" />
@@ -4024,10 +4046,10 @@ function MultiLineChart({ data, metric }) {
       {/* Eje Y fijo encima del scroll */}
       <svg width={PAD.left} height={H}
         style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)' }}>
-        {[0, 0.5, 1].map(p => (
-          <text key={p} x={PAD.left - 4} y={PAD.top + cH * (1 - p) + 3}
+        {ticksY.map(v => (
+          <text key={v} x={PAD.left - 4} y={Y(v) + 3}
             textAnchor="end" style={{ fill: 'var(--text-sub)' }} fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
-            {fmtY(niceMax * p)}
+            {fmtY(v)}
           </text>
         ))}
       </svg>

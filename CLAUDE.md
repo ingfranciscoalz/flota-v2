@@ -76,7 +76,7 @@ All tables use RLS with `auth.uid() = user_id` policies. Admin operations use Po
 
 ### PWA / Android
 
-- `public/sw.js` — service worker with stale-while-revalidate strategy. Cache name is `flota-v8`. **When deploying breaking JS changes, bump the cache name** so old clients clear their cache on next activation.
+- `public/sw.js` — service worker with stale-while-revalidate strategy. Cache name is `flota-v9`. **When deploying breaking JS changes, bump the cache name** so old clients clear their cache on next activation.
 - `public/manifest.json` — PWA manifest targeting `flota-v2.vercel.app`
 - `public/.well-known/assetlinks.json` — Digital Asset Links for Android TWA verification. The SHA-256 fingerprint here must match the keystore used to sign the APK. **After any new Android build with a new keystore, update this file.**
 - `twa/gen-android.cjs` — generates a complete Gradle 8.x + AGP 8.3.2 Android project from scratch. Keystore path is resolved via `rootProject.file()` relative to `twa/android/`.
