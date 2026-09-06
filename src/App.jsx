@@ -76,6 +76,31 @@ function ConfirmModal({ title, message, confirmLabel = 'Eliminar', loadingLabel 
 }
 
 // ── BAR CHART ─────────────────────────────────────────────────────────────────
+// Escala con pasos redondos que siempre incluyen el cero. Devuelve los ticks ya
+// calculados para que la grilla y los rótulos caigan en los mismos valores.
+function escalaNice(vals, objetivo = 4) {
+  const max = Math.max(...vals, 0)
+  const min = Math.min(...vals, 0)
+  const bruto = (max - min || 1) / objetivo
+  const mag = Math.pow(10, Math.floor(Math.log10(bruto)))
+  const norm = bruto / mag
+  const paso = Math.max(1, (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag)
+  const niceMin = Math.floor(min / paso) * paso
+  let niceMax = Math.ceil(max / paso) * paso
+  if (niceMax === niceMin) niceMax += paso
+  const ticks = []
+  for (let v = niceMin; v <= niceMax + paso / 1000; v += paso) ticks.push(Math.round(v))
+  return { niceMin, niceMax, span: niceMax - niceMin, ticks, hayPerdidas: niceMin < 0 }
+}
+
+// Valor del eje en k/M, conservando el signo.
+function fmtEje(v) {
+  const abs = Math.abs(v), signo = v < 0 ? '-' : ''
+  if (abs >= 1000000) return `${signo}${(abs / 1000000).toFixed(1)}M`
+  if (abs >= 1000) return `${signo}${Math.round(abs / 1000)}k`
+  return `${v}`
+}
+
 function BarChart({ data }) {
   const scrollRef = useRef(null)
   const [sel, setSel] = useState(null) // { label, año, turnos, gastos, neto }
@@ -84,25 +109,30 @@ function BarChart({ data }) {
   }, [data])
 
   if (!data || data.length === 0) return null
-  const maxVal = Math.max(...data.flatMap(d => [d.turnos, d.gastos]), 1)
   const H = 140, PT = 16, BW = 10, GAP = 2, SW = 54
   const totalH = PT + H + 28
   const totalW = data.length * SW
-  const PAD_LEFT = 44
 
-  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)))
-  const niceMax = Math.ceil(maxVal / magnitude) * magnitude
-  const fmtY = v => v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v
-  const ticks = [0, 0.25, 0.5, 0.75, 1]
+  // El neto entra en la escala junto a ingresos y gastos porque puede ser
+  // negativo; antes se recortaba a cero y los meses en pérdida desaparecían.
+  const netos = data.map(d => d.turnos - d.gastos)
+  const { niceMin, span, ticks, hayPerdidas } =
+    escalaNice([...data.flatMap(d => [d.turnos, d.gastos]), ...netos])
+  const PAD_LEFT = hayPerdidas ? 52 : 44
+
+  const Y = v => PT + H - ((v - niceMin) / span) * H
+  const yCero = Y(0)
+  // Barra anclada al cero: sube si el valor es positivo, baja si es negativo.
+  const barra = v => ({ y: Math.min(yCero, Y(v)), h: Math.max(Math.abs(Y(v) - yCero), 2) })
 
   return (
     <div style={{ marginTop: 8, position: 'relative' }}>
       {/* Eje Y — overlay fijo */}
       <svg width={PAD_LEFT} height={totalH} style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', background: 'var(--bg-card)', zIndex: 1 }}>
-        {ticks.map(p => (
-          <text key={p} x={PAD_LEFT - 5} y={PT + H - H * p + 4}
+        {ticks.map(v => (
+          <text key={v} x={PAD_LEFT - 5} y={Y(v) + 4}
             textAnchor="end" style={{ fill: 'var(--text-sub)' }} fontSize="10" fontWeight="600" fontFamily="'DM Mono',monospace">
-            {fmtY(niceMax * p)}
+            {fmtEje(v)}
           </text>
         ))}
       </svg>
@@ -114,18 +144,16 @@ function BarChart({ data }) {
         >
           <svg width={totalW} height={totalH} style={{ display: 'block', overflow: 'visible' }}>
             {/* Grid horizontales */}
-            {ticks.filter(p => p > 0).map(p => (
-              <line key={p} x1="0" y1={PT + H - H * p} x2={totalW} y2={PT + H - H * p}
-                style={{ stroke: p === 1 ? 'var(--border)' : 'var(--bg-inner)' }} strokeWidth="1" />
+            {ticks.map(v => (
+              <line key={v} x1="0" y1={Y(v)} x2={totalW} y2={Y(v)}
+                style={{ stroke: 'var(--bg-inner)' }} strokeWidth="1" />
             ))}
+            {/* El cero, resaltado: con pérdidas deja de estar en el piso */}
+            <line x1="0" y1={yCero} x2={totalW} y2={yCero}
+              style={{ stroke: 'var(--border)' }} strokeWidth="1.5" />
             {(() => {
               // Puntos de los picos de neto para la curva suavizada
-              const pts = data.map((d, i) => {
-                const cx = i * SW + SW / 2
-                const neto = Math.max(d.turnos - d.gastos, 0)
-                const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
-                return [cx, PT + H - hN]
-              })
+              const pts = data.map((d, i) => [i * SW + SW / 2, Y(d.turnos - d.gastos)])
               // Genera path bezier cúbico suavizado
               let smoothPath = ''
               if (pts.length > 1) {
@@ -141,10 +169,8 @@ function BarChart({ data }) {
                 <>
                   {data.map((d, i) => {
                     const cx = i * SW + SW / 2
-                    const neto = Math.max(d.turnos - d.gastos, 0)
-                    const hT = Math.max((d.turnos / niceMax) * H, 2)
-                    const hG = Math.max((d.gastos / niceMax) * H, 2)
-                    const hN = neto > 0 ? Math.max((neto / niceMax) * H, 2) : 0
+                    const neto = d.turnos - d.gastos
+                    const bN = barra(neto), bT = barra(d.turnos), bG = barra(d.gastos)
                     const label = MESES[d.mes - 1].slice(0, 3)
                     const isSelected = sel && sel.key === d.key
                     const dimmed = sel && !isSelected
@@ -155,9 +181,9 @@ function BarChart({ data }) {
                         <rect x={cx - SW / 2} y={0} width={SW} height={PT + H + 20} fill="transparent" />
                         {/* Fondo de selección */}
                         {isSelected && <rect x={cx - SW / 2 + 2} y={PT} width={SW - 4} height={H} fill="var(--bg-inner)" rx="4" />}
-                        <rect x={cx - BW * 1.5 - GAP} y={PT + H - hN} width={BW} height={hN} fill="#10B981" rx="2" opacity={dimmed ? 0.25 : 1} />
-                        <rect x={cx - BW / 2}          y={PT + H - hT} width={BW} height={hT} fill="#3F7DF5" rx="2" opacity={dimmed ? 0.25 : 1} />
-                        <rect x={cx + BW / 2 + GAP}    y={PT + H - hG} width={BW} height={hG} fill="#EF4444" rx="2" opacity={dimmed ? 0.2 : 0.85} />
+                        <rect x={cx - BW * 1.5 - GAP} y={bN.y} width={BW} height={bN.h} fill={neto < 0 ? '#EF4444' : '#10B981'} rx="2" opacity={dimmed ? 0.25 : 1} />
+                        <rect x={cx - BW / 2}          y={bT.y} width={BW} height={bT.h} fill="#3F7DF5" rx="2" opacity={dimmed ? 0.25 : 1} />
+                        <rect x={cx + BW / 2 + GAP}    y={bG.y} width={BW} height={bG.h} fill="#EF4444" rx="2" opacity={dimmed ? 0.2 : 0.85} />
                         <text x={cx} y={PT + H + 16} textAnchor="middle" fontSize="9" fontFamily="DM Mono,monospace"
                           style={{ fill: isSelected ? '#3F7DF5' : 'var(--text-muted)', fontWeight: isSelected ? 700 : 400 }}>{label}</text>
                       </g>
@@ -194,7 +220,7 @@ function BarChart({ data }) {
             <button onClick={() => setSel(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}>×</button>
           </div>
           {[
-            { color: '#10B981', label: 'Ganancias', value: sel.neto },
+            { color: sel.neto < 0 ? '#EF4444' : '#10B981', label: 'Ganancias', value: sel.neto },
             { color: '#3F7DF5', label: 'Ingresos',  value: sel.turnos },
             { color: '#EF4444', label: 'Gastos',    value: sel.gastos },
           ].map(({ color, label, value }, i, arr) => (
@@ -3960,18 +3986,11 @@ function MultiLineChart({ data, metric }) {
   const STEP = 52          // px por mes
   const H = 190
 
-  // La escala se adapta al mínimo y al máximo reales. Antes arrancaba fijo en
-  // cero, así que un mes con pérdida se dibujaba por debajo del área visible.
   const allVals = data.flatMap(a => a.monthly.map(m => m[metric]))
-  const redondear = v => {
-    if (!v) return 0
-    const mag = Math.pow(10, Math.floor(Math.log10(Math.abs(v))))
-    return Math.sign(v) * Math.ceil(Math.abs(v) / mag) * mag
-  }
-  const niceMax = redondear(Math.max(...allVals, 0)) || 1
-  const niceMin = redondear(Math.min(...allVals, 0))
-  const span = niceMax - niceMin
-  const hayPerdidas = niceMin < 0
+  // Pasos redondos que incluyen el cero: dan referencias intermedias y dejan
+  // los meses en pérdida dentro del área.
+  const { niceMin, span, ticks: ticksY, hayPerdidas } = escalaNice(allVals)
+  const promedio = allVals.reduce((s, v) => s + v, 0) / (allVals.length || 1)
 
   // Los rótulos negativos son más anchos y no entran en el eje de 46px.
   const PAD = { top: 14, right: 18, bottom: 26, left: hayPerdidas ? 56 : 46 }
@@ -3983,13 +4002,6 @@ function MultiLineChart({ data, metric }) {
   const X = i => PAD.left + (n > 1 ? i * STEP : cW / 2)
   const Y = v => PAD.top + cH - ((v - niceMin) / span) * cH
   const yCero = Y(0)
-  const fmtY = v => {
-    const abs = Math.abs(v), signo = v < 0 ? '-' : ''
-    if (abs >= 1000000) return `${signo}${(abs / 1000000).toFixed(1)}M`
-    if (abs >= 1000) return `${signo}${Math.round(abs / 1000)}k`
-    return `${v}`
-  }
-  const ticksY = hayPerdidas ? [niceMin, 0, niceMax] : [0, niceMax / 2, niceMax]
 
   return (
     <div style={{ position: 'relative' }}>
@@ -4000,16 +4012,20 @@ function MultiLineChart({ data, metric }) {
       >
         <svg width={W} height={H} style={{ display: 'block', overflow: 'visible' }}>
           {/* Grid horizontales */}
-          {[0, 0.25, 0.5, 0.75, 1].map(p => (
-            <line key={p}
+          {ticksY.map(v => (
+            <line key={v}
               x1={PAD.left} x2={W - PAD.right}
-              y1={PAD.top + cH * (1 - p)} y2={PAD.top + cH * (1 - p)}
+              y1={Y(v)} y2={Y(v)}
               style={{ stroke: 'var(--bg-inner)' }} strokeWidth={1} />
           ))}
 
           {/* El cero va resaltado: con pérdidas deja de estar en el piso */}
           <line x1={PAD.left} x2={W - PAD.right} y1={yCero} y2={yCero}
             style={{ stroke: 'var(--border)' }} strokeWidth="1.5" />
+
+          {/* Promedio del período: referencia de si el mes fue mejor o peor */}
+          <line x1={PAD.left} x2={W - PAD.right} y1={Y(promedio)} y2={Y(promedio)}
+            stroke="var(--text-faint)" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.85" />
 
           {/* Líneas y áreas por auto */}
           {data.map((auto, ai) => {
@@ -4049,7 +4065,7 @@ function MultiLineChart({ data, metric }) {
         {ticksY.map(v => (
           <text key={v} x={PAD.left - 4} y={Y(v) + 3}
             textAnchor="end" style={{ fill: 'var(--text-sub)' }} fontSize="11" fontWeight="600" fontFamily="'DM Mono',monospace">
-            {fmtY(v)}
+            {fmtEje(v)}
           </text>
         ))}
       </svg>
@@ -4072,6 +4088,8 @@ function AutosComparisonTab({ isDemoMode }) {
 
   // Último mes = mes actual (último item del array)
   const lastIdx = data[0].monthly.length - 1
+  const todosLosNetos = data.flatMap(a => a.monthly.map(m => m[metric]))
+  const promedio = todosLosNetos.reduce((s, v) => s + v, 0) / (todosLosNetos.length || 1)
 
   return (
     <>
@@ -4087,7 +4105,15 @@ function AutosComparisonTab({ isDemoMode }) {
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text-faint)', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', letterSpacing: 1.5, fontWeight: 700, textTransform: 'uppercase' }}>Neto mensual</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end', marginTop: 3 }}>
+              <svg width="16" height="3" style={{ overflow: 'visible' }}>
+                <line x1="0" y1="1.5" x2="16" y2="1.5" stroke="var(--text-faint)" strokeWidth="1.5" strokeDasharray="4 3" />
+              </svg>
+              <span style={{ fontSize: 10, color: 'var(--text-faint)', fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>prom {fmt(Math.round(promedio))}</span>
+            </div>
+          </div>
         </div>
 
         <MultiLineChart data={data} metric={metric} />
