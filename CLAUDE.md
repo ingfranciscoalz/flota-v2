@@ -52,6 +52,8 @@ Key component hierarchy:
 
 All Supabase calls are thin async functions exported from `data.js`. Every write uses `uid()` (gets current session user ID) to scope data per-user. RLS in Supabase enforces the same scoping server-side.
 
+**Choferes are never hard-deleted.** `deleteChofer()` sets `activo = false` — a real DELETE used to cascade away every turno and franco, silently wiping the auto's income history. Money aggregation (`getResumen`, `getMonthlyStatsByAuto`, `getDeudaHistorica`) counts inactive choferes so past income survives; operational views (calendar, deuda list, flota list) use `config.choferes_activos` and hide them. Debt stops accruing at `desactivado_en`.
+
 The heavy query is `getResumen()` — it fetches autos, choferes, turnos, francos, gastos, kms, config, mantenimiento, and user_mant_items in parallel and assembles the full fleet state object that most pages consume.
 
 ### Backend (Vercel Serverless Functions)
@@ -67,12 +69,14 @@ Run migrations in order in Supabase SQL Editor:
 1. `migration.sql` — full schema (destructive, drops all existing tables)
 2. `migration_addendum.sql` — adds `turno_base` to autos, `user_mant_items` table, performance indexes
 3. `migration_addendum2.sql` — adds `vtv_vence` and `seguro_vence` columns to autos
+4. `migration_addendum3.sql` — chofer login (token/QR linking), `comprobante_url` + `marcado_por` on turnos
+5. `migration_addendum4.sql` — soft delete for choferes (`activo`, `desactivado_en`); flips the turnos/francos `chofer_id` FKs from ON DELETE CASCADE to ON DELETE RESTRICT
 
 All tables use RLS with `auth.uid() = user_id` policies. Admin operations use Postgres functions (`get_all_profiles`, `admin_set_activo`, `admin_add_payment`) called via `supabase.rpc()` because the service role key is only used server-side in the webhook.
 
 ### PWA / Android
 
-- `public/sw.js` — service worker with stale-while-revalidate strategy. Cache name is `flota-v5`. **When deploying breaking JS changes, bump the cache name** so old clients clear their cache on next activation.
+- `public/sw.js` — service worker with stale-while-revalidate strategy. Cache name is `flota-v8`. **When deploying breaking JS changes, bump the cache name** so old clients clear their cache on next activation.
 - `public/manifest.json` — PWA manifest targeting `flota-v2.vercel.app`
 - `public/.well-known/assetlinks.json` — Digital Asset Links for Android TWA verification. The SHA-256 fingerprint here must match the keystore used to sign the APK. **After any new Android build with a new keystore, update this file.**
 - `twa/gen-android.cjs` — generates a complete Gradle 8.x + AGP 8.3.2 Android project from scratch. Keystore path is resolved via `rootProject.file()` relative to `twa/android/`.

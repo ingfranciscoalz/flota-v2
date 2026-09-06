@@ -60,14 +60,14 @@ function useToast() {
 }
 
 // ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
-function ConfirmModal({ title, message, confirmLabel = 'Eliminar', onConfirm, onCancel, loading = false }) {
+function ConfirmModal({ title, message, confirmLabel = 'Eliminar', loadingLabel = 'Eliminando...', onConfirm, onCancel, loading = false }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !loading && onCancel()}>
       <div className="modal-sheet">
         <div className="modal-title">{title}</div>
         {message && <div style={{ color: '#888', fontSize: 13, marginBottom: 20, lineHeight: 1.5 }}>{message}</div>}
         <button className="btn-primary ab-danger" style={{ marginBottom: 10 }} onClick={onConfirm} disabled={loading}>
-          {loading ? 'Eliminando...' : confirmLabel}
+          {loading ? loadingLabel : confirmLabel}
         </button>
         <button className="modal-close" onClick={onCancel} disabled={loading}>Cancelar</button>
       </div>
@@ -3194,7 +3194,7 @@ function DeudasTab({ resumen, showToast, isDemoMode }) {
   const [actionId, setActionId] = useState(null)
   const [form, setForm] = useState({ chofer_id: '', descripcion: '', monto: '', fecha: today() })
 
-  const choferes = resumen?.config?.choferes || []
+  const choferes = resumen?.config?.choferes_activos || resumen?.config?.choferes || []
 
   const load = useCallback(async () => {
     if (isDemoMode) { setDeudas(DEMO_DEUDAS); setLoading(false); return }
@@ -3391,7 +3391,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
   const [deletingChofer, setDeletingChofer] = useState(false)
 
   const autos = resumen?.config?.autos || []
-  const choferes = resumen?.config?.choferes || []
+  const choferes = resumen?.config?.choferes_activos || resumen?.config?.choferes || []
   const globalTurnoBase = resumen?.config?.turno_base || TURNO_BASE_DEFAULT
 
   const handleSaveVencimientos = async (autoId) => {
@@ -3480,7 +3480,7 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
     setDeletingChofer(false)
     setDeleteChoferConfirm(null)
     if (error) return showToast('⚠ ' + error.message, 'error')
-    showToast('✓ Chofer eliminado', 'success')
+    showToast('✓ Chofer dado de baja', 'success')
     onRefresh()
   }
 
@@ -3497,10 +3497,12 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
       )}
       {deleteChoferConfirm && (
         <ConfirmModal
-          title={`Eliminar a ${deleteChoferConfirm.nombre}`}
+          title={`Dar de baja a ${deleteChoferConfirm.nombre}`}
+          confirmLabel="Dar de baja"
+          loadingLabel="Dando de baja..."
           message={deleteChoferConfirm.vinculado
-            ? 'Este chofer tiene una cuenta vinculada. Se eliminará el chofer y se desvinculará su acceso. Sus turnos históricos quedarán registrados.'
-            : 'Se eliminará el chofer. Sus turnos históricos quedarán registrados. Esta acción no se puede deshacer.'}
+            ? 'Dejará de aparecer en el calendario y en las deudas, y se desvinculará su cuenta. Sus turnos y las estadísticas del auto se conservan.'
+            : 'Dejará de aparecer en el calendario y en las deudas. Sus turnos y las estadísticas del auto se conservan.'}
           onConfirm={handleDeleteChoferConfirmed}
           onCancel={() => setDeleteChoferConfirm(null)}
           loading={deletingChofer}

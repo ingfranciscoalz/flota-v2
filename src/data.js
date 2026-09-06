@@ -142,8 +142,17 @@ export async function updateAutoVencimientos(autoId, vtv_vence, seguro_vence) {
 export async function updateChofer(id, nombre) {
   return supabase.from('choferes').update({ nombre }).eq('id', id)
 }
+// Baja lógica. Un DELETE real dispara el ON DELETE CASCADE de turnos y
+// francos y se lleva todo el historial del chofer, y con él las
+// estadísticas del auto.
 export async function deleteChofer(id) {
-  return supabase.from('choferes').delete().eq('id', id)
+  return supabase.from('choferes').update({
+    activo: false,
+    desactivado_en: new Date().toISOString(),
+    chofer_user_id: null,
+    link_token: null,
+    link_token_expires_at: null,
+  }).eq('id', id)
 }
 
 export async function getUserMantItems() {
@@ -162,6 +171,9 @@ export async function updateMantItem(id, nombre, frecuenciaKms, autoId = null) {
 export async function deleteMantItem(id) {
   return supabase.from('user_mant_items').delete().eq('id', id)
 }
+
+// Una base sin la columna `activo` todavía devuelve undefined, que cuenta como activo.
+const esActivo = c => c.activo !== false
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 export async function getConfig() {
@@ -183,7 +195,10 @@ export async function getConfig() {
     turno_base: parseInt(cfg.turno_base || '50000'),
     franco_weekday: parseInt(cfg.franco_weekday || '1'),
     autos: autosRes.data || [],
+    // `choferes` incluye los dados de baja: sus turnos siguen contando en los
+    // totales de plata. `choferes_activos` es la lista para mostrar en pantalla.
     choferes: choferesRes.data || [],
+    choferes_activos: (choferesRes.data || []).filter(esActivo),
     mant_items: mantItemsRes.data || [],
   }
 }
@@ -272,7 +287,11 @@ export async function getResumen(cfg = null) {
 
       ganSemana += gSem
       ganMes += gMes
-      deudasPorChofer[chofer.id] = { nombre: chofer.nombre, dias: diasDebe, gan_semana: gSem, gan_mes: gMes }
+      // El chofer de baja sigue sumando lo que cobró, pero ya no acumula deuda
+      // ni aparece en el listado.
+      if (esActivo(chofer)) {
+        deudasPorChofer[chofer.id] = { nombre: chofer.nombre, dias: diasDebe, gan_semana: gSem, gan_mes: gMes }
+      }
     }
 
     totalSemana += ganSemana
@@ -363,7 +382,8 @@ export async function getCalendario(year, month, cfg = null) {
   const resultado = {}
   for (const auto of resolvedCfg.autos) {
     const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
-    const choferesAuto = resolvedCfg.choferes.filter(c => c.auto_id === auto.id)
+    // Vista operativa: el calendario solo muestra choferes en actividad.
+    const choferesAuto = resolvedCfg.choferes.filter(c => c.auto_id === auto.id && esActivo(c))
     const dias = {}
 
     for (let day = 1; day <= daysInMonth; day++) {
@@ -576,6 +596,9 @@ export async function getDeudaHistorica(cfg = null) {
     const inicioAuto = auto.created_at ? auto.created_at.split('T')[0] : fechaMinima
 
     for (const chofer of resolvedCfg.choferes.filter(c => c.auto_id === auto.id)) {
+      // Un chofer de baja deja de acumular deuda desde esa fecha, pero sus
+      // ganancias históricas se siguen contando.
+      const bajaStr = chofer.desactivado_en ? chofer.desactivado_en.split('T')[0] : null
       let diasDebe = 0, ganTotal = 0
       const d = new Date(inicioAuto)
       while (d.toISOString().split('T')[0] <= ayerStr) {
@@ -583,7 +606,7 @@ export async function getDeudaHistorica(cfg = null) {
         const pagado = turnosMap[chofer.id]?.[ds]
         if (pagado) {
           ganTotal += pagado
-        } else if (!isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap)) {
+        } else if (!isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap) && (!bajaStr || ds <= bajaStr)) {
           diasDebe++
         }
         d.setDate(d.getDate() + 1)
