@@ -2678,6 +2678,8 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           ds={dayModal}
           cal={cal}
           turnoBase={turnoBase}
+          daysInMonth={daysInMonth}
+          onChangeDay={setDayModal}
           onClose={() => setDayModal(null)}
           showToast={showToast}
           onRefresh={onRefresh}
@@ -2689,14 +2691,52 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   )
 }
 
-function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
+function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
   const [compVisor, setCompVisor] = useState(null) // URL del comprobante a ver en fullscreen
+  const toque = useRef(null)
 
   const [y, m, d] = ds.split('-').map(Number)
   const dow = (new Date(y, m - 1, d).getDay() + 6) % 7
+
+  // Cambiar de día sin cerrar el modal, para marcar varios seguidos. No sale
+  // del mes porque `cal` solo trae los días del mes que está en pantalla.
+  const irA = delta => {
+    const nd = d + delta
+    if (nd < 1 || nd > daysInMonth) return
+    onChangeDay(`${y}-${String(m).padStart(2, '0')}-${String(nd).padStart(2, '0')}`)
+  }
+
+  // El auto elegido se mantiene al cambiar de día — es lo que evita volver al
+  // calendario. Los montos a medio tipear, no.
+  useEffect(() => { setMontos({}); setCompVisor(null) }, [ds])
+
+  useEffect(() => {
+    const onKey = e => {
+      if (e.target.closest('input, textarea')) return
+      if (e.key === 'ArrowLeft') irA(-1)
+      else if (e.key === 'ArrowRight') irA(1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [ds, daysInMonth])
+
+  const onTouchStart = e => {
+    // Sobre un input el gesto es del input, y con el visor abierto no aplica.
+    if (compVisor || e.target.closest('input')) { toque.current = null; return }
+    toque.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  const onTouchEnd = e => {
+    if (!toque.current) return
+    const dx = e.changedTouches[0].clientX - toque.current.x
+    const dy = e.changedTouches[0].clientY - toque.current.y
+    toque.current = null
+    // Si fue más vertical que horizontal era scroll de la hoja, no un swipe.
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+    irA(dx < 0 ? 1 : -1)
+  }
 
   const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
 
@@ -2757,9 +2797,15 @@ function DayModal({ ds, cal, turnoBase, onClose, showToast, onRefresh, isDemoMod
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal-sheet">
-        <div className="modal-date">{DIAS_FULL[dow]}</div>
-        <div className="modal-title">{d} de {MESES[m - 1]}</div>
+      <div className="modal-sheet" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="day-nav">
+          <button className="day-nav-btn" onClick={() => irA(-1)} disabled={d <= 1} aria-label="Día anterior">‹</button>
+          <div className="day-nav-info">
+            <div className="modal-date">{DIAS_FULL[dow]}</div>
+            <div className="modal-title">{d} de {MESES[m - 1]}</div>
+          </div>
+          <button className="day-nav-btn" onClick={() => irA(1)} disabled={d >= daysInMonth} aria-label="Día siguiente">›</button>
+        </div>
 
         {!selectedAuto ? (
           <>
@@ -4589,6 +4635,11 @@ const globalStyles = `
   .modal-date{font-family:'DM Mono',monospace;font-size:12px;color:var(--text-sub);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
   .modal-title{font-size:22px;font-weight:700;margin-bottom:18px;letter-spacing:-0.3px;color:var(--text)}
   .modal-back{display:inline-flex;align-items:center;gap:4px;background:var(--bg-inner);border:1px solid var(--border-card);color:var(--text-sub);font-size:13px;font-weight:700;cursor:pointer;padding:6px 12px;border-radius:10px;margin-bottom:12px;font-family:'DM Sans',sans-serif}
+  .day-nav{display:flex;align-items:center;gap:8px;margin-bottom:18px}
+  .day-nav-info{flex:1;min-width:0;text-align:center}
+  .day-nav-info .modal-title{margin-bottom:0}
+  .day-nav-btn{flex-shrink:0;width:40px;height:40px;padding:0;border-radius:12px;background:var(--bg-inner);border:1px solid var(--border-card);color:var(--text-sub);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif}
+  .day-nav-btn:disabled{opacity:0.25;cursor:default}
   .modal-close{width:100%;padding:14px;background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:14px;font-size:14px;cursor:pointer;margin-top:12px}
 
   .auto-pick-btn{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-elem);border:1px solid var(--border);border-radius:14px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s}
