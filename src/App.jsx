@@ -2679,6 +2679,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           cal={cal}
           turnoBase={turnoBase}
           daysInMonth={daysInMonth}
+          filterAuto={filterAuto}
           onChangeDay={setDayModal}
           onClose={() => setDayModal(null)}
           showToast={showToast}
@@ -2691,7 +2692,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   )
 }
 
-function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
+function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
@@ -2738,13 +2739,18 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
     irA(dx < 0 ? 1 : -1)
   }
 
-  const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre)
+  // El filtro de autos del calendario manda también acá: si filtraste un auto
+  // y abrís un día, no tienen por qué aparecer los demás.
+  const autoEntries = Object.entries(cal).filter(([k, v]) => v && v.nombre && (!filterAuto || k === filterAuto))
+  // Con un solo auto a la vista el selector sobra: se entra directo a su ficha.
+  const unicoAuto = autoEntries.length === 1 ? autoEntries[0][0] : null
+  const autoActivo = selectedAuto || unicoAuto
 
   const doTurno = async (choferId, monto) => {
     if (isDemoMode) {
       const autoTurnoBase = adata?.turno_base || turnoBase
       const estado = monto >= autoTurnoBase ? 'completo' : 'parcial'
-      onDemoUpdateDay(selectedAuto, choferId, ds, { estado, monto })
+      onDemoUpdateDay(autoActivo, choferId, ds, { estado, monto })
       showToast('✓ Turno anotado', 'success')
       onRefresh()
       return
@@ -2760,10 +2766,10 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
   const doFranco = async (choferId, accion) => {
     if (isDemoMode) {
       if (accion === 'marcar') {
-        onDemoUpdateDay(selectedAuto, choferId, ds, { estado: 'franco', monto: null })
+        onDemoUpdateDay(autoActivo, choferId, ds, { estado: 'franco', monto: null })
       } else {
         const pasado = ds < today()
-        onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+        onDemoUpdateDay(autoActivo, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       }
       showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
       onRefresh()
@@ -2780,7 +2786,7 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
   const doBorrar = async (choferId) => {
     if (isDemoMode) {
       const pasado = ds < today()
-      onDemoUpdateDay(selectedAuto, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+      onDemoUpdateDay(autoActivo, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       showToast('✓ Pago eliminado', 'success')
       onRefresh()
       return
@@ -2793,7 +2799,7 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
     onRefresh()
   }
 
-  const adata = selectedAuto ? cal[selectedAuto] : null
+  const adata = autoActivo ? cal[autoActivo] : null
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -2807,7 +2813,7 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
           <button className="day-nav-btn" onClick={() => irA(1)} disabled={d >= daysInMonth} aria-label="Día siguiente">›</button>
         </div>
 
-        {!selectedAuto ? (
+        {!autoActivo ? (
           <>
             <div className="stitle" style={{ marginTop: 0 }}>Elegí el auto</div>
             {autoEntries.map(([aid, adata]) => {
@@ -2837,7 +2843,7 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, onChangeDay, onClose, showT
           </>
         ) : (
           <>
-            <button className="modal-back" onClick={() => setSelectedAuto(null)}>‹ Volver</button>
+            {!unicoAuto && <button className="modal-back" onClick={() => setSelectedAuto(null)}>‹ Volver</button>}
             <div className="stitle" style={{ marginTop: 8 }}>{adata.nombre}</div>
             {Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
               const info = adata.dias?.[ds]?.[cid]
