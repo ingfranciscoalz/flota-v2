@@ -1,4 +1,4 @@
-const CACHE = 'flota-v12'
+const CACHE = 'flota-v13'
 
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', e => e.waitUntil(

@@ -2537,6 +2537,9 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   const [dayModal, setDayModal] = useState(null)
   const [filterAuto, setFilterAuto] = useState(null)
   const [exportMenu, setExportMenu] = useState(false)
+  // Cómo abre el modal del día: eligiendo auto primero, o directo los choferes.
+  const [vistaChoferes, setVistaChoferes] = useState(localStorage.getItem('flota_cal_vista') === 'choferes')
+  useEffect(() => { localStorage.setItem('flota_cal_vista', vistaChoferes ? 'choferes' : 'autos') }, [vistaChoferes])
   if (!cal) return <div className="loading"><div className="spinner" /></div>
 
   const todayStr = today()
@@ -2634,6 +2637,18 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
         </div>
       )}
 
+      {autoEntries.length > 1 && (
+        <div className="filter-chips" style={{ marginTop: 8 }}>
+          <span className="vista-label">Al abrir un día</span>
+          <button className={`filter-chip ${!vistaChoferes ? 'fchip-active' : ''}`} onClick={() => setVistaChoferes(false)}>
+            Por auto
+          </button>
+          <button className={`filter-chip ${vistaChoferes ? 'fchip-active' : ''}`} onClick={() => setVistaChoferes(true)}>
+            Por chofer
+          </button>
+        </div>
+      )}
+
       <table className="cal-table"><thead><tr>{DIAS_CORTOS.map(d => <th key={d} className="cal-th">{d}</th>)}</tr></thead>
         <tbody>
           {chunk(cells, 7).map((week, wi) => (
@@ -2680,6 +2695,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
           turnoBase={turnoBase}
           daysInMonth={daysInMonth}
           filterAuto={filterAuto}
+          vistaChoferes={vistaChoferes}
           onChangeDay={setDayModal}
           onClose={() => setDayModal(null)}
           showToast={showToast}
@@ -2692,7 +2708,7 @@ function CalendarioPage({ cal, calYear, calMonth, changeMonth, showToast, onRefr
   )
 }
 
-function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
+function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, vistaChoferes, onChangeDay, onClose, showToast, onRefresh, isDemoMode, onDemoUpdateDay }) {
   const [montos, setMontos] = useState({})
   const [saving, setSaving] = useState(null)
   const [selectedAuto, setSelectedAuto] = useState(null)
@@ -2746,11 +2762,12 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
   const unicoAuto = autoEntries.length === 1 ? autoEntries[0][0] : null
   const autoActivo = selectedAuto || unicoAuto
 
-  const doTurno = async (choferId, monto) => {
+  // autoId es explícito porque en la vista por chofer cada uno trae el suyo.
+  const doTurno = async (choferId, monto, autoId = autoActivo) => {
     if (isDemoMode) {
-      const autoTurnoBase = adata?.turno_base || turnoBase
+      const autoTurnoBase = cal[autoId]?.turno_base || turnoBase
       const estado = monto >= autoTurnoBase ? 'completo' : 'parcial'
-      onDemoUpdateDay(autoActivo, choferId, ds, { estado, monto })
+      onDemoUpdateDay(autoId, choferId, ds, { estado, monto })
       showToast('✓ Turno anotado', 'success')
       onRefresh()
       return
@@ -2763,13 +2780,13 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
     onRefresh()
   }
 
-  const doFranco = async (choferId, accion) => {
+  const doFranco = async (choferId, accion, autoId = autoActivo) => {
     if (isDemoMode) {
       if (accion === 'marcar') {
-        onDemoUpdateDay(autoActivo, choferId, ds, { estado: 'franco', monto: null })
+        onDemoUpdateDay(autoId, choferId, ds, { estado: 'franco', monto: null })
       } else {
         const pasado = ds < today()
-        onDemoUpdateDay(autoActivo, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+        onDemoUpdateDay(autoId, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       }
       showToast(accion === 'marcar' ? '✓ Franco marcado' : '✓ Franco quitado', 'success')
       onRefresh()
@@ -2783,10 +2800,10 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
     onRefresh()
   }
 
-  const doBorrar = async (choferId) => {
+  const doBorrar = async (choferId, autoId = autoActivo) => {
     if (isDemoMode) {
       const pasado = ds < today()
-      onDemoUpdateDay(autoActivo, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
+      onDemoUpdateDay(autoId, choferId, ds, { estado: pasado ? 'debe' : 'futuro', monto: null })
       showToast('✓ Pago eliminado', 'success')
       onRefresh()
       return
@@ -2801,6 +2818,12 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
 
   const adata = autoActivo ? cal[autoActivo] : null
 
+  // Vista por chofer: todos de corrido, sin pasar por el selector de auto.
+  // Vista por auto: solo los del auto abierto.
+  const choferesAMostrar = vistaChoferes
+    ? autoEntries.flatMap(([aid, ad]) => Object.entries(ad.choferes || {}).map(([cid, cnombre]) => ({ aid, ad, cid, cnombre })))
+    : Object.entries(adata?.choferes || {}).map(([cid, cnombre]) => ({ aid: autoActivo, ad: adata, cid, cnombre }))
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-sheet" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
@@ -2813,7 +2836,7 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
           <button className="day-nav-btn" onClick={() => irA(1)} disabled={d >= daysInMonth} aria-label="Día siguiente">›</button>
         </div>
 
-        {!autoActivo ? (
+        {(!autoActivo && !vistaChoferes) ? (
           <>
             <div className="stitle" style={{ marginTop: 0 }}>Elegí el auto</div>
             {autoEntries.map(([aid, adata]) => {
@@ -2843,10 +2866,10 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
           </>
         ) : (
           <>
-            {!unicoAuto && <button className="modal-back" onClick={() => setSelectedAuto(null)}>‹ Volver</button>}
-            <div className="stitle" style={{ marginTop: 8 }}>{adata.nombre}</div>
-            {Object.entries(adata.choferes || {}).map(([cid, cnombre]) => {
-              const info = adata.dias?.[ds]?.[cid]
+            {!vistaChoferes && !unicoAuto && <button className="modal-back" onClick={() => setSelectedAuto(null)}>‹ Volver</button>}
+            {!vistaChoferes && <div className="stitle" style={{ marginTop: 8 }}>{adata.nombre}</div>}
+            {choferesAMostrar.map(({ aid, ad, cid, cnombre }) => {
+              const info = ad.dias?.[ds]?.[cid]
               if (!info) return null
               const { estado, monto } = info
               const badgeClass = { completo: 'eb-completo', parcial: 'eb-parcial', debe: 'eb-debe', franco: 'eb-franco', futuro: 'eb-futuro' }[estado] || 'eb-futuro'
@@ -2854,7 +2877,10 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
               return (
                 <div key={cid} className="chofer-section">
                   <div className="chofer-sec-header">
-                    <div className="chofer-sec-name">{cnombre}</div>
+                    <div className="chofer-sec-name">
+                      {cnombre}
+                      {vistaChoferes && <span className="chofer-sec-auto">{ad.nombre}</span>}
+                    </div>
                     <span className={`eb ${badgeClass}`}>{estado.charAt(0).toUpperCase() + estado.slice(1)}</span>
                   </div>
                   {monto ? (
@@ -2884,16 +2910,16 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
                     </div>
                   ) : null}
                   {estado === 'franco' ? (
-                    <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar')}>
+                    <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doFranco(cid, 'quitar', aid)}>
                       {saving === cid + 'franco' ? '...' : '✕ Quitar franco'}
                     </button>
                   ) : (
                     <>
                       <div className="action-grid">
-                        <button className="action-btn ab-primary" disabled={isSaving} onClick={() => doTurno(cid, adata.turno_base || turnoBase)}>
+                        <button className="action-btn ab-primary" disabled={isSaving} onClick={() => doTurno(cid, ad.turno_base || turnoBase, aid)}>
                           {saving === cid + 'turno' ? '...' : '✓ Turno completo'}
                         </button>
-                        <button className="action-btn ab-franco" disabled={isSaving} onClick={() => doFranco(cid, 'marcar')}>
+                        <button className="action-btn ab-franco" disabled={isSaving} onClick={() => doFranco(cid, 'marcar', aid)}>
                           {saving === cid + 'franco' ? '...' : 'Franco'}
                         </button>
                       </div>
@@ -2905,13 +2931,13 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, onChangeDay, on
                         <button className="monto-btn" disabled={isSaving} onClick={() => {
                           const v = parseFloat(montos[cid])
                           if (!v || v <= 0) return showToast('Ingresá un monto válido', 'error')
-                          doTurno(cid, v)
+                          doTurno(cid, v, aid)
                         }}>
                           {saving === cid + 'turno' ? '...' : 'OK'}
                         </button>
                       </div>
                       {(estado === 'completo' || estado === 'parcial') && (
-                        <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doBorrar(cid)}>
+                        <button className="action-btn ab-quitar" disabled={isSaving} onClick={() => doBorrar(cid, aid)}>
                           {saving === cid + 'borrar' ? '...' : '✕ Marcar como no pagado'}
                         </button>
                       )}
@@ -4654,6 +4680,8 @@ const globalStyles = `
   .chofer-section{margin-bottom:10px;background:var(--bg-elem);border-radius:14px;padding:16px}
   .chofer-sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
   .chofer-sec-name{font-size:16px;font-weight:600;color:var(--text)}
+  .chofer-sec-auto{display:block;font-size:11px;font-weight:600;color:var(--text-muted);margin-top:2px}
+  .vista-label{align-self:center;font-size:10px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px;margin-right:2px}
   .eb{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;text-transform:uppercase}
   .eb-completo{background:#0A1A10;color:#10B981}.eb-parcial{background:#1A1000;color:#F59E0B}.eb-debe{background:#1A0808;color:#EF4444}.eb-franco{background:#08111F;color:#60A5FA}.eb-futuro{background:var(--bg-inner);color:var(--text-muted)}
 
