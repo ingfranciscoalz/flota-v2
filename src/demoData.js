@@ -146,6 +146,14 @@ export function getDemoMonthlyStats() {
   })
 }
 
+export function getDemoTotalesHistoricos() {
+  const meses = getDemoMonthlyStats()
+  return {
+    ingresos: meses.reduce((s, m) => s + m.turnos, 0),
+    gastos: meses.reduce((s, m) => s + m.gastos, 0),
+  }
+}
+
 export function getDemoMonthlyStatsByAuto() {
   const now = new Date()
   const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']

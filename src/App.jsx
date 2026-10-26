@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import {
   getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoDeudaHistorica, getDemoMonthlyStatsByAuto,
+  getDemoTotalesHistoricos,
 } from './demoData'
 import {
   getResumen, getCalendario, getConfig, upsertTurno, deleteTurno, marcarFranco, quitarFranco,
@@ -10,7 +11,7 @@ import {
   getAdminUsers, setUserActivo, addPayment,
   createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer, deleteChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
-  getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto,
+  getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto, getTotalesHistoricos,
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
   savePushSubscription, deletePushSubscription,
   generateChoferLink, desvincularChofer, vincularChofer,
@@ -4253,6 +4254,7 @@ function AutosComparisonTab({ isDemoMode }) {
 function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isPro, onUpgrade }) {
   const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
+  const [totales, setTotales] = useState(null)
   const [deuda, setDeuda] = useState(null)
   const [deudasManuales, setDeudasManuales] = useState({}) // choferId → monto pendiente
   const [loading, setLoading] = useState(true)
@@ -4260,6 +4262,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
   useEffect(() => {
     if (isDemoMode) {
       setMonthlyData(getDemoMonthlyStats())
+      setTotales(getDemoTotalesHistoricos())
       setDeuda(getDemoDeudaHistorica())
       setLoading(false)
       return
@@ -4268,8 +4271,9 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
       setLoading(true)
       try {
         const cfg = resumen?.config || null
-        const [md, dd, dm] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg), getDeudas()])
+        const [md, dd, dm, tt] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg), getDeudas(), getTotalesHistoricos()])
         setMonthlyData(md)
+        setTotales(tt)
         setDeuda(dd)
         // Agrupar deudas manuales no saldadas por chofer
         const manual = {}
@@ -4324,8 +4328,10 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
 
   const deudaEntries = deuda ? Object.entries(deuda) : []
   const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
-  const totalGan = monthlyData?.reduce((s, d) => s + d.turnos, 0) || 0
-  const totalGas = monthlyData?.reduce((s, d) => s + d.gastos, 0) || 0
+  // De todo el historial, no de la ventana del gráfico: así el número no se
+  // mueve cuando cambiamos cuántos meses se grafican.
+  const totalGan = totales?.ingresos || 0
+  const totalGas = totales?.gastos || 0
   const promedios = promediosPorPeriodo(monthlyData)
 
   return (

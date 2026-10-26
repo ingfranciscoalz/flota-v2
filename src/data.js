@@ -6,6 +6,22 @@ async function uid() {
   return session.user.id
 }
 
+// PostgREST devuelve 1000 filas como máximo por request y no avisa cuando
+// recorta. La tabla de turnos ya pasó ese tope, así que las consultas de varios
+// meses venían sumando de menos en silencio. Todo lo que crezca sin límite con
+// el tiempo tiene que pasar por acá.
+async function traerTodo(tabla, columnas, filtrar = q => q) {
+  const filas = []
+  for (let desde = 0; ; desde += 1000) {
+    // El order por id es lo que hace determinista la paginación: sin un orden
+    // estable, entre página y página una fila puede repetirse y otra perderse.
+    const { data, error } = await filtrar(supabase.from(tabla).select(columnas)).order('id').range(desde, desde + 999)
+    if (error) throw error
+    filas.push(...(data || []))
+    if (!data || data.length < 1000) return filas
+  }
+}
+
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 export async function signUp(email, password) {
   return supabase.auth.signUp({ email, password })
@@ -220,7 +236,7 @@ export async function getResumen(cfg = null) {
     cfg ? Promise.resolve(cfg) : getConfig(),
     supabase.from('turnos').select('*, choferes(auto_id)').gte('fecha', inicioMes),
     supabase.from('gastos').select('*').gte('fecha', inicioMes),
-    supabase.from('gastos').select('auto_id, monto'),   // todos los gastos históricos
+    traerTodo('gastos', 'auto_id, monto'),   // todos los gastos históricos
     supabase.from('mantenimiento').select('*'),
     supabase.from('kms').select('*'),
     supabase.from('francos').select('*').gte('fecha', inicioMes),
@@ -229,7 +245,7 @@ export async function getResumen(cfg = null) {
   const resolvedCfg = cfg ? cfgData : cfgData
   const turnos = turnosRes.data || []
   const gastos = gastosRes.data || []
-  const gastosHist = gastosHistRes.data || []
+  const gastosHist = gastosHistRes
   const mantRealizados = mantRes.data || []
 
   // Total histórico de gastos por auto
@@ -492,9 +508,9 @@ export async function getMonthlyStats() {
   const now = new Date()
   const since = new Date(now.getFullYear(), now.getMonth() - MESES_STATS, 1).toISOString().split('T')[0]
 
-  const [turnosRes, gastosRes] = await Promise.all([
-    supabase.from('turnos').select('fecha, monto').gte('fecha', since),
-    supabase.from('gastos').select('fecha, monto').gte('fecha', since),
+  const [turnosRows, gastosRows] = await Promise.all([
+    traerTodo('turnos', 'fecha, monto', q => q.gte('fecha', since)),
+    traerTodo('gastos', 'fecha, monto', q => q.gte('fecha', since)),
   ])
 
   const meses = {}
@@ -504,11 +520,11 @@ export async function getMonthlyStats() {
     meses[key] = { key, mes: d.getMonth() + 1, año: d.getFullYear(), turnos: 0, gastos: 0 }
   }
 
-  for (const t of turnosRes.data || []) {
+  for (const t of turnosRows) {
     const k = t.fecha.slice(0, 7)
     if (meses[k]) meses[k].turnos += parseFloat(t.monto)
   }
-  for (const g of gastosRes.data || []) {
+  for (const g of gastosRows) {
     const k = g.fecha.slice(0, 7)
     if (meses[k]) meses[k].gastos += parseFloat(g.monto)
   }
@@ -516,14 +532,25 @@ export async function getMonthlyStats() {
   return Object.values(meses)
 }
 
+// Totales de todo el historial, sin ventana de meses: "total" tiene que
+// significar total y no moverse cuando cambia el rango del gráfico.
+export async function getTotalesHistoricos() {
+  const [turnos, gastos] = await Promise.all([
+    traerTodo('turnos', 'monto'),
+    traerTodo('gastos', 'monto'),
+  ])
+  const sumar = filas => filas.reduce((s, r) => s + parseFloat(r.monto), 0)
+  return { ingresos: sumar(turnos), gastos: sumar(gastos) }
+}
+
 export async function getMonthlyStatsByAuto() {
   const now = new Date()
   const since = new Date(now.getFullYear(), now.getMonth() - 8, 1).toISOString().split('T')[0]
   const MONTHS = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC']
 
-  const [turnosRes, gastosRes, autosRes, choferesRes] = await Promise.all([
-    supabase.from('turnos').select('fecha, monto, chofer_id').gte('fecha', since),
-    supabase.from('gastos').select('fecha, monto, auto_id').gte('fecha', since),
+  const [turnosRows, gastosRows, autosRes, choferesRes] = await Promise.all([
+    traerTodo('turnos', 'fecha, monto, chofer_id', q => q.gte('fecha', since)),
+    traerTodo('gastos', 'fecha, monto, auto_id', q => q.gte('fecha', since)),
     supabase.from('autos').select('id, nombre'),
     supabase.from('choferes').select('id, auto_id'),
   ])
@@ -543,11 +570,11 @@ export async function getMonthlyStatsByAuto() {
     for (const m of mesKeys) { ingresos[auto.id][m.key] = 0; gastos[auto.id][m.key] = 0 }
   }
 
-  for (const t of turnosRes.data || []) {
+  for (const t of turnosRows) {
     const aid = choferAutoMap[t.chofer_id]; const k = t.fecha.slice(0, 7)
     if (aid && ingresos[aid]?.[k] !== undefined) ingresos[aid][k] += parseFloat(t.monto)
   }
-  for (const g of gastosRes.data || []) {
+  for (const g of gastosRows) {
     const k = g.fecha.slice(0, 7)
     if (gastos[g.auto_id]?.[k] !== undefined) gastos[g.auto_id][k] += parseFloat(g.monto)
   }
@@ -577,18 +604,18 @@ export async function getDeudaHistorica(cfg = null) {
     return d < min ? d : min
   }, ayerStr)
 
-  const [turnosRes, francosRes] = await Promise.all([
-    supabase.from('turnos').select('chofer_id, fecha, monto').gte('fecha', fechaMinima),
-    supabase.from('francos').select('chofer_id, fecha, motivo').gte('fecha', fechaMinima),
+  const [turnosRows, francosRows] = await Promise.all([
+    traerTodo('turnos', 'chofer_id, fecha, monto', q => q.gte('fecha', fechaMinima)),
+    traerTodo('francos', 'chofer_id, fecha, motivo', q => q.gte('fecha', fechaMinima)),
   ])
 
   const turnosMap = {}
-  for (const t of turnosRes.data || []) {
+  for (const t of turnosRows) {
     if (!turnosMap[t.chofer_id]) turnosMap[t.chofer_id] = {}
     turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
   }
   const francosMap = {}
-  for (const f of francosRes.data || []) {
+  for (const f of francosRows) {
     if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
     francosMap[f.chofer_id].set(f.fecha, f.motivo || 'franco_especial')
   }
