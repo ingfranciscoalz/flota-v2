@@ -484,9 +484,13 @@ export async function insertMantenimiento(auto_id, tipo, kms_en_service, costo, 
 }
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
+// 13 meses: el actual (que va incompleto y no entra en los promedios) más los
+// 12 cerrados que necesita el promedio del último año.
+const MESES_STATS = 12
+
 export async function getMonthlyStats() {
   const now = new Date()
-  const since = new Date(now.getFullYear(), now.getMonth() - 8, 1).toISOString().split('T')[0]
+  const since = new Date(now.getFullYear(), now.getMonth() - MESES_STATS, 1).toISOString().split('T')[0]
 
   const [turnosRes, gastosRes] = await Promise.all([
     supabase.from('turnos').select('fecha, monto').gte('fecha', since),
@@ -494,8 +498,8 @@ export async function getMonthlyStats() {
   ])
 
   const meses = {}
-  for (let i = 0; i <= 8; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 8 + i, 1)
+  for (let i = 0; i <= MESES_STATS; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - MESES_STATS + i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     meses[key] = { key, mes: d.getMonth() + 1, año: d.getFullYear(), turnos: 0, gastos: 0 }
   }

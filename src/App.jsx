@@ -101,6 +101,23 @@ function fmtEje(v) {
   return `${v}`
 }
 
+// Monto compacto con signo, para celdas angostas: -$300k, $1.2M
+const fmtProm = v => (v < 0 ? '-$' : '$') + fmtEje(Math.abs(v))
+
+// Promedio mensual de ingresos, gastos y neto sobre las últimas `n` ventanas.
+// Se descarta el mes en curso (va incompleto y hundiría el promedio) y los
+// meses sin ningún movimiento, que son previos al arranque de la flota.
+function promediosPorPeriodo(monthlyData, periodos = [3, 6, 12]) {
+  const cerrados = (monthlyData || []).slice(0, -1).filter(d => d.turnos || d.gastos)
+  return periodos.map(n => {
+    const v = cerrados.slice(-n)
+    if (!v.length) return { n, meses: 0 }
+    const ing = v.reduce((s, d) => s + d.turnos, 0) / v.length
+    const gas = v.reduce((s, d) => s + d.gastos, 0) / v.length
+    return { n, meses: v.length, ing, gas, neto: ing - gas }
+  })
+}
+
 function BarChart({ data }) {
   const scrollRef = useRef(null)
   const [sel, setSel] = useState(null) // { label, año, turnos, gastos, neto }
@@ -4309,6 +4326,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
   const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
   const totalGan = monthlyData?.reduce((s, d) => s + d.turnos, 0) || 0
   const totalGas = monthlyData?.reduce((s, d) => s + d.gastos, 0) || 0
+  const promedios = promediosPorPeriodo(monthlyData)
 
   return (
     <div className="page">
@@ -4450,21 +4468,39 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
             {/* Ingresos totales + Gastos totales */}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. ganancias/mes</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#10B981' }}>
-                  {monthlyData?.length ? fmt(Math.round((totalGan - totalGas) / monthlyData.length)) : '—'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Ingresos totales</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Ingresos totales</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#3F7DF5' }}>{fmt(totalGan)}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Prom. gastos/mes</div>
-                <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 16, fontWeight: 600, color: '#EF4444' }}>
-                  {monthlyData?.length ? fmt(Math.round(totalGas / monthlyData.length)) : '—'}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginTop: 6 }}>Gastos totales</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2 }}>Gastos totales</div>
                 <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 14, fontWeight: 600, color: '#EF4444' }}>{fmt(totalGas)}</div>
               </div>
+            </div>
+
+            {/* Promedio mensual por período */}
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 8 }}>Promedio mensual</div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {promedios.map(p => {
+                  // Si todavía no hay tantos meses, la etiqueta dice los que sí hay.
+                  const completo = p.n === 12 ? '1 año' : `${p.n} meses`
+                  const etiqueta = p.meses && p.meses < p.n ? `${p.meses} ${p.meses === 1 ? 'mes' : 'meses'}` : completo
+                  return (
+                    <div key={p.n} style={{ flex: 1, minWidth: 0, background: 'var(--bg-inner)', borderRadius: 10, padding: '8px 4px', textAlign: 'center' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.8 }}>{etiqueta}</div>
+                      <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, fontWeight: 700, marginTop: 3, color: !p.meses ? 'var(--text-faint)' : p.neto >= 0 ? '#10B981' : '#EF4444' }}>
+                        {p.meses ? fmtProm(p.neto) : '—'}
+                      </div>
+                      {p.meses > 0 && (
+                        <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, marginTop: 3, color: 'var(--text-muted)' }}>
+                          <span style={{ color: '#3F7DF5' }}>{fmtProm(p.ing)}</span> · <span style={{ color: '#EF4444' }}>{fmtProm(p.gas)}</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 6 }}>Sin contar el mes en curso</div>
             </div>
             <BarChart data={monthlyData} />
           </div>

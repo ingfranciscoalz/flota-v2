@@ -132,10 +132,10 @@ export function getDemoGastos() {
 
 export function getDemoMonthlyStats() {
   const now = new Date()
-  const turnos = [1280000, 1350000, 1450000, 1620000, 1380000, 1500000, 1750000, 1920000, 1030000]
-  const gastos  = [155000,  170000,  180000,  210000,  165000,  195000,  225000,  195000,   78500]
-  return Array.from({ length: 9 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 8 + i, 1)
+  const turnos = [1090000, 1150000, 1210000, 1300000, 1280000, 1350000, 1450000, 1620000, 1380000, 1500000, 1750000, 1920000, 1030000]
+  const gastos  = [ 130000,  140000,  160000,  175000,  155000,  170000,  180000,  210000,  165000,  195000,  225000,  195000,   78500]
+  return Array.from({ length: 13 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 12 + i, 1)
     return {
       key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
       mes: d.getMonth() + 1,
