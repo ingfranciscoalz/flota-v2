@@ -460,9 +460,11 @@ export async function quitarFranco(chofer_id, fecha) {
 }
 
 // ── GASTOS ────────────────────────────────────────────────────────────────────
-export async function insertGasto(auto_id, descripcion, monto, categoria, fecha) {
+// `extra` lleva zonas/eje/lado/repuesto/taller cuando el gasto es de
+// mantenimiento; para las otras categorías viene vacío.
+export async function insertGasto(auto_id, descripcion, monto, categoria, fecha, extra = {}) {
   const user_id = await uid()
-  return supabase.from('gastos').insert({ user_id, auto_id, descripcion, monto, categoria, fecha })
+  return supabase.from('gastos').insert({ user_id, auto_id, descripcion, monto, categoria, fecha, ...extra })
 }
 export async function deleteGasto(id) {
   return supabase.from('gastos').delete().eq('id', id)

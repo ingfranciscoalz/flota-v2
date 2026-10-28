@@ -120,13 +120,21 @@ export function getDemoCalendario(year, month) {
 }
 
 export function getDemoGastos() {
+  // Fechas relativas a hoy para que el plano de zonas muestre siempre algo
+  // dentro de la ventana de garantía y algo viejo.
+  const hace = d => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
+  const corsa = { nombre: 'Corsa Blanco' }, gol = { nombre: 'Gol Negro' }
   return [
-    { id: 'dg1', auto_id: 'da2', descripcion: 'Aceite y filtros',   monto: 15000, categoria: 'mantenimiento', fecha: '2026-05-10', autos: { nombre: 'Gol Negro'    } },
-    { id: 'dg2', auto_id: 'da1', descripcion: 'Revisión de frenos', monto: 22000, categoria: 'mantenimiento', fecha: '2026-05-08', autos: { nombre: 'Corsa Blanco' } },
-    { id: 'dg3', auto_id: 'da2', descripcion: 'Seguro mensual',     monto: 18500, categoria: 'seguro',        fecha: '2026-04-25', autos: { nombre: 'Gol Negro'    } },
-    { id: 'dg4', auto_id: 'da1', descripcion: 'Combustible',        monto: 12000, categoria: 'combustible',   fecha: '2026-04-20', autos: { nombre: 'Corsa Blanco' } },
-    { id: 'dg5', auto_id: 'da2', descripcion: 'Patente',            monto:  8500, categoria: 'impuesto',      fecha: '2026-04-15', autos: { nombre: 'Gol Negro'    } },
-    { id: 'dg6', auto_id: 'da1', descripcion: 'Filtro de aire',     monto:  6000, categoria: 'mantenimiento', fecha: '2026-03-30', autos: { nombre: 'Corsa Blanco' } },
+    { id: 'dg1',  auto_id: 'da1', descripcion: 'Caja mano de obra',  monto: 180000, categoria: 'mantenimiento', fecha: hace(28),  zonas: ['caja'], eje: null, lado: null, repuesto: 'Kit de embrague', taller: 'Taller Pérez', autos: corsa },
+    { id: 'dg2',  auto_id: 'da1', descripcion: 'Pérdida de aceite',  monto:  45000, categoria: 'mantenimiento', fecha: hace(4),   zonas: ['caja'], eje: null, lado: null, repuesto: 'Retén', taller: 'Taller Pérez', autos: corsa },
+    { id: 'dg3',  auto_id: 'da1', descripcion: 'Pastillas y discos', monto:  96000, categoria: 'mantenimiento', fecha: hace(55),  zonas: ['frenos'], eje: 'del', lado: null, repuesto: 'Pastillas Ferodo', taller: 'Frenos Sur', autos: corsa },
+    { id: 'dg4',  auto_id: 'da1', descripcion: 'Amortiguador',       monto:  72000, categoria: 'mantenimiento', fecha: hace(140), zonas: ['suspension'], eje: 'tras', lado: 'izq', repuesto: 'Amortiguador Monroe', taller: 'Suspensiones Luis', autos: corsa },
+    { id: 'dg5',  auto_id: 'da1', descripcion: 'Aceite y filtros',   monto:  38000, categoria: 'mantenimiento', fecha: hace(210), zonas: ['motor'], eje: null, lado: null, repuesto: null, taller: null, autos: corsa },
+    { id: 'dg6',  auto_id: 'da1', descripcion: 'Combustible',        monto:  12000, categoria: 'combustible',   fecha: hace(9),   zonas: null, eje: null, lado: null, repuesto: null, taller: null, autos: corsa },
+    { id: 'dg7',  auto_id: 'da2', descripcion: 'Bujías y pastillas', monto: 110000, categoria: 'mantenimiento', fecha: hace(20),  zonas: ['motor', 'frenos'], eje: null, lado: null, repuesto: 'Bujías NGK', taller: 'Taller Pérez', autos: gol },
+    { id: 'dg8',  auto_id: 'da2', descripcion: 'Cubierta trasera',   monto:  85000, categoria: 'mantenimiento', fecha: hace(70),  zonas: ['ruedas'], eje: 'tras', lado: 'der', repuesto: 'Cubierta 185/65', taller: 'Gomería Nico', autos: gol },
+    { id: 'dg9',  auto_id: 'da2', descripcion: 'Chapa y pintura',    monto: 260000, categoria: 'mantenimiento', fecha: hace(300), zonas: ['carroceria'], eje: null, lado: 'izq', repuesto: null, taller: 'Chapista Carlos', autos: gol },
+    { id: 'dg10', auto_id: 'da2', descripcion: 'Seguro mensual',     monto:  18500, categoria: 'seguro',        fecha: hace(12),  zonas: null, eje: null, lado: null, repuesto: null, taller: null, autos: gol },
   ]
 }
 

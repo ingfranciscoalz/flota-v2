@@ -3006,6 +3006,225 @@ function DayModal({ ds, cal, turnoBase, daysInMonth, filterAuto, vistaChoferes, 
 }
 
 // ── GASTO CATEGORY ICONS ──────────────────────────────────────────────────────
+// ── ZONAS DEL AUTO ────────────────────────────────────────────────────────────
+// Sirven para reclamar garantía: si una zona se intervino hace poco y vuelve a
+// fallar, el gasto anterior es el antecedente. Un gasto puede tocar varias.
+const ZONAS = {
+  motor:         { nombre: 'Motor',              corto: 'Motor' },
+  refrigeracion: { nombre: 'Refrigeración',      corto: 'Refrig.' },
+  caja:          { nombre: 'Caja / embrague',    corto: 'Caja' },
+  transmision:   { nombre: 'Transmisión',        corto: 'Transm.' },
+  direccion:     { nombre: 'Dirección',          corto: 'Dirección' },
+  suspension:    { nombre: 'Suspensión',         corto: 'Susp.' },
+  frenos:        { nombre: 'Frenos',             corto: 'Frenos' },
+  ruedas:        { nombre: 'Ruedas',             corto: 'Ruedas' },
+  escape:        { nombre: 'Escape',             corto: 'Escape' },
+  electrico:     { nombre: 'Eléctrico / luces',  corto: 'Eléctr.' },
+  climatizacion: { nombre: 'A/C y calefacción',  corto: 'Clima' },
+  gnc:           { nombre: 'GNC',                corto: 'GNC' },
+  carroceria:    { nombre: 'Carrocería / chapa', corto: 'Chapa' },
+  interior:      { nombre: 'Interior',           corto: 'Interior' },
+  otro:          { nombre: 'Otro / general',     corto: 'Otro' },
+}
+// Estas tres comparten las cuatro esquinas del auto, así que en el plano van
+// juntas por esquina y el detalle aclara cuál fue.
+const ZONAS_RODAJE = ['suspension', 'frenos', 'ruedas']
+const ZONAS_CON_LADO = [...ZONAS_RODAJE, 'direccion', 'transmision', 'carroceria', 'electrico']
+const ESQUINAS = [
+  { id: 'del_izq',  eje: 'del',  lado: 'izq', nombre: 'Delantera izquierda' },
+  { id: 'del_der',  eje: 'del',  lado: 'der', nombre: 'Delantera derecha' },
+  { id: 'tras_izq', eje: 'tras', lado: 'izq', nombre: 'Trasera izquierda' },
+  { id: 'tras_der', eje: 'tras', lado: 'der', nombre: 'Trasera derecha' },
+]
+const GARANTIA_DIAS = 90
+
+const diasDesde = fecha => Math.floor((Date.now() - new Date(fecha + 'T00:00:00')) / 86400000)
+
+// Cuanto más reciente la intervención, más fuerte el color. Ámbar = dentro de
+// la ventana de garantía, que es justo lo que hay que mirar.
+function pintarZona(dias) {
+  if (dias == null)          return { fill: 'var(--bg-inner)', stroke: 'var(--border)', w: 1 }
+  if (dias <= GARANTIA_DIAS) return { fill: '#F59E0B33', stroke: '#F59E0B', w: 1.8 }
+  if (dias <= 365)           return { fill: '#3F7DF533', stroke: '#3F7DF588', w: 1.2 }
+  return { fill: '#3F7DF514', stroke: '#3F7DF533', w: 1 }
+}
+
+// Agrupa los gastos de un auto por zona y por esquina, guardando todas las
+// intervenciones y cuál fue la más reciente.
+function resumirZonas(gastos) {
+  const porZona = {}, porEsquina = {}
+  const guardar = (mapa, clave, g) => {
+    if (!mapa[clave]) mapa[clave] = { ultima: g, items: [] }
+    else if (g.fecha > mapa[clave].ultima.fecha) mapa[clave].ultima = g
+    mapa[clave].items.push(g)
+  }
+  for (const g of gastos) {
+    for (const z of g.zonas || []) {
+      guardar(porZona, z, g)
+      if (ZONAS_RODAJE.includes(z)) {
+        // Sin lado declarado no sabemos cuál fue, así que cuenta en las cuatro.
+        for (const e of ESQUINAS) {
+          if ((!g.eje || g.eje === e.eje) && (!g.lado || g.lado === e.lado)) guardar(porEsquina, e.id, g)
+        }
+      }
+    }
+  }
+  return { porZona, porEsquina }
+}
+
+// Bloques del esquema: vista desde arriba, frente hacia arriba.
+const BLOQUES = [
+  { zona: 'refrigeracion', x: 56,  y: 18,  w: 88,  h: 24 },
+  { zona: 'motor',         x: 50,  y: 48,  w: 100, h: 50 },
+  { zona: 'direccion',     x: 50,  y: 104, w: 100, h: 22 },
+  { zona: 'caja',          x: 56,  y: 132, w: 88,  h: 30 },
+  { zona: 'electrico',     x: 30,  y: 168, w: 44,  h: 36 },
+  { zona: 'interior',      x: 78,  y: 168, w: 44,  h: 36 },
+  { zona: 'climatizacion', x: 126, y: 168, w: 44,  h: 36 },
+  { zona: 'transmision',   x: 82,  y: 210, w: 36,  h: 40 },
+  { zona: 'gnc',           x: 56,  y: 256, w: 88,  h: 24 },
+  { zona: 'escape',        x: 70,  y: 288, w: 60,  h: 18 },
+]
+const RUEDAS_XY = {
+  del_izq:  { x: 0, y: 52 },  del_der:  { x: 174, y: 52 },
+  tras_izq: { x: 0, y: 232 }, tras_der: { x: 174, y: 232 },
+}
+
+function PlanoAuto({ porZona, porEsquina, sel, onSel }) {
+  const dias = o => (o ? diasDesde(o.ultima.fecha) : null)
+  const marco = pintarZona(dias(porZona.carroceria))
+  const chapaSel = sel?.tipo === 'zona' && sel.id === 'carroceria'
+  return (
+    <svg viewBox="0 0 200 332" style={{ width: '100%', maxWidth: 270, display: 'block', margin: '0 auto' }}>
+      <text x="100" y="5.5" textAnchor="middle" fontSize="6" fontWeight="700" fontFamily="'DM Sans',sans-serif" style={{ fill: 'var(--text-faint)' }}>FRENTE</text>
+
+      {/* La carrocería es el contorno del auto y también una zona */}
+      <g onClick={() => onSel(chapaSel ? null : { tipo: 'zona', id: 'carroceria' })} style={{ cursor: 'pointer' }}>
+        <rect x="22" y="8" width="156" height="310" rx="32" fill={marco.fill}
+          stroke={chapaSel ? 'var(--text)' : marco.stroke} strokeWidth={chapaSel ? 2.4 : Math.max(marco.w, 1.4)} />
+        <text x="100" y="330" textAnchor="middle" fontSize="6" fontWeight="700" fontFamily="'DM Sans',sans-serif"
+          style={{ fill: 'var(--text-faint)', pointerEvents: 'none' }}>CHAPA Y PINTURA</text>
+      </g>
+
+      {BLOQUES.map(b => {
+        const p = pintarZona(dias(porZona[b.zona]))
+        const activo = sel?.tipo === 'zona' && sel.id === b.zona
+        return (
+          <g key={b.zona} onClick={() => onSel(activo ? null : { tipo: 'zona', id: b.zona })} style={{ cursor: 'pointer' }}>
+            <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="6" fill={p.fill}
+              stroke={activo ? 'var(--text)' : p.stroke} strokeWidth={activo ? 2.2 : p.w} />
+            <text x={b.x + b.w / 2} y={b.y + b.h / 2 + 2.6} textAnchor="middle" fontSize="7.5" fontWeight="700"
+              fontFamily="'DM Sans',sans-serif" style={{ fill: 'var(--text-sub)', pointerEvents: 'none' }}>
+              {ZONAS[b.zona].corto}
+            </text>
+          </g>
+        )
+      })}
+
+      {ESQUINAS.map(e => {
+        const { x, y } = RUEDAS_XY[e.id]
+        const p = pintarZona(dias(porEsquina[e.id]))
+        const activo = sel?.tipo === 'esquina' && sel.id === e.id
+        return (
+          <g key={e.id} onClick={() => onSel(activo ? null : { tipo: 'esquina', id: e.id })} style={{ cursor: 'pointer' }}>
+            <rect x={x} y={y} width="26" height="48" rx="7" fill={p.fill}
+              stroke={activo ? 'var(--text)' : p.stroke} strokeWidth={activo ? 2.2 : p.w} />
+            <text x={x + 13} y={y + 27} textAnchor="middle" fontSize="8" fontWeight="700" fontFamily="'DM Sans',sans-serif"
+              style={{ fill: 'var(--text-sub)', pointerEvents: 'none' }}>
+              {(e.eje === 'del' ? 'D' : 'T') + (e.lado === 'izq' ? 'I' : 'D')}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+// Modal con el plano de un auto y el detalle de la zona que se toque.
+function ZonasAutoModal({ auto, gastos, onClose }) {
+  const [sel, setSel] = useState(null)
+  const delAuto = (gastos || []).filter(g => g.auto_id === auto.id && (g.zonas || []).length)
+  const { porZona, porEsquina } = resumirZonas(delAuto)
+
+  const grupo = !sel ? null : sel.tipo === 'zona' ? porZona[sel.id] : porEsquina[sel.id]
+  const titulo = !sel ? null : sel.tipo === 'zona' ? ZONAS[sel.id].nombre : ESQUINAS.find(e => e.id === sel.id).nombre
+  const items = [...(grupo?.items || [])].sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
+
+  const sinZona = (gastos || []).filter(g => g.auto_id === auto.id && !(g.zonas || []).length).length
+  const enGarantia = Object.values(porZona).filter(v => diasDesde(v.ultima.fecha) <= GARANTIA_DIAS).length
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-sheet">
+        <div className="modal-date">Reparaciones por zona</div>
+        <div className="modal-title">{auto.nombre}</div>
+
+        {delAuto.length === 0 ? (
+          <div className="loading" style={{ padding: '24px 0' }}>Todavía no hay gastos con zona cargada</div>
+        ) : (
+          <>
+            <PlanoAuto porZona={porZona} porEsquina={porEsquina} sel={sel} onSel={setSel} />
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', margin: '10px 0 4px' }}>
+              {[['#F59E0B', `últimos ${GARANTIA_DIAS} días`], ['#3F7DF588', 'hasta 1 año'], ['#3F7DF533', 'más de 1 año'], ['var(--border)', 'sin registro']].map(([c, t]) => (
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 9, height: 9, borderRadius: 3, background: c }} />
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{t}</span>
+                </div>
+              ))}
+            </div>
+
+            {enGarantia > 0 && !sel && (
+              <div style={{ background: '#F59E0B14', border: '1px solid #F59E0B44', borderRadius: 10, padding: '9px 12px', marginTop: 8, fontSize: 12, color: 'var(--text-sub)' }}>
+                {enGarantia === 1 ? 'Hay 1 zona intervenida' : `Hay ${enGarantia} zonas intervenidas`} en los últimos {GARANTIA_DIAS} días. Si alguna vuelve a fallar, tocala para ver el antecedente.
+              </div>
+            )}
+
+            {sel && (
+              <div style={{ marginTop: 10 }}>
+                <div className="stitle" style={{ marginTop: 0 }}>{titulo}</div>
+                {items.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin intervenciones registradas en esta zona.</div>
+                ) : items.map(g => {
+                  const d = diasDesde(g.fecha)
+                  const reciente = d <= GARANTIA_DIAS
+                  return (
+                    <div key={g.id} style={{ background: 'var(--bg-inner)', border: `1px solid ${reciente ? '#F59E0B55' : 'var(--border-card)'}`, borderRadius: 11, padding: '10px 12px', marginBottom: 7 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{g.descripcion}</span>
+                        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, fontWeight: 700, color: '#EF4444', whiteSpace: 'nowrap' }}>{fmt(g.monto)}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
+                        {g.fecha.split('-').reverse().join('/')} · hace {d} día{d === 1 ? '' : 's'}
+                        {reciente && <span style={{ marginLeft: 6, color: '#F59E0B', fontWeight: 700 }}>· posible garantía</span>}
+                      </div>
+                      {(g.repuesto || g.taller || (g.zonas || []).length > 1) && (
+                        <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 4, lineHeight: 1.5 }}>
+                          {g.repuesto && <div>Repuesto: {g.repuesto}</div>}
+                          {g.taller && <div>Taller: {g.taller}</div>}
+                          {(g.zonas || []).length > 1 && <div>Zonas: {g.zonas.map(z => ZONAS[z]?.nombre || z).join(', ')}</div>}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {sinZona > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 10 }}>
+                {sinZona} gasto{sinZona === 1 ? '' : 's'} de este auto sin zona cargada, no {sinZona === 1 ? 'aparece' : 'aparecen'} en el plano.
+              </div>
+            )}
+          </>
+        )}
+
+        <button className="modal-close" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 const GASTO_CATS = {
   mantenimiento: { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>, color: '#F59E0B', bg: '#1A1200' },
   combustible:   { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 22V8l7-6 7 6v14"/><path d="M14 22v-4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v4"/><path d="M18 9.5V6a2 2 0 0 0-2-2"/><path d="M20 14v3a2 2 0 0 1-2 2h0"/><path d="M18 5h2a1 1 0 0 1 1 1v4"/></svg>, color: '#3F7DF5', bg: '#0B1530' },
@@ -3027,7 +3246,19 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
   const [filtroMes, setFiltroMes] = useState('')
   const ocrInputRef = useRef(null)
   const autos = resumen?.config?.autos || []
-  const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today() })
+  const [form, setForm] = useState({ auto_id: '', descripcion: '', monto: '', categoria: 'mantenimiento', fecha: today(), zonas: [], eje: null, lado: null, repuesto: '', taller: '' })
+
+  // Antecedente de garantía: el gasto más reciente de este auto que haya tocado
+  // alguna de las zonas elegidas. Es el dato con el que se le reclama al mecánico.
+  const antecedente = (() => {
+    if (form.categoria !== 'mantenimiento' || !form.auto_id || !(form.zonas || []).length) return null
+    const previos = gastos
+      .filter(g => g.auto_id === form.auto_id && (g.zonas || []).some(z => form.zonas.includes(z)) && g.fecha <= form.fecha)
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
+    if (!previos.length) return null
+    const dias = Math.round((new Date(form.fecha + 'T00:00:00') - new Date(previos[0].fecha + 'T00:00:00')) / 86400000)
+    return dias <= GARANTIA_DIAS * 2 ? { g: previos[0], dias } : null
+  })()
 
   const handleScanReceipt = async (e) => {
     const file = e.target.files?.[0]
@@ -3242,6 +3473,73 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
               )
             })}
           </div>
+          {form.categoria === 'mantenimiento' && (
+            <>
+              <div className="stitle">Zona del auto</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {Object.entries(ZONAS).map(([id, z]) => {
+                  const sel = (form.zonas || []).includes(id)
+                  return (
+                    <button key={id} type="button" className={`filter-chip ${sel ? 'fchip-active' : ''}`}
+                      onClick={() => setForm(f => {
+                        const zonas = (f.zonas || []).includes(id) ? f.zonas.filter(x => x !== id) : [...(f.zonas || []), id]
+                        // Si ya ninguna zona lleva lado, limpiamos el que hubiera quedado puesto
+                        const usaLado = zonas.some(x => ZONAS_CON_LADO.includes(x))
+                        return { ...f, zonas, eje: usaLado ? f.eje : null, lado: usaLado ? f.lado : null }
+                      })}>
+                      {z.nombre}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {(form.zonas || []).some(z => ZONAS_CON_LADO.includes(z)) && (
+                <>
+                  <div className="stitle" style={{ marginTop: 0 }}>¿De qué lado?</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 6, marginBottom: 6 }}>
+                    {ESQUINAS.map(e => {
+                      const sel = form.eje === e.eje && form.lado === e.lado
+                      return (
+                        <button key={e.id} type="button" className={`filter-chip ${sel ? 'fchip-active' : ''}`}
+                          onClick={() => setForm(f => (sel ? { ...f, eje: null, lado: null } : { ...f, eje: e.eje, lado: e.lado }))}>
+                          {e.nombre}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 12 }}>
+                    Dejalo sin elegir si fue en ambos lados o no corresponde.
+                  </div>
+                </>
+              )}
+
+              <div className="stitle" style={{ marginTop: 0 }}>Repuesto (opcional)</div>
+              <div className="form-group">
+                <input className="form-input" placeholder="Ej: kit de embrague Valeo"
+                  value={form.repuesto || ''} onChange={e => setForm(f => ({ ...f, repuesto: e.target.value }))} />
+              </div>
+              <div className="stitle">Taller o mecánico (opcional)</div>
+              <div className="form-group">
+                <input className="form-input" placeholder="A quién reclamarle si falla"
+                  value={form.taller || ''} onChange={e => setForm(f => ({ ...f, taller: e.target.value }))} />
+              </div>
+
+              {antecedente && (
+                <div style={{ background: '#F59E0B14', border: '1px solid #F59E0B55', borderRadius: 12, padding: '11px 13px', marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B', marginBottom: 4 }}>
+                    Esta zona ya se intervino hace {antecedente.dias} día{antecedente.dias === 1 ? '' : 's'}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-sub)', lineHeight: 1.5 }}>
+                    {antecedente.g.descripcion} · {fmt(antecedente.g.monto)} · {antecedente.g.fecha.split('-').reverse().join('/')}
+                    {antecedente.g.taller ? ` · ${antecedente.g.taller}` : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 5 }}>
+                    {antecedente.dias <= GARANTIA_DIAS ? 'Podría estar en garantía.' : 'Fuera de los 90 días, pero conviene tenerlo a mano.'}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
           <div className="stitle">Fecha</div>
           <div className="form-group">
             <input className="form-input" type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} />
@@ -3257,18 +3555,22 @@ function GastosPage({ resumen, showToast, onRefresh, isDemoMode, embedded }) {
                 monto: parseFloat(form.monto),
                 categoria: form.categoria,
                 fecha: form.fecha,
+                zonas: form.zonas, eje: form.eje, lado: form.lado, repuesto: form.repuesto, taller: form.taller,
                 autos: { nombre: autos.find(a => a.id === form.auto_id)?.nombre || '' },
               }
               setGastos(prev => [demoGasto, ...prev])
               showToast('✓ Gasto registrado', 'success')
-              setForm(f => ({ ...f, descripcion: '', monto: '' }))
+              setForm(f => ({ ...f, descripcion: '', monto: '', zonas: [], eje: null, lado: null, repuesto: '' }))
               setTab('lista')
               return
             }
-            const { error } = await insertGasto(form.auto_id, form.descripcion, parseFloat(form.monto), form.categoria, form.fecha)
+            const extra = form.categoria === 'mantenimiento'
+              ? { zonas: form.zonas?.length ? form.zonas : null, eje: form.eje, lado: form.lado, repuesto: form.repuesto || null, taller: form.taller || null }
+              : {}
+            const { error } = await insertGasto(form.auto_id, form.descripcion, parseFloat(form.monto), form.categoria, form.fecha, extra)
             if (error) return showToast('⚠ ' + error.message, 'error')
             showToast('✓ Gasto registrado', 'success')
-            setForm(f => ({ ...f, descripcion: '', monto: '' }))
+            setForm(f => ({ ...f, descripcion: '', monto: '', zonas: [], eje: null, lado: null, repuesto: '' }))
             onRefresh()
             setTab('lista')
           }}>REGISTRAR GASTO</button>
@@ -3510,6 +3812,15 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, nombre }
   const [deletingAuto, setDeletingAuto] = useState(false)
   const [deleteChoferConfirm, setDeleteChoferConfirm] = useState(null) // { id, nombre, vinculado }
+  const [zonasModal, setZonasModal] = useState(null) // { auto, gastos }
+
+  // Los gastos no viven en esta pestaña, así que se traen al abrir el plano.
+  const abrirZonas = async auto => {
+    if (isDemoMode) return setZonasModal({ auto, gastos: getDemoGastos() })
+    const { data, error } = await getGastos(auto.id)
+    if (error) return showToast('⚠ ' + error.message, 'error')
+    setZonasModal({ auto, gastos: data || [] })
+  }
   const [deletingChofer, setDeletingChofer] = useState(false)
 
   const autos = resumen?.config?.autos || []
@@ -3638,6 +3949,9 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
           onClose={() => setLinkModal(null)}
         />
       )}
+      {zonasModal && (
+        <ZonasAutoModal auto={zonasModal.auto} gastos={zonasModal.gastos} onClose={() => setZonasModal(null)} />
+      )}
       {autos.map(auto => {
         const autoChoferes = choferes.filter(c => c.auto_id === auto.id)
         const turnoActual = auto.turno_base || globalTurnoBase
@@ -3646,11 +3960,18 @@ function AutosTab({ resumen, showToast, onRefresh, isDemoMode, isPro, onUpgrade 
           <div key={auto.id} className="card" style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <span className="auto-tag tag-auto">{auto.nombre}</span>
-              <button
-                onClick={() => setDeleteConfirm({ id: auto.id, nombre: auto.nombre })}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
-                title="Eliminar auto"
-              >🗑</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <button
+                  onClick={() => abrirZonas(auto)}
+                  style={{ background: 'none', border: '1px solid var(--border-card)', borderRadius: 9, color: 'var(--text-sub)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: '5px 10px', fontFamily: "'DM Sans',sans-serif" }}
+                  title="Reparaciones por zona"
+                >Zonas</button>
+                <button
+                  onClick={() => setDeleteConfirm({ id: auto.id, nombre: auto.nombre })}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', padding: '4px 8px', lineHeight: 1 }}
+                  title="Eliminar auto"
+                >🗑</button>
+              </div>
             </div>
 
             <div className="stitle" style={{ marginTop: 0 }}>Turno base</div>
