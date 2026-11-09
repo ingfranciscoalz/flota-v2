@@ -178,12 +178,3 @@ export function getDemoMonthlyStatsByAuto() {
     { id: 'da2', nombre: 'Gol Negro',    monthly: meses.map((mes, i) => ({ mes, ingresos: golIn[i],   gastos: golGas[i],   neto: golIn[i]   - golGas[i]   })) },
   ]
 }
-
-export function getDemoDeudaHistorica() {
-  return {
-    dc1: { nombre: 'Carlos M.',  autoNombre: 'Corsa Blanco', diasDebe: 0, montoDebe: 0,      ganTotal: 2450000 },
-    dc2: { nombre: 'Roberto P.', autoNombre: 'Corsa Blanco', diasDebe: 3, montoDebe: 150000, ganTotal: 1820000 },
-    dc3: { nombre: 'Miguel A.',  autoNombre: 'Gol Negro',    diasDebe: 1, montoDebe: 48000,  ganTotal: 2280000 },
-    dc4: { nombre: 'Diego F.',   autoNombre: 'Gol Negro',    diasDebe: 5, montoDebe: 240000, ganTotal: 1440000 },
-  }
-}

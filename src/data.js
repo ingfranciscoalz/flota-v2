@@ -593,69 +593,6 @@ export async function getMonthlyStatsByAuto() {
   }))
 }
 
-export async function getDeudaHistorica(cfg = null) {
-  const hoy = new Date()
-  const ayer = new Date(hoy); ayer.setDate(hoy.getDate() - 1)
-  const ayerStr = ayer.toISOString().split('T')[0]
-
-  const resolvedCfg = cfg || await getConfig()
-
-  // Fecha mínima = el auto más antiguo de la flota
-  const fechaMinima = resolvedCfg.autos.reduce((min, auto) => {
-    const d = auto.created_at ? auto.created_at.split('T')[0] : ayerStr
-    return d < min ? d : min
-  }, ayerStr)
-
-  const [turnosRows, francosRows] = await Promise.all([
-    traerTodo('turnos', 'chofer_id, fecha, monto', q => q.gte('fecha', fechaMinima)),
-    traerTodo('francos', 'chofer_id, fecha, motivo', q => q.gte('fecha', fechaMinima)),
-  ])
-
-  const turnosMap = {}
-  for (const t of turnosRows) {
-    if (!turnosMap[t.chofer_id]) turnosMap[t.chofer_id] = {}
-    turnosMap[t.chofer_id][t.fecha] = parseFloat(t.monto)
-  }
-  const francosMap = {}
-  for (const f of francosRows) {
-    if (!francosMap[f.chofer_id]) francosMap[f.chofer_id] = new Map()
-    francosMap[f.chofer_id].set(f.fecha, f.motivo || 'franco_especial')
-  }
-
-  const resultado = {}
-  for (const auto of resolvedCfg.autos) {
-    const autoTurnoBase = auto.turno_base || resolvedCfg.turno_base
-    // Arrancar desde la fecha de creación del auto, no desde enero
-    const inicioAuto = auto.created_at ? auto.created_at.split('T')[0] : fechaMinima
-
-    for (const chofer of resolvedCfg.choferes.filter(c => c.auto_id === auto.id)) {
-      // Un chofer de baja deja de acumular deuda desde esa fecha, pero sus
-      // ganancias históricas se siguen contando.
-      const bajaStr = chofer.desactivado_en ? chofer.desactivado_en.split('T')[0] : null
-      let diasDebe = 0, ganTotal = 0
-      const d = new Date(inicioAuto)
-      while (d.toISOString().split('T')[0] <= ayerStr) {
-        const ds = d.toISOString().split('T')[0]
-        const pagado = turnosMap[chofer.id]?.[ds]
-        if (pagado) {
-          ganTotal += pagado
-        } else if (!isFranco(d, chofer.id, resolvedCfg.franco_weekday, francosMap) && (!bajaStr || ds <= bajaStr)) {
-          diasDebe++
-        }
-        d.setDate(d.getDate() + 1)
-      }
-      resultado[chofer.id] = {
-        nombre: chofer.nombre,
-        autoNombre: auto.nombre,
-        diasDebe,
-        montoDebe: diasDebe * autoTurnoBase,
-        ganTotal,
-      }
-    }
-  }
-  return resultado
-}
-
 // ── DEUDAS MANUALES ───────────────────────────────────────────────────────────
 export async function getDeudas() {
   return supabase

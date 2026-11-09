@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase'
 import {
-  getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoDeudaHistorica, getDemoMonthlyStatsByAuto,
+  getDemoResumen, getDemoCalendario, getDemoGastos, getDemoMonthlyStats, getDemoMonthlyStatsByAuto,
   getDemoTotalesHistoricos,
 } from './demoData'
 import {
@@ -11,7 +11,7 @@ import {
   getAdminUsers, setUserActivo, addPayment,
   createAuto, deleteAuto, createChofer, updateAutoTurnoBase, updateAutoVencimientos, updateChofer, deleteChofer,
   getUserMantItems, createMantItem, updateMantItem, deleteMantItem,
-  getMonthlyStats, getDeudaHistorica, getMonthlyStatsByAuto, getTotalesHistoricos,
+  getMonthlyStats, getMonthlyStatsByAuto, getTotalesHistoricos,
   getDeudas, insertDeuda, saldarDeuda, deleteDeuda,
   savePushSubscription, deletePushSubscription,
   generateChoferLink, desvincularChofer, vincularChofer,
@@ -4576,33 +4576,21 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
   const [tab, setTab] = useState('general')
   const [monthlyData, setMonthlyData] = useState(null)
   const [totales, setTotales] = useState(null)
-  const [deuda, setDeuda] = useState(null)
-  const [deudasManuales, setDeudasManuales] = useState({}) // choferId → monto pendiente
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (isDemoMode) {
       setMonthlyData(getDemoMonthlyStats())
       setTotales(getDemoTotalesHistoricos())
-      setDeuda(getDemoDeudaHistorica())
       setLoading(false)
       return
     }
     const load = async () => {
       setLoading(true)
       try {
-        const cfg = resumen?.config || null
-        const [md, dd, dm, tt] = await Promise.all([getMonthlyStats(), getDeudaHistorica(cfg), getDeudas(), getTotalesHistoricos()])
+        const [md, tt] = await Promise.all([getMonthlyStats(), getTotalesHistoricos()])
         setMonthlyData(md)
         setTotales(tt)
-        setDeuda(dd)
-        // Agrupar deudas manuales no saldadas por chofer
-        const manual = {}
-        for (const d of dm.data || []) {
-          if (d.saldado) continue
-          manual[d.chofer_id] = (manual[d.chofer_id] || 0) + parseFloat(d.monto || 0)
-        }
-        setDeudasManuales(manual)
       } catch (e) {
         showToast('Error al cargar stats', 'error')
       } finally {
@@ -4622,7 +4610,7 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
         <div style={{ fontSize: 48 }}>📊</div>
         <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.5px' }}>Estadísticas Pro</div>
         <div style={{ fontSize: 14, color: 'var(--text-sub)', lineHeight: 1.6, maxWidth: 280 }}>
-          Accedé a rentabilidad mensual, historial de deuda y estadísticas por auto con el plan Pro.
+          Accedé a rentabilidad mensual, promedios por período y estadísticas por auto con el plan Pro.
         </div>
         <button
           onClick={onUpgrade}
@@ -4647,8 +4635,6 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
     )
   }
 
-  const deudaEntries = deuda ? Object.entries(deuda) : []
-  const hayDeuda = deudaEntries.some(([, d]) => d.diasDebe > 0)
   // De todo el historial, no de la ventana del gráfico: así el número no se
   // mueve cuando cambiamos cuántos meses se grafican.
   const totalGan = totales?.ingresos || 0
@@ -4831,51 +4817,6 @@ function StatsPage({ resumen, cal, calYear, calMonth, showToast, isDemoMode, isP
             </div>
             <BarChart data={monthlyData} />
           </div>
-
-          <div className="stitle">Deuda acumulada — {new Date().getFullYear()}</div>
-          {deudaEntries.length === 0 ? (
-            <div className="loading" style={{ padding: '30px 0' }}>Sin choferes registrados</div>
-          ) : !hayDeuda && Object.keys(deudasManuales).length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', color: '#3F7DF5', fontSize: 13 }}>✓ Todos los choferes al día</div>
-          ) : (
-            deudaEntries.map(([cid, d]) => {
-              const extraManual = deudasManuales[cid] || 0
-              const totalDebe = d.montoDebe + extraManual
-              const tieneDeuda = d.diasDebe > 0 || extraManual > 0
-              return (
-                <div key={cid} className="card" style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600 }}>{d.nombre}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{d.autoNombre}</div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      {tieneDeuda ? (
-                        <>
-                          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 15, color: '#EF4444', fontWeight: 700 }}>
-                            ~{fmt(totalDebe)}
-                          </div>
-                          {d.diasDebe > 0 && (
-                            <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 12, color: '#EF4444', opacity: 0.75, marginTop: 2 }}>
-                              {d.diasDebe} día{d.diasDebe !== 1 ? 's' : ''} sin pagar
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div style={{ fontSize: 12, color: '#3F7DF5', fontWeight: 600 }}>✓ Al día</div>
-                      )}
-                    </div>
-                  </div>
-                  {extraManual > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Deudas pendientes</span>
-                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 13, color: '#F59E0B' }}>{fmt(extraManual)}</span>
-                    </div>
-                  )}
-                </div>
-              )
-            })
-          )}
         </>
       )}
 
